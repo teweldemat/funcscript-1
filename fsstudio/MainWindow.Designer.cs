@@ -335,7 +335,9 @@
             // 
             // labelValue
             // 
+            this.labelValue.BackColor = System.Drawing.Color.White;
             this.labelValue.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.labelValue.Font = new System.Drawing.Font("Arial Narrow", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.labelValue.Location = new System.Drawing.Point(3, 3);
             this.labelValue.Name = "labelValue";
             this.labelValue.ReadOnly = true;

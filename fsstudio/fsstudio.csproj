@@ -21,15 +21,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-    <ProjectReference Include="..\..\server\main\orch.utils.web\orch.utils.web.csproj" />
+    <ProjectReference Include="..\..\orch-backend\orch.utils.web\orch.utils.web.csproj" />
     <ProjectReference Include="..\funcscript\funcscript.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="orch.core">
-      <HintPath>..\..\server\main\orch.core\bin\Debug\net6.0\orch.core.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<ItemGroup>
+	  <Reference Include="orch.core">
+	    <HintPath>..\..\orch-backend\orch.core\bin\Debug\net6.0\orch.core.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
 
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

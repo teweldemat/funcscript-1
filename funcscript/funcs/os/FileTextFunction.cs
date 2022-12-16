@@ -30,7 +30,7 @@ namespace funcscript.funcs.os
                 throw new error.TypeMismatchError($"Function {this.Symbol}. Type mistmatch");
             var fileName = (string)par0;
             if (!System.IO.File.Exists(fileName))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. String '{par0}' not guid");
+                throw new error.TypeMismatchError($"Function {this.Symbol}. File '{par0}' doesn't exist");
             if(new System.IO.FileInfo(fileName).Length>1000000)
                 throw new error.TypeMismatchError($"Function {this.Symbol}. File '{par0}' is too big");
             return System.IO.File.ReadAllText(fileName);
