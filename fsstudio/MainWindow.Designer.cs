@@ -56,6 +56,7 @@
             this.tabHtmlResult = new System.Windows.Forms.TabPage();
             this.webView = new Microsoft.Web.WebView2.WinForms.WebView2();
             this.listVariables = new System.Windows.Forms.ListView();
+            this.buttonCopy = new System.Windows.Forms.ToolStripButton();
             ((System.ComponentModel.ISupportInitialize)(this.splitMain)).BeginInit();
             this.splitMain.Panel1.SuspendLayout();
             this.splitMain.Panel2.SuspendLayout();
@@ -259,8 +260,9 @@
             this.textName,
             this.buttonAdd,
             this.comboUser,
+            this.buttonSync,
             this.buttonAPI,
-            this.buttonSync});
+            this.buttonCopy});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(591, 34);
@@ -289,6 +291,7 @@
             // 
             this.comboUser.Name = "comboUser";
             this.comboUser.Size = new System.Drawing.Size(121, 34);
+            this.comboUser.Visible = false;
             // 
             // buttonAPI
             // 
@@ -306,8 +309,8 @@
             this.buttonSync.Image = ((System.Drawing.Image)(resources.GetObject("buttonSync.Image")));
             this.buttonSync.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.buttonSync.Name = "buttonSync";
-            this.buttonSync.Size = new System.Drawing.Size(52, 29);
-            this.buttonSync.Text = "Sync";
+            this.buttonSync.Size = new System.Drawing.Size(81, 29);
+            this.buttonSync.Text = "Evaluate";
             this.buttonSync.Click += new System.EventHandler(this.buttonSync_Click);
             // 
             // tabResult
@@ -378,6 +381,16 @@
             this.listVariables.View = System.Windows.Forms.View.List;
             this.listVariables.SelectedIndexChanged += new System.EventHandler(this.listVariables_SelectedIndexChanged);
             // 
+            // buttonCopy
+            // 
+            this.buttonCopy.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.buttonCopy.Image = ((System.Drawing.Image)(resources.GetObject("buttonCopy.Image")));
+            this.buttonCopy.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.buttonCopy.Name = "buttonCopy";
+            this.buttonCopy.Size = new System.Drawing.Size(110, 29);
+            this.buttonCopy.Text = "Copy Result";
+            this.buttonCopy.Click += new System.EventHandler(this.buttonCopy_Click);
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
@@ -447,5 +460,6 @@
         private TabPage tabTexResult;
         private TabPage tabHtmlResult;
         private Microsoft.Web.WebView2.WinForms.WebView2 webView;
+        private ToolStripButton buttonCopy;
     }
 }

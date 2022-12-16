@@ -811,6 +811,19 @@ namespace fsstudio
             funcscript.core.FuncScriptParser.Parse(globalProvider, exp, out var node,list);
             PopulateTree(exp,treeView.Nodes, node);
         }
+
+        private void buttonCopy_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Clipboard.SetText(labelValue.Text);
+                MessageBox.Show("Coppied","FuncScript");
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message, "FuncScript");
+            }
+        }
     }
     class NoflickerTree : TreeView
     {
