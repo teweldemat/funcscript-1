@@ -25,8 +25,11 @@ namespace funcscript.funcs.logic
             var par0=pars[0];
             var par1 = pars[1];
 
+            if (par0 == null && par1 == null)
+                return false;
+
             if (par0 == null || par1 == null)
-                return null;
+                return true;
 
             if (FuncScript.IsNumeric(par0) && FuncScript.IsNumeric(par1))
             {
