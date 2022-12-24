@@ -78,11 +78,11 @@ namespace funcscript.test
         [TestCase(@"""99"">""98""", true)]
         [TestCase(@"""90""<""99""", true)]
 
-        [TestCase(@"""99""<>""99""", false)]
+        [TestCase(@"""99""!=""99""", false)]
         [TestCase(@"""99""<""98""", false)]
         [TestCase(@"""90"">""99""", false)]
 
-        [TestCase(@"null<>""99""", null)]  //null to the mix
+        [TestCase(@"null!=""99""", null)]  //null to the mix
         [TestCase(@"null<""98""", null)]
         [TestCase(@"""90"">null", null)]
         [TestCase(@"null=null", true)]
