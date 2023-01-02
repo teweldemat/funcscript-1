@@ -46,11 +46,20 @@ namespace funcscript.test
             var res = FuncScript.Evaluate("{a:4,b:5,c:6,return {a,c}}",g);
             var expected = new ObjectKvc(new {a=4,c=6});
             Assert.AreEqual(expected, res);
-        }[Test]
+        }
+        [Test]
         public void TestSelector()
         {
             var g = new DefaultFsDataProvider();
             var res = FuncScript.Evaluate("{a:4,b:5,c:6}{a,c}",g);
+            var expected = new ObjectKvc(new { a = 4, c = 6 });
+            Assert.AreEqual(expected, res);
+        }
+        [Test]
+        public void TestSelector2()
+        {
+            var g = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate("{a:4,b:5,c:6}{'a',\"c\"}", g);
             var expected = new ObjectKvc(new { a = 4, c = 6 });
             Assert.AreEqual(expected, res);
         }

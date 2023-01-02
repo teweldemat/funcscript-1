@@ -82,7 +82,7 @@ namespace funcscript.test
         [TestCase(@"""99""<""98""", false)]
         [TestCase(@"""90"">""99""", false)]
 
-        [TestCase(@"null!=""99""", null)]  //null to the mix
+        [TestCase(@"null!=""99""", true)]  //null to the mix
         [TestCase(@"null<""98""", null)]
         [TestCase(@"""90"">null", null)]
         [TestCase(@"null=null", true)]
@@ -97,7 +97,7 @@ namespace funcscript.test
         [TestCase(@"1>2>3", typeof(error.EvaluationException))] //chained comparision
         [TestCase(@"1<2<3", typeof(error.EvaluationException))]
         [TestCase(@"1=2=3", typeof(error.EvaluationException))]
-        [TestCase(@"1<>2<>3", typeof(error.EvaluationException))]
+        [TestCase(@"1!=2!=3", typeof(error.EvaluationException))]
 
         [TestCase(@"if(2=null,0,1)", 1)]  //how would if deal with null condition
 

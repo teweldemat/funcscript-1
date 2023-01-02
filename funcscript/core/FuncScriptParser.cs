@@ -69,7 +69,8 @@ namespace funcscript.core
             }
         }
         static String[] s_SingleLetterOps = new String[] { "+", "*","-","/","^",">","<","%","=" };
-        static String[] s_DoubleLetterOps = new String[] { ">=","<=","!="};
+        static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??","?!" };
+
         const string KW_RETURN = "return";
         static HashSet<string> s_KeyWords;
         static FuncScriptParser()
@@ -761,6 +762,24 @@ namespace funcscript.core
                 parseNode = nodeIden;
                 return i;
             }
+            var e3 = new List<SyntaxErrorData>();
+            i = GetSimpleString(exp, index, out iden, out nodeIden,e3);
+            if (i > index)
+            {
+                item = new KvcExpression.KeyValueExpression
+                {
+                    Key = iden,
+                    KeyLower = idenLower,
+                    ValueExpression = new ReferenceBlock(iden, iden.ToLower())
+                    {
+                        Pos = index,
+                        Length = i - index
+                    }
+                };
+                parseNode = nodeIden;
+                return i;
+            }
+            
             return index;
         }
         static int GetKvcExpression(IFsDataProvider context, String exp, int index, out KvcExpression kvcExpr,out ParseNode parseNode,List<SyntaxErrorData> serrors)
