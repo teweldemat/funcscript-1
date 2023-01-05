@@ -532,7 +532,7 @@ namespace funcscript
         {
             return Evaluate(expression, new DefaultFsDataProvider(), vars, ParseMode.Standard);
         }
-        public static object Evaluate(string expression, IFsDataProvider providers)
+        public static object Evaluate(IFsDataProvider providers, string expression)
         {
             return Evaluate(expression, providers, null,ParseMode.Standard);
         }
