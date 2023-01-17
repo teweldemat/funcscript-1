@@ -19,7 +19,7 @@ namespace funcscript.test
         public void TestKvcSimple()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate( "{a:3,c:5}",g);
+            var res = FuncScript.Evaluate(g, "{a:3,c:5}");
             var expected = new ObjectKvc(new { a = 3, c = 5 });
             Assert.AreEqual(expected, res);
         }
@@ -27,7 +27,7 @@ namespace funcscript.test
         public void TestKvcCrossRef()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:3,c:5,d:a*c}",g);
+            var res = FuncScript.Evaluate(g,"{a:3,c:5,d:a*c}");
             var expected = new ObjectKvc(new { a = 3, c = 5,d=15 });
             Assert.AreEqual(expected, res);
         }
@@ -35,7 +35,7 @@ namespace funcscript.test
         public void TestKvcReturn()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:3,c:5,d:a*c,return d}",g);
+            var res = FuncScript.Evaluate(g,"{a:3,c:5,d:a*c,return d}");
             var expected = 15;
             Assert.AreEqual(expected, res);
         }
@@ -43,7 +43,7 @@ namespace funcscript.test
         public void TestKvcIdenOnly()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:4,b:5,c:6,return {a,c}}",g);
+            var res = FuncScript.Evaluate(g,"{a:4,b:5,c:6,return {a,c}}");
             var expected = new ObjectKvc(new {a=4,c=6});
             Assert.AreEqual(expected, res);
         }
@@ -51,7 +51,7 @@ namespace funcscript.test
         public void TestSelector()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:4,b:5,c:6}{a,c}",g);
+            var res = FuncScript.Evaluate(g,"{a:4,b:5,c:6}{a,c}");
             var expected = new ObjectKvc(new { a = 4, c = 6 });
             Assert.AreEqual(expected, res);
         }
@@ -59,7 +59,7 @@ namespace funcscript.test
         public void TestSelector2()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:4,b:5,c:6}{'a',\"c\"}", g);
+            var res = FuncScript.Evaluate(g,"{a:4,b:5,c:6}{'a',\"c\"}");
             var expected = new ObjectKvc(new { a = 4, c = 6 });
             Assert.AreEqual(expected, res);
         }
@@ -67,7 +67,7 @@ namespace funcscript.test
         public void TestSelectorChain()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:{id:3}}.a.id\r\n", g);
+            var res = FuncScript.Evaluate(g,"{a:{id:3}}.a.id\r\n");
             var expected = 3; ;
             Assert.AreEqual(expected, res);
         }
@@ -76,7 +76,7 @@ namespace funcscript.test
         public void TestSelectorWithExp()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("{a:4,b:5,c:6} {a,c,z:45}",g);
+            var res = FuncScript.Evaluate(g,"{a:4,b:5,c:6} {a,c,z:45}");
             var expected = new ObjectKvc(new { a = 4, c = 6,z=45 });
             Assert.AreEqual(expected, res);
         }
@@ -84,7 +84,7 @@ namespace funcscript.test
         public void TestSelectorOnArray()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("[{a:4,b:5,c:6},{a:7,b:8,c:9}]\n{a,c}",g);
+            var res = FuncScript.Evaluate(g,"[{a:4,b:5,c:6},{a:7,b:8,c:9}]\n{a,c}");
             var expected = new FsList(new object[]{new ObjectKvc(new { a = 4, c=6})
             ,new ObjectKvc(new { a = 7, c = 9})
             });
@@ -94,7 +94,7 @@ namespace funcscript.test
         public void ChainFunctionCall()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("((x)=>((y)=>3*y))(0)(2)",g);
+            var res = FuncScript.Evaluate(g,"((x)=>((y)=>3*y))(0)(2)");
             var expected = 6;
             Assert.AreEqual(expected, res);
 
@@ -103,10 +103,10 @@ namespace funcscript.test
         public void DoubleMap()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(@"{
+            var res = FuncScript.Evaluate(g,@"{
 z:Map([1,2,3],(x)=>x*x),
 return Map(z,(x)=>x*x);
-}",g) as FsList;
+}") as FsList;
             Assert.IsNotNull(res);
             var expected = new FsList(new object[] {1,16,81});
             
@@ -117,7 +117,7 @@ return Map(z,(x)=>x*x);
         public void KvcMergeHeriarchy()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(@"{a:12,b:{c:10,z:10}}+{d:13,b:{c:12,x:5}}",g);
+            var res = FuncScript.Evaluate(g,@"{a:12,b:{c:10,z:10}}+{d:13,b:{c:12,x:5}}");
             var expected = new ObjectKvc(new { a = 12, d = 13, b=new {c=12,z=10,x=5 } });
 
             Assert.AreEqual(expected, res);

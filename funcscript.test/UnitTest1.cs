@@ -17,7 +17,7 @@ namespace funcscript.test
             Assert.Throws(typeof(EvaluationException), () =>
             {
                 var g = new DefaultFsDataProvider();
-                FuncScript.Evaluate("3(4,5)",g);
+                FuncScript.Evaluate(g,"3(4,5)");
             });
         }
         [Test]
@@ -41,14 +41,14 @@ namespace funcscript.test
         public static object AssertSingleResult(string expStr)
         {
             var p = new DefaultFsDataProvider();
-            var ret=FuncScript.Evaluate(expStr,p);
+            var ret=FuncScript.Evaluate(p,expStr);
             Assert.AreEqual(ret, FuncScript.NormalizeDataType(ret));
             return ret;
         }
         public static object AssertSingleResultType(string expStr, System.Type type)
         {
             var p = new DefaultFsDataProvider();
-            var res=FuncScript.Evaluate(expStr,p);
+            var res=FuncScript.Evaluate(p,expStr);
             Assert.AreEqual(res, FuncScript.NormalizeDataType(res));
 
             if (type == null)
@@ -63,7 +63,7 @@ namespace funcscript.test
         void ShouldReturnEmpty(string expStr)
         {
             var p = new DefaultFsDataProvider();
-            var res=FuncScript.Evaluate(expStr,p);
+            var res=FuncScript.Evaluate(p,expStr);
             Assert.IsTrue(res == null , $"Must returl empty result, got {res}");
         }
 
@@ -307,7 +307,7 @@ return j;
         public void TestSpread()
         {
             var res = AssertSingleResultType("Select({'a':1,'b':2},{'b':5,'c':8})", typeof(KeyValueCollection));
-            var expected= FuncScript.Evaluate("{'a':1,'b':5,'c':8}",null);
+            var expected= FuncScript.Evaluate(null,"{'a':1,'b':5,'c':8}");
             Assert.AreEqual(expected,res);
         }
 
@@ -315,14 +315,14 @@ return j;
         public void TestDotnetObject()
         {
             var res = new ObjectKvc(new { a = 1,b=5,c=8});
-            var expected = FuncScript.Evaluate("{'a':1,'b':5,'c':8}",null);
+            var expected = FuncScript.Evaluate(null,"{'a':1,'b':5,'c':8}");
             Assert.AreEqual(expected, res);
         }
         [Test]
         public void TestSpread2()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("Select({'a':1,'b':5,'c':8},{'a':null,'b':null})",g);
+            var res = FuncScript.Evaluate(g,"Select({'a':1,'b':5,'c':8},{'a':null,'b':null})");
             var expected = new ObjectKvc(new { a = 1, b = 5});
             Assert.AreEqual(expected, res);
         }
@@ -330,7 +330,7 @@ return j;
         public void TestIdenKey()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate("Select({a:3,b:4},{a,c:5})",g);
+            var res = FuncScript.Evaluate(g,"Select({a:3,b:4},{a,c:5})");
             var expected = new ObjectKvc(new { a = 3, c = 5 });
             Assert.AreEqual(expected, res);
         }
