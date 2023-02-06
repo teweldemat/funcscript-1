@@ -78,7 +78,7 @@ namespace funcscript.model
                 var val = prop.Value.Field == null ?
                         prop.Value.Prop.GetValue(_val) : prop.Value.Field.GetValue(_val);
                 val = FuncScript.NormalizeDataType(val);
-                list.Add(KeyValuePair.Create(prop.Key, val));
+                list.Add(KeyValuePair.Create(prop.Value.Name, val));
             }
             return list;
         }

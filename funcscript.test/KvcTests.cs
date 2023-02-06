@@ -244,6 +244,15 @@ d";
             var expected = FuncScript.Evaluate(fs);
             Assert.AreEqual(expected, res);
         }
+        [Test]
+        public void ObjectKvRetailCases()
+        {
+            var obj = new ObjectKvc(new { AbC = "123" });
+            var sb = new StringBuilder();
+            FuncScript.Format(sb, obj, null, false, true);
+            Assert.IsTrue(sb.ToString().Contains("AbC"));
+           
+        }
     }
 
 }
