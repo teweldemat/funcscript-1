@@ -65,6 +65,8 @@ namespace funcscript.core
         }
         static String[] s_SingleLetterOps = new String[] { "+", "*", "-", "/", "^", ">", "<", "%", "=" };
         static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??", "?!" };
+        
+        
 
         const string KW_RETURN = "return";
         static HashSet<string> s_KeyWords;
@@ -594,15 +596,20 @@ namespace funcscript.core
                 return i;
             return GetStringTemplate(provider, "'", exp, index, out prog, out parseNode, serrors);
         }
-
-        static int GetStringTemplate(IFsDataProvider provider, String delimator, string exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        
+        
+        static int GetStringTemplate(IFsDataProvider provider, String delimator,string exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
+
+            
+
             parseNode = null;
             prog = null;
             var parts = new List<ExpressionBlock>();
             var nodeParts = new List<ParseNode>();
+            
 
-            var i = GetLiteralMatch(exp, index, delimator);
+            var i = GetLiteralMatch(exp, index, $"f{delimator}");
             if (i == index)
                 return index;
             var lastIndex = i;
@@ -632,18 +639,18 @@ namespace funcscript.core
                     continue;
                 }
 
-                i2 = GetLiteralMatch(exp, i, $"\\{delimator}");
+                i2 = GetLiteralMatch(exp, i, $@"\{delimator}");
                 if (i2 > i)
                 {
                     i = i2;
                     sb.Append(delimator);
                     continue;
                 }
-                i2 = GetLiteralMatch(exp, i, "\\{");
+                i2 = GetLiteralMatch(exp, i, @"\{");
                 if (i2 > i)
                 {
                     i = i2;
-                    sb.Append('{');
+                    sb.Append("{");
                     continue;
                 }
                 i2 = GetLiteralMatch(exp, i, "{");
@@ -1164,14 +1171,26 @@ namespace funcscript.core
             prog = null;
             int i;
 
-            //get string
+            //get string template
             i = GetStringTemplate(provider, exp, index, out var template, out nodeUnit, serrors);
             if (i > index)
             {
+                parseNode = nodeUnit;
                 prog = template;
                 prog.Pos = index;
                 prog.Length = i - index;
+                return i;
+
+            }
+
+            //get string 
+            i = GetSimpleString(exp, index, out var str, out nodeUnit, serrors);
+            if (i > index)
+            {
                 parseNode = nodeUnit;
+                prog = new LiteralBlock(str);
+                prog.Pos = index;
+                prog.Length = i - index;
                 return i;
 
             }

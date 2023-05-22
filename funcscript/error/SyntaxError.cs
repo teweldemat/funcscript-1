@@ -17,5 +17,20 @@ namespace funcscript.error
         {
             this.data= data;
         }
+        public override string Message
+        {
+            get
+            {
+                
+                if (data == null || data.Count == 0)
+                    return "";
+                var ret = data[0].Message;
+                for(int i=1;i<data.Count;i++)
+                    ret += "\n"+data[i].Message;
+                return ret;
+
+            }
+        }
+
     }
 }

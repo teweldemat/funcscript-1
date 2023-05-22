@@ -166,11 +166,11 @@ namespace funcscript.test
         [TestCase(@"2=2 and 3=4", false)]
         [TestCase(@"2=2 or 3=4", true)]
 
-        [TestCase(@"{ x:5; return ""ab{x}"";}", "ab5")] //templates
-        [TestCase(@"{ x:5; return ""ab{ x}"";}", "ab5")] //skip spaces
-        [TestCase(@"{ x:5; return ""ab{ x }"";}", "ab5")]
-        [TestCase(@"{ x:5; return ""ab{x }"";}", "ab5")]
-        [TestCase(@"'{1}\''", "1'")] //escape charcater and template expression interference
+        [TestCase(@"{ x:5; return f""ab{x}"";}", "ab5")] //templates
+        [TestCase(@"{ x:5; return f""ab{ x}"";}", "ab5")] //skip spaces
+        [TestCase(@"{ x:5; return f""ab{ x }"";}", "ab5")]
+        [TestCase(@"{ x:5; return f""ab{x }"";}", "ab5")]
+        [TestCase(@"f'{1}\''", "1'")] //escape charachter and template expression interference
 
         
 

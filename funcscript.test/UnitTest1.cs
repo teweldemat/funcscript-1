@@ -120,8 +120,8 @@ namespace funcscript.test
         [TestCase("\"12\"+3", "123")]
         [TestCase("\"a\\\"b\"", "a\"b")]
 
-        [TestCase("{x:5; return \"a{x}b\"; }", "a5b")]
-        [TestCase("{x:5; return \"a\\{x}b\"; }", "a{x}b")]
+        [TestCase("{x:5; return f\"a{x}b\"; }", "a5b")]
+        [TestCase("{x:5; return f\"a\\{x}b\"; }", "a{x}b")]
 
         [TestCase("{return 3}",3)] //single white space
         [TestCase("{return\t3}", 3)] //tab white space
