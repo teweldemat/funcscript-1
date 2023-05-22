@@ -11,6 +11,7 @@ namespace funcscript.test
 {
     public class JSLikeSyntax
     {
+
         [Test]
         public void StringInterpolationBasic()
         {
@@ -19,6 +20,8 @@ namespace funcscript.test
             var res = FuncScript.Evaluate(p, @"f'y={x+2}'");
             Assert.AreEqual("y=102", res);
         }
+
+
         [Test]
         public void StringInterpolationEscape()
         {
@@ -26,6 +29,22 @@ namespace funcscript.test
                 new DefaultFsDataProvider());
             var res = FuncScript.Evaluate(p, @"f'y=\{x+2}'");
             Assert.AreEqual(@"y={x+2}", res);
+        }
+
+        [Test]
+        public void NullSafeGetMemberNullValue()
+        {
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, @"x?.y");
+            Assert.AreEqual(null, res);
+        }
+
+        [Test]
+        public void NullSafeGetMemberNoneNullValue()
+        {
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, @"{ x:{y:5}; return x?.y}");
+            Assert.AreEqual(5, res);
         }
     }
 }

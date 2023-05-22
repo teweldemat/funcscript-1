@@ -64,7 +64,7 @@ namespace funcscript.core
             }
         }
         static String[] s_SingleLetterOps = new String[] { "+", "*", "-", "/", "^", ">", "<", "%", "=" };
-        static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??", "?!" };
+        static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??", "?!", "?." };
         
         
 
@@ -1035,10 +1035,17 @@ namespace funcscript.core
         }
         static int GetMemberAccess(IFsDataProvider context, ExpressionBlock source, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
+            var i2=GetMemberAccess(context,".",source,exp, index, out prog, out parseNode, serrors);
+            if(i2==index)
+                return GetMemberAccess(context, "?.", source, exp, index, out prog, out parseNode, serrors);
+            return i2;
+        }
+        static int GetMemberAccess(IFsDataProvider context, string oper, ExpressionBlock source, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
             parseNode = null;
             prog = null;
             var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, ".");
+            var i2 = GetLiteralMatch(exp, i, oper);
             if (i2 == i)
                 return index;
             i = i2;
@@ -1052,7 +1059,7 @@ namespace funcscript.core
             i = i2;
             prog = new FunctionCallExpression
             {
-                Function = new LiteralBlock(context.GetData(".")),
+                Function = new LiteralBlock(context.GetData(oper)),
                 Parameters = new ExpressionBlock[] { source, new LiteralBlock(member) },
                 Pos = source.Pos,
                 Length = i - source.Pos
