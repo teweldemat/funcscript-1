@@ -1068,13 +1068,20 @@ namespace funcscript.core
         }
         static int GetFunctionCallParametersList(IFsDataProvider context, ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
+            var i= GetFunctionCallParametersList(context,"(",")",func,exp,index,out prog,out parseNode,serrors);
+            if(i==index)
+                return GetFunctionCallParametersList(context, "[", "]", func, exp, index, out prog, out parseNode, serrors);
+            return i;
+        }
+        static int GetFunctionCallParametersList(IFsDataProvider context,String openBrance,String closeBrance,  ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
             //syntax (<param expresion>[,<param expresion]*)
             parseNode = null;
             prog = null;
 
             //make sure we have open brace
             var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, "(");
+            var i2 = GetLiteralMatch(exp, i, openBrance);
             if (i == i2)
                 return index;//we didn't find '('
             i = i2;
@@ -1109,11 +1116,14 @@ namespace funcscript.core
             }
 
             i = SkipSpace(exp, i);
-            if (i >= exp.Length || exp[i++] != ')')
+            i2 = GetLiteralMatch(exp, i, closeBrance);
+            if (i2==i)
             {
-                serrors.Add(new SyntaxErrorData(i, 0, "')' expected"));
+                serrors.Add(new SyntaxErrorData(i, 0, $"'{closeBrance}' expected"));
                 return index;
             }
+            i = i2;
+
             prog = new FunctionCallExpression
             {
                 Function = func,

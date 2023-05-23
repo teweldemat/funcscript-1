@@ -6,15 +6,13 @@ using System;
 
 namespace funcscript.test
 {
-    public class TestSet3
+    public class SyntaxLibrary
     {
-
-
         void TestResult(string exp, object expected, Func<object, object> tran = null)
         {
             if (expected is Type)
             {
-                Assert.Throws((Type)expected,()=>
+                Assert.Throws((Type)expected, () =>
                 {
                     var res = Tests.AssertSingleResult(exp);
 
@@ -23,28 +21,13 @@ namespace funcscript.test
             else
             {
                 var res = Tests.AssertSingleResult(exp);
-                if(tran!=null)
-                    res=tran(res);
                 Assert.AreEqual(expected, res);
             }
 
         }
 
-        [Test]
-        public void TestListIndex1()
-        {
-            TestResult("[2,3,4](0)", 2);
-        }
-        [Test]
-        public void TestListIndex2()
-        {
-            TestResult("([2,3,4])(0)", 2);
-        }
-        [Test]
-        public void TestListIndex2D_1()
-        {
-            TestResult("([[2,3,4],[3,4,5]])(0)(1)", 3);
-        }
+        
+       
 
         [Test]
 
@@ -172,26 +155,40 @@ namespace funcscript.test
         [TestCase(@"{ x:5; return f""ab{x }"";}", "ab5")]
         [TestCase(@"f'{1}\''", "1'")] //escape charachter and template expression interference
 
-        
+
 
         [TestCase(@"format(12.123,""#,0.00"")", "12.12")] //test formatting
         [TestCase(@"format(null,""#,0.00"")", "null")]
 
+
+
+        [TestCase(@"[4,5,6][1]",5)]     //list indexing
+        [TestCase(@"{x:[4,5,6];return x[1]}",5)]
+        [TestCase("[2,3,4](0)", 2)]
+        [TestCase("([[2,3,4],[3,4,5]])(0)(1)", 3)]
+            
         public void SoManyTests_1(string expr, object res)
         {
-            TestResult(expr, res);
+            TestResult(expr,res);
         }
 
+        [Test]
         public void TestListFormt()
         {
-            var exp = "fomrat([1,2,3])";
+            var exp = "format([1,2,3])";
             var expected = "[1,2,3]";
             var res=(string)Tests.AssertSingleResultType(exp,typeof(string));
             res = res.Replace(" ", "").Replace("\n", "").Replace("\r", "").Replace("\t", "");
             Assert.AreEqual(expected, res);
 
         }
-
+        [Test]
+        public void TestSeriesFunction()
+        {
+            var res = FuncScript.Evaluate("series(1,5)");
+            var expected = new FsList(new object[] { 1, 2, 3, 4, 5 });
+            Assert.AreEqual(expected, res);
+        }
 
         [Test]
         public void Complicated1()

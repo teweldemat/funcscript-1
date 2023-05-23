@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace funcscript.test
 {
-    public class JSLikeSyntax
+    public class Syntax2
     {
 
         [Test]
@@ -44,6 +44,41 @@ namespace funcscript.test
         {
             var p = new DefaultFsDataProvider();
             var res = FuncScript.Evaluate(p, @"{ x:{y:5}; return x?.y}");
+            Assert.AreEqual(5, res);
+        }
+
+        [Test]
+        public void NullSafeExpressionNullValue()
+        {
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, @"x?!(x*200)");
+            Assert.AreEqual(null, res);
+        }
+
+
+        
+
+        [Test]
+        public void NullSafeExpressionNoneNullValue()
+        {
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, @"{ x:5; return x?!(x*200)}");
+            Assert.AreEqual(1000, res);
+        }
+
+        [Test]
+        public void SquareBraceIndexLiteral()
+        {
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, @"[4,5,6][1]");
+            Assert.AreEqual(5, res);
+        }
+
+        [Test]
+        public void SquareBraceIndexVariable()
+        {
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, @"{x:[4,5,6];return x[1]}");
             Assert.AreEqual(5, res);
         }
     }
