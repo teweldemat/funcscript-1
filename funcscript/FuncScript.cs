@@ -453,7 +453,7 @@ namespace funcscript
             {
                 if (v2 is long)
                 {
-                    v1out = Convert.ToUInt64(v1);
+                    v1out = Convert.ToInt64(v1);
                     v2out = v2;
                     return true;
                 }
@@ -475,7 +475,7 @@ namespace funcscript
                 if (v2 is int)
                 {
                     v1out = v1;
-                    v2out = Convert.ToUInt64(v2);
+                    v2out = Convert.ToInt64(v2);
                     return true;
                 }
                 if (v2 is double)
