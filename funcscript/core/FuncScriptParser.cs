@@ -526,6 +526,35 @@ namespace funcscript.core
             }
             return index;
         }
+        static int GetReturnDefinition(IFsDataProvider context, String exp, int index, out ExpressionBlock retExp,out ParseNode parseNode,List<SyntaxErrorData> serrors)
+        {
+            if (exp == null)
+            {
+                throw new ArgumentNullException(nameof(exp), "The input expression cannot be null.");
+            }
+
+            foreach (var k in keyWord)
+            {
+                bool matchFound = true;
+                if (index + k.Length <= exp.Length)
+                {
+                    for (int i = 0; i < k.Length; i++)
+                    {
+                        if (char.ToLowerInvariant(exp[index + i]) != char.ToLowerInvariant(k[i]))
+                        {
+                            matchFound = false;
+                            break;
+                        }
+                    }
+
+                    if (matchFound)
+                    {
+                        return index + k.Length;
+                    }
+                }
+            }
+            return index;
+        }
 
         static int GetReturnDefinition(IFsDataProvider context, String exp, int index, out ExpressionBlock retExp, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
@@ -596,9 +625,8 @@ namespace funcscript.core
                 return i;
             return GetStringTemplate(provider, "'", exp, index, out prog, out parseNode, serrors);
         }
-        
-        
-        static int GetStringTemplate(IFsDataProvider provider, String delimator,string exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+
+        static int GetStringTemplate(IFsDataProvider provider,String delimator,string exp, int index, out ExpressionBlock prog,out ParseNode parseNode,List<SyntaxErrorData> serrors)
         {
 
             
@@ -1045,8 +1073,8 @@ namespace funcscript.core
             parseNode = null;
             prog = null;
             var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, oper);
-            if (i2 == i)
+            var i2 = GetLiteralMatch(exp, i, ".");
+            if(i2==i)
                 return index;
             i = i2;
             i = SkipSpace(exp, i);
@@ -1066,23 +1094,16 @@ namespace funcscript.core
             };
             return i;
         }
-        static int GetFunctionCallParametersList(IFsDataProvider context, ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
-        {
-            var i= GetFunctionCallParametersList(context,"(",")",func,exp,index,out prog,out parseNode,serrors);
-            if(i==index)
-                return GetFunctionCallParametersList(context, "[", "]", func, exp, index, out prog, out parseNode, serrors);
-            return i;
-        }
-        static int GetFunctionCallParametersList(IFsDataProvider context,String openBrance,String closeBrance,  ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        static int GetFunctionCallParametersList(IFsDataProvider context, ExpressionBlock func,String exp, int index, out ExpressionBlock prog,out ParseNode parseNode,List<SyntaxErrorData> serrors)
         {
             //syntax (<param expresion>[,<param expresion]*)
             parseNode = null;
             prog = null;
 
             //make sure we have open brace
-            var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, openBrance);
-            if (i == i2)
+            var i=SkipSpace(exp, index);
+            var i2 = GetLiteralMatch(exp, i, "(");
+            if (i==i2)
                 return index;//we didn't find '('
             i = i2;
             var pars = new List<ExpressionBlock>();
@@ -1116,10 +1137,9 @@ namespace funcscript.core
             }
 
             i = SkipSpace(exp, i);
-            i2 = GetLiteralMatch(exp, i, closeBrance);
-            if (i2==i)
-            {
-                serrors.Add(new SyntaxErrorData(i, 0, $"'{closeBrance}' expected"));
+            if (i >= exp.Length || exp[i++] != ')')
+             {
+                serrors.Add(new SyntaxErrorData(i, 0, "')' expected"));
                 return index;
             }
             i = i2;
@@ -1188,8 +1208,8 @@ namespace funcscript.core
             prog = null;
             int i;
 
-            //get string template
-            i = GetStringTemplate(provider, exp, index, out var template, out nodeUnit, serrors);
+            //get string
+            i = GetStringTemplate(provider, exp, index, out var template,out nodeUnit,serrors);
             if (i > index)
             {
                 parseNode = nodeUnit;
