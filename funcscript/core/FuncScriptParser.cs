@@ -526,35 +526,7 @@ namespace funcscript.core
             }
             return index;
         }
-        static int GetReturnDefinition(IFsDataProvider context, String exp, int index, out ExpressionBlock retExp,out ParseNode parseNode,List<SyntaxErrorData> serrors)
-        {
-            if (exp == null)
-            {
-                throw new ArgumentNullException(nameof(exp), "The input expression cannot be null.");
-            }
-
-            foreach (var k in keyWord)
-            {
-                bool matchFound = true;
-                if (index + k.Length <= exp.Length)
-                {
-                    for (int i = 0; i < k.Length; i++)
-                    {
-                        if (char.ToLowerInvariant(exp[index + i]) != char.ToLowerInvariant(k[i]))
-                        {
-                            matchFound = false;
-                            break;
-                        }
-                    }
-
-                    if (matchFound)
-                    {
-                        return index + k.Length;
-                    }
-                }
-            }
-            return index;
-        }
+        
 
         static int GetReturnDefinition(IFsDataProvider context, String exp, int index, out ExpressionBlock retExp, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
@@ -1073,7 +1045,7 @@ namespace funcscript.core
             parseNode = null;
             prog = null;
             var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, ".");
+            var i2 = GetLiteralMatch(exp, i, oper);
             if(i2==i)
                 return index;
             i = i2;
