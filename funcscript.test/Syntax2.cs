@@ -1,4 +1,5 @@
 ﻿using funcscript.model;
+using Microsoft.VisualBasic;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -71,6 +72,14 @@ namespace funcscript.test
         {
             var p = new DefaultFsDataProvider();
             var res = FuncScript.Evaluate(p, @"[4,5,6][1]");
+            Assert.AreEqual(5, res);
+        }
+        [Test]
+        public void EmptyParameterList()
+        {
+            var exp = @"{y:()=>5;return y()}";
+            var p = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(p, exp);
             Assert.AreEqual(5, res);
         }
 

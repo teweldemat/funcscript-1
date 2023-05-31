@@ -1066,15 +1066,21 @@ namespace funcscript.core
             };
             return i;
         }
-        static int GetFunctionCallParametersList(IFsDataProvider context, ExpressionBlock func,String exp, int index, out ExpressionBlock prog,out ParseNode parseNode,List<SyntaxErrorData> serrors)
+        static int GetFunctionCallParametersList(IFsDataProvider context, ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
-            //syntax (<param expresion>[,<param expresion]*)
+            var i = GetFunctionCallParametersList(context, "(", ")", func, exp, index, out prog, out parseNode, serrors);
+            if (i == index)
+                return GetFunctionCallParametersList(context, "[", "]", func, exp, index, out prog, out parseNode, serrors);
+            return i;
+        }
+        static int GetFunctionCallParametersList(IFsDataProvider context, String openBrance, String closeBrance, ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
             parseNode = null;
             prog = null;
 
             //make sure we have open brace
             var i=SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, "(");
+            var i2 = GetLiteralMatch(exp, i, openBrance);
             if (i==i2)
                 return index;//we didn't find '('
             i = i2;
@@ -1091,7 +1097,7 @@ namespace funcscript.core
                 do
                 {
                     i2 = SkipSpace(exp, i);
-                    if (i2 >= exp.Length || exp[i2++] != ',') //stop colletion paramters if there is no ','
+                    if (i2 >= exp.Length || exp[i2++] != ',') //stop collection of paramters if there is no ','
                         break;
                     i = i2;
                     i = SkipSpace(exp, i);
@@ -1109,12 +1115,14 @@ namespace funcscript.core
             }
 
             i = SkipSpace(exp, i);
-            if (i >= exp.Length || exp[i++] != ')')
-             {
-                serrors.Add(new SyntaxErrorData(i, 0, "')' expected"));
+            i2 = GetLiteralMatch(exp, i, closeBrance);
+            if (i2 == i)
+            {
+                serrors.Add(new SyntaxErrorData(i, 0, $"'{closeBrance}' expected"));
                 return index;
             }
             i = i2;
+
 
             prog = new FunctionCallExpression
             {
