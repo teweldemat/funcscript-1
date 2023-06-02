@@ -3,6 +3,7 @@ using funcscript.model;
 using funcscript.error;
 using NUnit.Framework;
 using System;
+using System.Numerics;
 
 namespace funcscript.test
 {
@@ -340,6 +341,15 @@ return j;
             
             Assert.IsNull(FuncScript.Evaluate("null map (x)=>x"));
             Assert.IsNull(FuncScript.Evaluate("y map (x)=>x"));
+        }
+
+        [TestCase(null,"3 in null")]
+        [TestCase(true, "3 in [2,3]")]
+        [TestCase(false, "null in [2,3]")]
+        [TestCase(false, "null in [2,null]")]
+        public void InFunction(object expected,string exp)
+        {
+            Assert.AreEqual(expected, FuncScript.Evaluate(exp));
         }
         
     }
