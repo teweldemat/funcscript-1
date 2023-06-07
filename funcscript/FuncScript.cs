@@ -524,6 +524,17 @@ namespace funcscript
         {
             return Evaluate(expression, new DefaultFsDataProvider(),null,ParseMode.Standard);
         }
+
+        public static T ConvertFromFSObject<T>(object obj) where T:class
+        {
+            if(obj is KeyValueCollection)
+            {
+                return (T)((KeyValueCollection)obj).ConvertTo(typeof(T));
+            }
+            if (obj is null)
+                return null;
+            return (T)obj;
+        }
         public static object EvaluateSpaceSeparatedList(string expression)
         {
             return Evaluate(expression, new DefaultFsDataProvider(), null, ParseMode.SpaceSeparatedList);
