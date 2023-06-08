@@ -567,13 +567,40 @@ namespace funcscript.core
             if (i == index)
                 return index;
             int i2;
+            var sb = new StringBuilder();
             while (true)
             {
-                i2 = GetLiteralMatch(exp, i, $"\\{delimator}");
+                i2 = GetLiteralMatch(exp, i, @"\n");
                 if (i2 > i)
+                {
                     i = i2;
+                    sb.Append('\n');
+                    continue;
+                }
+                i2 = GetLiteralMatch(exp, i, @"\t");
+                if (i2 > i)
+                {
+                    i = i2;
+                    sb.Append('\t');
+                    continue;
+                }
+                i2 = GetLiteralMatch(exp, i, @"\\");
+                if (i2 > i)
+                {
+                    i = i2;
+                    sb.Append('\\');
+                    continue;
+                }
+
+                i2 = GetLiteralMatch(exp, i, $@"\{delimator}");
+                if (i2 > i)
+                {
+                    sb.Append(delimator);
+                    i = i2;
+                }
                 if (i >= exp.Length || GetLiteralMatch(exp, i, delimator) > i)
                     break;
+                sb.Append(exp[i]);
                 i++;
             }
             i2 = GetLiteralMatch(exp, i, delimator);
@@ -583,7 +610,7 @@ namespace funcscript.core
                 return index;
             }
             i = i2;
-            str = exp.Substring(index + 1, i - index - 2).Replace($"\\{delimator}", delimator);
+            str = sb.ToString();
             parseNode = new ParseNode(ParseNodeType.LiteralString, index, i - index);
             return i;
 

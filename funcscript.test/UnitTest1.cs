@@ -218,7 +218,20 @@ namespace funcscript.test
             Assert.IsTrue(res is double, ".net data type not double");
             Assert.AreEqual((double)res,double.Parse(exp));
         }
-        
+
+        [Test]
+        [TestCase(@"''","")]
+        [TestCase(@"'\n'", "\n")]
+        [TestCase(@"'\t'", "\t")]
+        [TestCase(@"'\\n'", @"\n")]
+        public void TesStringParser(string exp,string expected)
+        {
+
+            var res = AssertSingleResultType(exp, typeof(string));
+            Assert.IsTrue(res is string, ".net data type not string");
+            Assert.AreEqual(expected, (string)res);
+        }
+
         [Test]
         [TestCase("12.E2+2", "1202")]
         [TestCase("12.0E2+2", "1202")]

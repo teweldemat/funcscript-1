@@ -23,13 +23,19 @@ namespace funcscript.funcs.misc
             if (pars.Count ==0)
                 throw new error.EvaluationTimeException($"{this.Symbol} function: {this.ParName(0)} expected");
             
-            var tag = pars.Count >= 1 ? $"({pars[1].ToString()})": "";
+            var tag = pars.Count > 1 ? $"({pars[1].ToString()})": "";
+            var output= pars.Count > 2 ? (pars[2] is bool ? (bool)pars[2] :false):true;
             Console.WriteLine($"FuncScript: Evaluating {tag}");
             try
             {
                 var res = pars[0];
-                Console.WriteLine($"FuncScript: Result{tag}:\n{(res==null?"<null>":res.ToString())}");
-                Console.WriteLine($"End Result{tag}");
+                if (output)
+                {
+                    Console.WriteLine($"FuncScript: Result{tag}:\n{(res == null ? "<null>" : res.ToString())}");
+                    Console.WriteLine($"End Result {tag}");
+                }
+                else
+                    Console.WriteLine($"Done {tag}");
                 return res;
             }
             catch(Exception ex) 
