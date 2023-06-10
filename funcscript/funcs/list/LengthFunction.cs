@@ -26,9 +26,12 @@ namespace funcscript.funcs.list
             if (par0 == null)
                 return 0;
 
-            if (!(par0 is FsList))
-                throw new error.TypeMismatchError($"{this.Symbol} function: first paramter should be {this.ParName(0)}");
-            return ((FsList)par0).Data.Length;
+            if (par0 is FsList)
+                return ((FsList)par0).Data.Length;
+            if (par0 is string)
+                return ((string)par0).Length;
+            throw new error.TypeMismatchError($"{this.Symbol} functiond doesn't apply to {par0.GetType()}");
+
         }
 
         public string ParName(int index)
