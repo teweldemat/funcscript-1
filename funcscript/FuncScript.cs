@@ -550,7 +550,8 @@ namespace funcscript
         public enum ParseMode
         {
             Standard,
-            SpaceSeparatedList
+            SpaceSeparatedList,
+            FsTemplate
         }
         public static object Evaluate(string expression, IFsDataProvider provider,object vars,ParseMode mode)
         {
@@ -567,6 +568,9 @@ namespace funcscript
                     break;
                 case ParseMode.SpaceSeparatedList:
                     return core.FuncScriptParser.ParseSpaceSepratedList(provider, expression, serrors);
+                case ParseMode.FsTemplate:
+                    exp= core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
+                    break;
                 default:
                     exp=null;
                     break;
@@ -592,6 +596,8 @@ namespace funcscript
                 throw new EvaluationException(msg, ex.Pos, ex.Len, ex.InnerException);
             }
         }
+
+        
 
 
     }
