@@ -1,5 +1,6 @@
 ﻿using funcscript.model;
 using Microsoft.VisualBasic;
+using NuGet.Frameworks;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -89,6 +90,40 @@ namespace funcscript.test
             var p = new DefaultFsDataProvider();
             var res = FuncScript.Evaluate(p, @"{x:[4,5,6];return x[1]}");
             Assert.AreEqual(5, res);
+        }
+
+        [Test]
+        public void TestFSTemplate1()
+        {
+            var template = "abc";
+            var expeced = "abc";
+            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            Assert.That(res, Is.EqualTo(expeced));
+        }
+
+        [Test]
+        public void TestFSTemplate2()
+        {
+            var template = "abc${'1'}";
+            var expeced = "abc1";
+            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            Assert.That(res, Is.EqualTo(expeced));
+        }
+        [Test]
+        public void TestFSTemplate3()
+        {
+            var template = "abc${['d',1,['e',2]]}f";
+            var expeced = "abcd1e2f";
+            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            Assert.That(res, Is.EqualTo(expeced));
+        }
+        [Test]
+        public void TestFSTemplate4()
+        {
+            var template = "abc${['d',1] map (x)=>'>'+x}f";
+            var expeced = "abc>d>1f";
+            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            Assert.That(res, Is.EqualTo(expeced));
         }
     }
 }

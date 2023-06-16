@@ -1,4 +1,5 @@
 ﻿using funcscript.block;
+using funcscript.funcs.math;
 using System.Collections.Generic;
 using System.Text;
 
@@ -1524,7 +1525,7 @@ namespace funcscript.core
             {
                 prog = new FunctionCallExpression
                 {
-                    Function = new LiteralBlock(provider.GetData("+")),
+                    Function = new LiteralBlock(provider.GetData(TemplateMergeMergeFunction.SYMBOL)),
                     Parameters = parts.ToArray()
 
                 };
