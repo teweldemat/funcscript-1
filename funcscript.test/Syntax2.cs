@@ -4,6 +4,7 @@ using NuGet.Frameworks;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
@@ -124,6 +125,14 @@ namespace funcscript.test
             var expeced = "abc>d>1f";
             var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
             Assert.That(res, Is.EqualTo(expeced));
+        }
+        [Test]
+        public void ListParsingBug_23_6_17()
+        {
+            var expr = "[[1][2]]";
+            Assert.Throws<SyntaxErrorException>(()=>FuncScript.Evaluate(expr));
+            
+
         }
     }
 }

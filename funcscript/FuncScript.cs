@@ -421,6 +421,8 @@ namespace funcscript
                 return FSDataType.Boolean;
             if (value is int)
                 return FSDataType.Integer;
+            if (value is double)
+                return FSDataType.Float;
             if (value is long)
                 return FSDataType.BigInteger;
             if (value is Guid)
