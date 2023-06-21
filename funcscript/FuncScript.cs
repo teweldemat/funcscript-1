@@ -13,7 +13,7 @@ namespace funcscript
 {
     public static class FuncScript
     {
-     
+
         static object FromJToken(JToken p)
         {
             object val;
@@ -26,7 +26,7 @@ namespace funcscript
                 case JTokenType.Array:
                     var jarr = (JArray)p;
                     object[] a = new object[jarr.Count];
-                    for (int i = 0; i<a.Length; i++)
+                    for (int i = 0; i < a.Length; i++)
                         a[i] = FromJToken(jarr[i]);
                     return new FsList(a);
                 case JTokenType.Constructor:
@@ -66,7 +66,7 @@ namespace funcscript
         static KeyValueCollection FromJObject(JObject jobj)
         {
             var pairs = new List<KeyValuePair<string, object>>();
-            foreach(var p in jobj)
+            foreach (var p in jobj)
             {
                 pairs.Add(new KeyValuePair<string, object>(p.Key, FromJToken(p.Value)));
             }
@@ -75,7 +75,7 @@ namespace funcscript
         }
         public static object FromJson(String json)
         {
-            var t=Newtonsoft.Json.Linq.JToken.Parse(json);
+            var t = Newtonsoft.Json.Linq.JToken.Parse(json);
             return FromJToken(t);
         }
         /// <summary>
@@ -87,8 +87,8 @@ namespace funcscript
         {
             if (value == null)
                 return null;
-            
-            if(value is byte[])
+
+            if (value is byte[])
             {
                 return value;
             }
@@ -124,10 +124,10 @@ namespace funcscript
             {
                 return value.ToString();
             }
-            if(value is Delegate)
+            if (value is Delegate)
             {
                 return new DelegateFunction((Delegate)value);
-                
+
             }
             return new ObjectKvc(value);
         }
@@ -173,7 +173,15 @@ namespace funcscript
 
         const string TAB = "  ";
         private const int BREAK_LINE_THRUSHOLD = 80;
-
+        public static bool IsAttomicType(object val)
+        {
+            return val==null ||
+                val is bool ||
+                    val is int ||
+                    val is long ||
+                    val is double ||
+                    val is string;
+        }
         /// <summary>
         /// Formats a value into string
         /// </summary>
@@ -182,10 +190,12 @@ namespace funcscript
         /// <param name="format">Optional formatting parameter </param>
         /// <param name="asFuncScriptLiteral">Format as FuncScript literal</param>
         /// <param name="asJsonLiteral">Format as JSON literal</param>
-        public static void Format(StringBuilder sb, object val, string format=null,
-            bool asFuncScriptLiteral=false,
-            bool asJsonLiteral=false)
+        public static void Format(StringBuilder sb, object val, string format = null,
+            bool asFuncScriptLiteral = false,
+            bool asJsonLiteral = false)
         {
+            
+               
             Format("", sb, val, format,asFuncScriptLiteral,asJsonLiteral,true);
         }
         static String TestFormat(object val, string format = null,
