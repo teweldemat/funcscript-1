@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 
 namespace funcscript
 {
@@ -129,7 +130,40 @@ namespace funcscript
                 return new DelegateFunction((Delegate)value);
 
             }
+            if(value is JToken)
+            {
+                return collect((JToken)value);
+            }
+            if (value is JsonElement)
+            {
+                return collect((JsonElement)value);
+            }
             return new ObjectKvc(value);
+        }
+        static object collect(JsonElement el)
+        {
+            switch(el.ValueKind)
+            {
+                case JsonValueKind.Array:
+                    return new FsList(el.EnumerateArray().Select(x => collect(x)).ToArray());
+                case JsonValueKind.String:
+                    return el.GetString();
+                case JsonValueKind.Object:
+                    return new SimpleKeyValueCollection(el.EnumerateObject().Select(x=>
+                    new KeyValuePair<string,object>(x.Name,collect(x.Value))
+                    ).ToArray());
+                case JsonValueKind.Number:
+                    return el.GetDouble();
+                case JsonValueKind.Null:
+                    return null;
+                case JsonValueKind.False:
+                    return false;
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.Undefined:
+                    return null;
+            }
+            return null;
         }
         static object collect(JToken obj)
         {
