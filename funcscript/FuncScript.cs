@@ -99,6 +99,7 @@ namespace funcscript
             {
                 return new FsList(value);
             }
+            
             if (value == null
                 || value is bool || value is long || value is Guid || value is string  //simple dataa
                 || value is DateTime
@@ -110,7 +111,10 @@ namespace funcscript
             {
                 return value; ;
             }
-
+            if(value is decimal)
+            {
+                return (double)(decimal)value;
+            }
             if (value is int || value is short || value is byte) //we use only int32 and int64
             {
                 return Convert.ToInt32(value);
@@ -446,7 +450,7 @@ namespace funcscript
             }
             if (asJsonLiteral || asFuncScriptLiteral)
                 sb.Append("\"");
-            sb.Append(val.ToString());
+            sb.Append(val.ToString().Replace("\"","\\\""));
             if (asJsonLiteral || asFuncScriptLiteral)
                 sb.Append("\"");
         }

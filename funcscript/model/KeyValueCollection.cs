@@ -45,7 +45,8 @@ namespace funcscript.model
         /// <returns></returns>
         public object ConvertTo(Type t)
         {
-            return Newtonsoft.Json.JsonConvert.DeserializeObject(this.ToString(),t);
+            var json = this.ToString();
+            return Newtonsoft.Json.JsonConvert.DeserializeObject(json,t);
         }
         /// <summary>
         /// Returns list of all Key-Value-Pairs in the KVC
