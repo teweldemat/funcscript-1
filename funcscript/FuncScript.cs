@@ -14,7 +14,22 @@ namespace funcscript
 {
     public static class FuncScript
     {
-
+        static HashSet<Type> _useJson;
+        static Newtonsoft.Json.JsonSerializerSettings _nsSetting;
+        static FuncScript()
+        {
+            _nsSetting = new Newtonsoft.Json.JsonSerializerSettings
+            {
+                ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver()
+            };
+            _useJson = new HashSet<Type>(); 
+        }
+        public static void NormalizeUsingJson<T>()
+        {
+            var t=typeof(T);    
+            if (!_useJson.Contains(t))
+                _useJson.Add(t);
+        }
         static object FromJToken(JToken p)
         {
             object val;
@@ -141,6 +156,12 @@ namespace funcscript
             if (value is JsonElement)
             {
                 return collect((JsonElement)value);
+            }
+            if (_useJson.Contains(value.GetType()))
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(value, _nsSetting);
+                var obj = FuncScript.Evaluate(json);
+                return obj;
             }
             return new ObjectKvc(value);
         }
