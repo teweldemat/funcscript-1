@@ -28,29 +28,31 @@ namespace funcscript.funcs.text
                 return null;
             var str = par0.ToString();
             object par1;
-            string format=null;
-            if (pars.Count>1 && (par1 = pars[1])!=null)
+            string format = null;
+            if (pars.Count > 1 && (par1 = pars[1]) != null)
             {
                 format = pars[1].ToString();
             }
             if (format == null)
                 return str;
-            switch(format)
+            switch (format)
             {
                 case "hex":
-                    if(str.StartsWith("0x"))
+                    if (str.StartsWith("0x"))
                         return Convert.ToInt32(str, 16);
-                    return Convert.ToInt32("0x"+str, 16);
+                    return Convert.ToInt32("0x" + str, 16);
+                case "l":
+                    return Convert.ToInt64(str);
             }
             return str;
         }
 
         public string ParName(int index)
         {
-            switch(index)
+            switch (index)
             {
                 case 0: return "text";
-                case 1:return "format";
+                case 1: return "format";
             }
             return null;
         }
