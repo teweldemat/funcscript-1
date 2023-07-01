@@ -508,7 +508,7 @@ namespace funcscript
                 return FSDataType.Function;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
-        internal static bool IsNumeric(object val)
+        public static bool IsNumeric(object val)
         {
             return val is int || val is double || val is long;
         }
