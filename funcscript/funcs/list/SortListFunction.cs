@@ -3,29 +3,30 @@ using funcscript.model;
 
 namespace funcscript.funcs.list
 {
-    public class FilterListFunction : IFsFunction
+    public class SortListFunction : IFsFunction
     {
         public int MaxParsCount => 2;
 
         public CallType CallType => CallType.Prefix;
 
-        public string Symbol => "Filter";
+        public string Symbol => "Sort";
 
         public int Precidence => 0;
-        class FilterListFuncPar : IParameterList
+
+        class SortListFuncPar : IParameterList
         {
             public object X;
-            public object I;
+            public object Y;
             public object this[int index]
             {
                 get
                 {
-                    switch (index)
+                    return index switch
                     {
-                        case 0: return X;
-                        case 1: return I;
-                    }
-                    return null;
+                        0 => X,
+                        1 => Y,
+                        _ => null,
+                    };
                 }
             }
 
@@ -39,35 +40,37 @@ namespace funcscript.funcs.list
             var par1 = pars[1];
             if (par0 == null)
                 return null;
-            if (!(par0 is FsList))
+            if (par0 is not FsList)
                 throw new error.TypeMismatchError($"{this.Symbol} function: first paramter should be {this.ParName(0)}");
-            if (!(par1 is IFsFunction))
+            if (par1 is not IFsFunction)
                 throw new error.TypeMismatchError($"{this.Symbol} function: second paramter should be {this.ParName(1)}");
-            var func = par1 as IFsFunction;
-            if (func == null)
+
+            if (par1 is not IFsFunction func)
                 throw new error.TypeMismatchError($"{this.Symbol} function: second paramter didn't evaluate to a function");
+
             var lst = (FsList)par0;
-            var res = new List<object>();
-            for (int i = 0; i < lst.Data.Length; i++)
+            var res = new List<object>(lst.Data);
+
+            res.Sort((x, y) =>
             {
-                var val = func.Evaluate(parent, new FilterListFuncPar { X = lst.Data[i], I = i });
-                if ((val is bool) && (bool)val)
-                    res.Add(lst.Data[i]);
-            }
+                var result = func.Evaluate(parent, new SortListFuncPar { X = x, Y = y });
+                if (!(result is int))
+                    throw new error.EvaluationTimeException($"{this.Symbol} function: sorting function must return an integer");
+
+                return (int)result;
+            });
+
             return new FsList(res);
         }
 
         public string ParName(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0:
-                    return "List";
-                case 1:
-                    return "Filter Function";
-                default:
-                    return "";
-            }
+                0 => "List",
+                1 => "Sorting Function",
+                _ => "",
+            };
         }
     }
 }
