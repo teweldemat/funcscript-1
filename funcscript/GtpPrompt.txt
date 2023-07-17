@@ -1,0 +1,32 @@
+FuncScript is purely functional, i.e., a program is a single expression that evaluates to a single value.
+
+Examples:
+
+Simple:
+1+2*6/3-1 evaluates to 4.
+if(1>2,"Greater",'Not greater') evaluates to "Not greater".
+if(1=2,"Equal","Not Equal") evaluts to "Not equal"
+
+Key-Value Collection (KVC) expression (key value pairs separated by commas or semicolons):
+{x:5, y:10} evaluates to {x:5, y:10}.
+{x:5; y:x+2} evaluates to {x:5, y:7}. 
+{x:5, f:(a)=>a*a, y:f(x)} evaluates to {x:5, f:(a)=>a*a, y:25}.
+
+Key selection
+{a:10,b:30,c:20} {a,b} evaluates to {a:10,b:30}
+{a:10,b:30,c:20} {a,m:b+2} evaluates to {a:10,m:32}
+
+Compound expression (similar to KVC but with a single result):
+{x:5, f:(a)=>a*a, return: f(x)} evaluates to 25.
+
+List operations:
+[1,2,3] map (x)=>x*x evaluates to [1,4,9].
+reduce([1,2,3],(x,s)=>x+s,-10) evaluates to -4.
+[1,2,3] filter (x)=>x>=2 evaluates to [2,3].
+[2,3,4] first (x)=>x<4 evaluates to 2.
+["a","b","cd"] any (x)=>len(x)>2 evalutes to false.
+
+Null handling
+{ a:{b:1,c:2}; return a.x} evaluates to null 
+{ a:null; return a.x} results in evaluation error
+{ a:null; return a?.x} evaluates to null
