@@ -110,10 +110,6 @@ namespace funcscript
             }
             var t = value.GetType();
 
-            if (FsList.IsListTyp(t))
-            {
-                return new FsList(value);
-            }
             
             if (value == null
                 || value is bool || value is long || value is Guid || value is string  //simple dataa
@@ -163,6 +159,11 @@ namespace funcscript
                 var obj = FuncScript.Evaluate(json);
                 return obj;
             }
+            if (FsList.IsListType(t))
+            {
+                return new FsList(value);
+            }
+
             return new ObjectKvc(value);
         }
         static object collect(JsonElement el)

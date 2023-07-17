@@ -1,12 +1,6 @@
 ﻿using funcscript.core;
 using funcscript.model;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace funcscript.funcs.math
 {
@@ -27,27 +21,28 @@ namespace funcscript.funcs.math
 
             int c = pars.Count;
             FsList? list;
-            if (c < 1 || (list = pars[0] as FsList)==null)
+            if (c < 1 || (list = pars[0] as FsList) == null)
                 throw new funcscript.error.TypeMismatchError($"{this.Symbol}: list expected");
-            String? separtor;
-            if (c < 2 || (separtor = pars[1] as String) == null)
+            String? separator;
+            if (c < 2 || (separator = pars[1] as String) == null)
                 throw new funcscript.error.TypeMismatchError($"{this.Symbol}: separator expected");
-
 
             for (int i = 0; i < list.Data.Length; i++)
             {
-
                 var o = list.Data[i];
-                if (sb.Length > 0)
-                    sb.Append(separtor);
-                sb.Append(o==null?"":o.ToString());
+                if (o != null)
+                {
+                    if (sb.Length > 0)
+                        sb.Append(separator);
+                    sb.Append(o.ToString());
+                }
             }
             return sb.ToString();
         }
 
         public string ParName(int index)
         {
-            switch(index)
+            switch (index)
             {
                 case 0:
                     return "List";
