@@ -1,7 +1,6 @@
 ﻿using funcscript.core;
 using funcscript.error;
 using funcscript.model;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace funcscript.block
@@ -15,7 +14,7 @@ namespace funcscript.block
         {
             get
             {
-                var ret=index < 0 || index >= Parameters.Length ? null : Parameters[index].Evaluate(_provider);
+                var ret = index < 0 || index >= Parameters.Length ? null : Parameters[index].Evaluate(_provider);
                 if (DefaultFsDataProvider.Trace)
                 {
                     DefaultFsDataProvider.WriteTraceLine($"Par {index} - {ret}");
@@ -29,10 +28,10 @@ namespace funcscript.block
         public override object Evaluate(IFsDataProvider provider)
         {
             _provider = provider;
-            var func=Function.Evaluate(provider);
+            var func = Function.Evaluate(provider);
             if (func is IFsFunction)
             {
-                string fn=null;
+                string fn = null;
                 if (DefaultFsDataProvider.Trace)
                 {
                     DefaultFsDataProvider.IncreateTraceIndent();
@@ -55,11 +54,11 @@ namespace funcscript.block
                 {
                     throw;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     throw new error.EvaluationException(this.Pos, this.Length, ex);
                 }
-                
+
             }
             else if (func is FsList)
             {
@@ -89,7 +88,22 @@ namespace funcscript.block
                 }
                 return ret;
             }
-            throw new EvaluationException(this.Pos,this.Length,
+            else if (func is KeyValueCollection collection)
+            {
+                var index = this[0];
+
+                object ret;
+                if (index is string key)
+                {
+                    var kvc = collection;
+                    var value = kvc.Get(key);
+                    return value;
+                }
+                else
+                    ret = null;
+                return ret;
+            }
+            throw new EvaluationException(this.Pos, this.Length,
                 new TypeMismatchError($"Function part didn't evaluate to a function or a list. {FuncScript.GetFsDataType(func)}"));
 
 
@@ -108,17 +122,17 @@ namespace funcscript.block
         public override string AsExpString(IFsDataProvider provider)
         {
             string infix = null;
-            if(this.Function is ReferenceBlock)
+            if (this.Function is ReferenceBlock)
             {
                 var f = provider.GetData(((ExpressionBlock)this.Function).ToString().ToLower()) as IFsFunction;
-                if(f!=null && f.CallType==CallType.Infix)
+                if (f != null && f.CallType == CallType.Infix)
                 {
                     infix = f.Symbol;
                 }
             }
             else if (this.Function is LiteralBlock)
             {
-                var f=((LiteralBlock)this.Function).Value as IFsFunction;
+                var f = ((LiteralBlock)this.Function).Value as IFsFunction;
                 if (f != null && f.CallType == CallType.Infix)
                 {
                     infix = f.Symbol;

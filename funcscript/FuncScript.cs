@@ -8,12 +8,28 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 
 namespace funcscript
 {
     public static class FuncScript
     {
-     
+        static HashSet<Type> _useJson;
+        static Newtonsoft.Json.JsonSerializerSettings _nsSetting;
+        static FuncScript()
+        {
+            _nsSetting = new Newtonsoft.Json.JsonSerializerSettings
+            {
+                ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver()
+            };
+            _useJson = new HashSet<Type>(); 
+        }
+        public static void NormalizeUsingJson<T>()
+        {
+            var t=typeof(T);    
+            if (!_useJson.Contains(t))
+                _useJson.Add(t);
+        }
         static object FromJToken(JToken p)
         {
             object val;
@@ -26,7 +42,7 @@ namespace funcscript
                 case JTokenType.Array:
                     var jarr = (JArray)p;
                     object[] a = new object[jarr.Count];
-                    for (int i = 0; i<a.Length; i++)
+                    for (int i = 0; i < a.Length; i++)
                         a[i] = FromJToken(jarr[i]);
                     return new FsList(a);
                 case JTokenType.Constructor:
@@ -66,7 +82,7 @@ namespace funcscript
         static KeyValueCollection FromJObject(JObject jobj)
         {
             var pairs = new List<KeyValuePair<string, object>>();
-            foreach(var p in jobj)
+            foreach (var p in jobj)
             {
                 pairs.Add(new KeyValuePair<string, object>(p.Key, FromJToken(p.Value)));
             }
@@ -75,7 +91,7 @@ namespace funcscript
         }
         public static object FromJson(String json)
         {
-            var t=Newtonsoft.Json.Linq.JToken.Parse(json);
+            var t = Newtonsoft.Json.Linq.JToken.Parse(json);
             return FromJToken(t);
         }
         /// <summary>
@@ -87,17 +103,14 @@ namespace funcscript
         {
             if (value == null)
                 return null;
-            
-            if(value is byte[])
+
+            if (value is byte[])
             {
                 return value;
             }
             var t = value.GetType();
 
-            if (FsList.IsListTyp(t))
-            {
-                return new FsList(value);
-            }
+            
             if (value == null
                 || value is bool || value is long || value is Guid || value is string  //simple dataa
                 || value is DateTime
@@ -109,7 +122,10 @@ namespace funcscript
             {
                 return value; ;
             }
-
+            if(value is decimal)
+            {
+                return (double)(decimal)value;
+            }
             if (value is int || value is short || value is byte) //we use only int32 and int64
             {
                 return Convert.ToInt32(value);
@@ -124,12 +140,56 @@ namespace funcscript
             {
                 return value.ToString();
             }
-            if(value is Delegate)
+            if (value is Delegate)
             {
                 return new DelegateFunction((Delegate)value);
-                
+
             }
+            if(value is JToken)
+            {
+                return collect((JToken)value);
+            }
+            if (value is JsonElement)
+            {
+                return collect((JsonElement)value);
+            }
+            if (_useJson.Contains(value.GetType()))
+            {
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(value, _nsSetting);
+                var obj = FuncScript.Evaluate(json);
+                return obj;
+            }
+            if (FsList.IsListType(t))
+            {
+                return new FsList(value);
+            }
+
             return new ObjectKvc(value);
+        }
+        static object collect(JsonElement el)
+        {
+            switch(el.ValueKind)
+            {
+                case JsonValueKind.Array:
+                    return new FsList(el.EnumerateArray().Select(x => collect(x)).ToArray());
+                case JsonValueKind.String:
+                    return el.GetString();
+                case JsonValueKind.Object:
+                    return new SimpleKeyValueCollection(el.EnumerateObject().Select(x=>
+                    new KeyValuePair<string,object>(x.Name,collect(x.Value))
+                    ).ToArray());
+                case JsonValueKind.Number:
+                    return el.GetDouble();
+                case JsonValueKind.Null:
+                    return null;
+                case JsonValueKind.False:
+                    return false;
+                case JsonValueKind.True:
+                    return true;
+                case JsonValueKind.Undefined:
+                    return null;
+            }
+            return null;
         }
         static object collect(JToken obj)
         {
@@ -173,7 +233,15 @@ namespace funcscript
 
         const string TAB = "  ";
         private const int BREAK_LINE_THRUSHOLD = 80;
-
+        public static bool IsAttomicType(object val)
+        {
+            return val==null ||
+                val is bool ||
+                    val is int ||
+                    val is long ||
+                    val is double ||
+                    val is string;
+        }
         /// <summary>
         /// Formats a value into string
         /// </summary>
@@ -182,10 +250,12 @@ namespace funcscript
         /// <param name="format">Optional formatting parameter </param>
         /// <param name="asFuncScriptLiteral">Format as FuncScript literal</param>
         /// <param name="asJsonLiteral">Format as JSON literal</param>
-        public static void Format(StringBuilder sb, object val, string format=null,
-            bool asFuncScriptLiteral=false,
-            bool asJsonLiteral=false)
+        public static void Format(StringBuilder sb, object val, string format = null,
+            bool asFuncScriptLiteral = false,
+            bool asJsonLiteral = false)
         {
+            
+               
             Format("", sb, val, format,asFuncScriptLiteral,asJsonLiteral,true);
         }
         static String TestFormat(object val, string format = null,
@@ -402,7 +472,7 @@ namespace funcscript
             }
             if (asJsonLiteral || asFuncScriptLiteral)
                 sb.Append("\"");
-            sb.Append(val.ToString());
+            sb.Append(val.ToString().Replace("\"","\\\""));
             if (asJsonLiteral || asFuncScriptLiteral)
                 sb.Append("\"");
         }
@@ -421,6 +491,8 @@ namespace funcscript
                 return FSDataType.Boolean;
             if (value is int)
                 return FSDataType.Integer;
+            if (value is double)
+                return FSDataType.Float;
             if (value is long)
                 return FSDataType.BigInteger;
             if (value is Guid)
@@ -437,7 +509,7 @@ namespace funcscript
                 return FSDataType.Function;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
-        internal static bool IsNumeric(object val)
+        public static bool IsNumeric(object val)
         {
             return val is int || val is double || val is long;
         }
@@ -453,7 +525,7 @@ namespace funcscript
             {
                 if (v2 is long)
                 {
-                    v1out = Convert.ToUInt64(v1);
+                    v1out = Convert.ToInt64(v1);
                     v2out = v2;
                     return true;
                 }
@@ -475,7 +547,7 @@ namespace funcscript
                 if (v2 is int)
                 {
                     v1out = v1;
-                    v2out = Convert.ToUInt64(v2);
+                    v2out = Convert.ToInt64(v2);
                     return true;
                 }
                 if (v2 is double)
@@ -524,6 +596,17 @@ namespace funcscript
         {
             return Evaluate(expression, new DefaultFsDataProvider(),null,ParseMode.Standard);
         }
+
+        public static T ConvertFromFSObject<T>(object obj) where T:class
+        {
+            if(obj is KeyValueCollection)
+            {
+                return (T)((KeyValueCollection)obj).ConvertTo(typeof(T));
+            }
+            if (obj is null)
+                return null;
+            return (T)obj;
+        }
         public static object EvaluateSpaceSeparatedList(string expression)
         {
             return Evaluate(expression, new DefaultFsDataProvider(), null, ParseMode.SpaceSeparatedList);
@@ -539,7 +622,8 @@ namespace funcscript
         public enum ParseMode
         {
             Standard,
-            SpaceSeparatedList
+            SpaceSeparatedList,
+            FsTemplate
         }
         public static object Evaluate(string expression, IFsDataProvider provider,object vars,ParseMode mode)
         {
@@ -556,6 +640,9 @@ namespace funcscript
                     break;
                 case ParseMode.SpaceSeparatedList:
                     return core.FuncScriptParser.ParseSpaceSepratedList(provider, expression, serrors);
+                case ParseMode.FsTemplate:
+                    exp= core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
+                    break;
                 default:
                     exp=null;
                     break;
@@ -581,6 +668,8 @@ namespace funcscript
                 throw new EvaluationException(msg, ex.Pos, ex.Len, ex.InnerException);
             }
         }
+
+        
 
 
     }

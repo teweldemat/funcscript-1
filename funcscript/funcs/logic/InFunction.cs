@@ -25,8 +25,7 @@ namespace funcscript.funcs.logic
                 throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
             var par0 = pars[0];
             var par1 = pars[1];
-
-            if (par0 == null || par1 == null)
+            if (par1 == null)
                 return null;
 
             if (!(par1 is FsList))
@@ -47,9 +46,13 @@ namespace funcscript.funcs.logic
                     left = par0;
                     right = val;
                 }
+                if (left == null && right == null)
+                    return true;
+                if (left == null || right == null)
+                    return false;
                 if (left.GetType() != right.GetType())
                     continue;
-                if(left.Equals(right))
+                if (left.Equals(right))
                 return true;
             }
             return false;

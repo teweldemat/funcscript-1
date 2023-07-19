@@ -24,9 +24,8 @@ namespace funcscript.model
                 if (s_typeInfos.TryGetValue(t, out var info))
                     return info;
                 var tinfo = new TypeInfo();
-                foreach (var prop in t.GetProperties())
+                foreach (var prop in t.GetProperties().Where(p => p.CanRead && p.GetMethod.GetParameters().Length == 0))
                 {
-                    if (prop.GetMethod.GetParameters().Length == 0)
                         tinfo.Properties.Add(prop.Name.ToLower(), new PropInfo { Name = prop.Name, Prop = prop });
                 }
                 foreach (var field in t.GetFields())

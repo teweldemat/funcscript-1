@@ -96,7 +96,15 @@ namespace funcscript.model
                     _data = new object[l.Count];
                     for (int i = 0; i < l.Count; i++)
                         _data[i] = FuncScript.NormalizeDataType(l[i]);
-                } 
+                }
+                else if (t.IsAssignableTo(typeof(System.Collections.IEnumerable)))
+                {
+                    var l = (System.Collections.IEnumerable)data;
+                    var list = new List<object>();
+                    foreach (var o in l)
+                        list.Add(FuncScript.NormalizeDataType(o));
+                    _data = list.ToArray();
+                }
                 else
                 {
                     throw new error.TypeMismatchError($"{t} can't be used as list");
@@ -104,8 +112,8 @@ namespace funcscript.model
             }
         }
 
-        public static bool IsListTyp(Type t) =>
-            t.IsAssignableTo(typeof(System.Collections.IList)) || IsGenericList(t);
+        public static bool IsListType(Type t) =>
+            t.IsAssignableTo(typeof(System.Collections.IEnumerable)) || t.IsAssignableTo(typeof(System.Collections.IList)) || IsGenericList(t);
         static bool IsGenericList(Type t)
         {
             return t != typeof(byte[]) && t.IsGenericType && (t.GetGenericTypeDefinition().IsAssignableTo(typeof(IList<>))

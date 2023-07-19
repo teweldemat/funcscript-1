@@ -1,4 +1,6 @@
 ﻿using funcscript.block;
+using funcscript.funcs.math;
+using System.Collections.Generic;
 using System.Text;
 
 namespace funcscript.core
@@ -64,7 +66,9 @@ namespace funcscript.core
             }
         }
         static String[] s_SingleLetterOps = new String[] { "+", "*", "-", "/", "^", ">", "<", "%", "=" };
-        static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??", "?!" };
+        static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??", "?!", "?." };
+        
+        
 
         const string KW_RETURN = "return";
         static HashSet<string> s_KeyWords;
@@ -524,6 +528,7 @@ namespace funcscript.core
             }
             return index;
         }
+        
 
         static int GetReturnDefinition(IFsDataProvider context, String exp, int index, out ExpressionBlock retExp, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
@@ -564,13 +569,40 @@ namespace funcscript.core
             if (i == index)
                 return index;
             int i2;
+            var sb = new StringBuilder();
             while (true)
             {
-                i2 = GetLiteralMatch(exp, i, $"\\{delimator}");
+                i2 = GetLiteralMatch(exp, i, @"\n");
                 if (i2 > i)
+                {
                     i = i2;
+                    sb.Append('\n');
+                    continue;
+                }
+                i2 = GetLiteralMatch(exp, i, @"\t");
+                if (i2 > i)
+                {
+                    i = i2;
+                    sb.Append('\t');
+                    continue;
+                }
+                i2 = GetLiteralMatch(exp, i, @"\\");
+                if (i2 > i)
+                {
+                    i = i2;
+                    sb.Append('\\');
+                    continue;
+                }
+
+                i2 = GetLiteralMatch(exp, i, $@"\{delimator}");
+                if (i2 > i)
+                {
+                    sb.Append(delimator);
+                    i = i2;
+                }
                 if (i >= exp.Length || GetLiteralMatch(exp, i, delimator) > i)
                     break;
+                sb.Append(exp[i]);
                 i++;
             }
             i2 = GetLiteralMatch(exp, i, delimator);
@@ -580,7 +612,7 @@ namespace funcscript.core
                 return index;
             }
             i = i2;
-            str = exp.Substring(index + 1, i - index - 2).Replace($"\\{delimator}", delimator);
+            str = sb.ToString();
             parseNode = new ParseNode(ParseNodeType.LiteralString, index, i - index);
             return i;
 
@@ -595,14 +627,18 @@ namespace funcscript.core
             return GetStringTemplate(provider, "'", exp, index, out prog, out parseNode, serrors);
         }
 
-        static int GetStringTemplate(IFsDataProvider provider, String delimator, string exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        static int GetStringTemplate(IFsDataProvider provider,String delimator,string exp, int index, out ExpressionBlock prog,out ParseNode parseNode,List<SyntaxErrorData> serrors)
         {
+
+            
+
             parseNode = null;
             prog = null;
             var parts = new List<ExpressionBlock>();
             var nodeParts = new List<ParseNode>();
+            
 
-            var i = GetLiteralMatch(exp, index, delimator);
+            var i = GetLiteralMatch(exp, index, $"f{delimator}");
             if (i == index)
                 return index;
             var lastIndex = i;
@@ -632,18 +668,18 @@ namespace funcscript.core
                     continue;
                 }
 
-                i2 = GetLiteralMatch(exp, i, $"\\{delimator}");
+                i2 = GetLiteralMatch(exp, i, $@"\{delimator}");
                 if (i2 > i)
                 {
                     i = i2;
                     sb.Append(delimator);
                     continue;
                 }
-                i2 = GetLiteralMatch(exp, i, "\\{");
+                i2 = GetLiteralMatch(exp, i, @"\{");
                 if (i2 > i)
                 {
                     i = i2;
-                    sb.Append('{');
+                    sb.Append("{");
                     continue;
                 }
                 i2 = GetLiteralMatch(exp, i, "{");
@@ -1028,11 +1064,18 @@ namespace funcscript.core
         }
         static int GetMemberAccess(IFsDataProvider context, ExpressionBlock source, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
+            var i2=GetMemberAccess(context,".",source,exp, index, out prog, out parseNode, serrors);
+            if(i2==index)
+                return GetMemberAccess(context, "?.", source, exp, index, out prog, out parseNode, serrors);
+            return i2;
+        }
+        static int GetMemberAccess(IFsDataProvider context, string oper, ExpressionBlock source, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
             parseNode = null;
             prog = null;
             var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, ".");
-            if (i2 == i)
+            var i2 = GetLiteralMatch(exp, i, oper);
+            if(i2==i)
                 return index;
             i = i2;
             i = SkipSpace(exp, i);
@@ -1045,7 +1088,7 @@ namespace funcscript.core
             i = i2;
             prog = new FunctionCallExpression
             {
-                Function = new LiteralBlock(context.GetData(".")),
+                Function = new LiteralBlock(context.GetData(oper)),
                 Parameters = new ExpressionBlock[] { source, new LiteralBlock(member) },
                 Pos = source.Pos,
                 Length = i - source.Pos
@@ -1054,14 +1097,20 @@ namespace funcscript.core
         }
         static int GetFunctionCallParametersList(IFsDataProvider context, ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
-            //syntax (<param expresion>[,<param expresion]*)
+            var i = GetFunctionCallParametersList(context, "(", ")", func, exp, index, out prog, out parseNode, serrors);
+            if (i == index)
+                return GetFunctionCallParametersList(context, "[", "]", func, exp, index, out prog, out parseNode, serrors);
+            return i;
+        }
+        static int GetFunctionCallParametersList(IFsDataProvider context, String openBrance, String closeBrance, ExpressionBlock func, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
             parseNode = null;
             prog = null;
 
             //make sure we have open brace
-            var i = SkipSpace(exp, index);
-            var i2 = GetLiteralMatch(exp, i, "(");
-            if (i == i2)
+            var i=SkipSpace(exp, index);
+            var i2 = GetLiteralMatch(exp, i, openBrance);
+            if (i==i2)
                 return index;//we didn't find '('
             i = i2;
             var pars = new List<ExpressionBlock>();
@@ -1077,7 +1126,7 @@ namespace funcscript.core
                 do
                 {
                     i2 = SkipSpace(exp, i);
-                    if (i2 >= exp.Length || exp[i2++] != ',') //stop colletion paramters if there is no ','
+                    if (i2 >= exp.Length || exp[i2++] != ',') //stop collection of paramters if there is no ','
                         break;
                     i = i2;
                     i = SkipSpace(exp, i);
@@ -1095,11 +1144,15 @@ namespace funcscript.core
             }
 
             i = SkipSpace(exp, i);
-            if (i >= exp.Length || exp[i++] != ')')
+            i2 = GetLiteralMatch(exp, i, closeBrance);
+            if (i2 == i)
             {
-                serrors.Add(new SyntaxErrorData(i, 0, "')' expected"));
+                serrors.Add(new SyntaxErrorData(i, 0, $"'{closeBrance}' expected"));
                 return index;
             }
+            i = i2;
+
+
             prog = new FunctionCallExpression
             {
                 Function = func,
@@ -1165,13 +1218,25 @@ namespace funcscript.core
             int i;
 
             //get string
-            i = GetStringTemplate(provider, exp, index, out var template, out nodeUnit, serrors);
+            i = GetStringTemplate(provider, exp, index, out var template,out nodeUnit,serrors);
             if (i > index)
             {
+                parseNode = nodeUnit;
                 prog = template;
                 prog.Pos = index;
                 prog.Length = i - index;
+                return i;
+
+            }
+
+            //get string 
+            i = GetSimpleString(exp, index, out var str, out nodeUnit, serrors);
+            if (i > index)
+            {
                 parseNode = nodeUnit;
+                prog = new LiteralBlock(str);
+                prog.Pos = index;
+                prog.Length = i - index;
                 return i;
 
             }
@@ -1378,6 +1443,98 @@ namespace funcscript.core
             parseNode = new ParseNode(ParseNodeType.InfixExpression, index, i - index, parseNodes);
             return i;
         }
+        public static int GetFSTemplate(IFsDataProvider provider, string exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            parseNode = null;
+            prog = null;
+            var parts = new List<ExpressionBlock>();
+            var nodeParts = new List<ParseNode>();
+            
+            var i = index;
+            var sb = new StringBuilder();
+            int i2;
+            var lastIndex = i;
+            while (true)
+            {
+                i2 = GetLiteralMatch(exp, i, "$${");
+                if (i2 >i)
+                {
+                    sb.Append("${");
+                    i = i2;
+                }
+                
+                i2 = GetLiteralMatch(exp, i, "${");
+                if (i2 > i)
+                {
+                    if (sb.Length > 0)
+                    {
+                        parts.Add(new LiteralBlock(sb.ToString()));
+                        nodeParts.Add(new ParseNode(ParseNodeType.LiteralString, lastIndex, i - lastIndex));
+                        sb = new StringBuilder();
+                    }
+                    i = i2;
+
+                    i = SkipSpace(exp, i);
+                    i2 = GetExpression(provider, exp, i, out var expr, out var nodeExpr, serrors);
+                    if (i2 == i)
+                    {
+                        serrors.Add(new SyntaxErrorData(i, 0, "expression expected"));
+                        return index;
+                    }
+                    i = SkipSpace(exp, i);
+
+                    parts.Add(expr);
+                    nodeParts.Add(nodeExpr);
+                    i = i2;
+                    
+                    i2 = GetLiteralMatch(exp, i, "}");
+                    if (i2 == i)
+                    {
+                        serrors.Add(new SyntaxErrorData(i, 0, "'}' expected"));
+                        return index;
+                    }
+                    i = i2;
+                    lastIndex = i;
+                    if (i < exp.Length)
+                        continue;
+                    else
+                        break;
+                }
+                sb.Append(exp[i]);
+                i++;
+                if (i == exp.Length)
+                    break;
+            }
+            if (sb.Length > 0)
+            {
+                parts.Add(new LiteralBlock(sb.ToString()));
+                nodeParts.Add(new ParseNode(ParseNodeType.LiteralString, lastIndex, i - lastIndex));
+            }
+
+            if (parts.Count == 0)
+            {
+                prog = new LiteralBlock("");
+                parseNode = new ParseNode(ParseNodeType.LiteralString, index, i - index);
+            }
+            if (parts.Count == 1)
+            {
+                prog = parts[0];
+                parseNode = nodeParts[0];
+            }
+            else
+            {
+                prog = new FunctionCallExpression
+                {
+                    Function = new LiteralBlock(provider.GetData(TemplateMergeMergeFunction.SYMBOL)),
+                    Parameters = parts.ToArray()
+
+                };
+                parseNode = new ParseNode(ParseNodeType.StringTemplate, index, i - index, nodeParts);
+            }
+
+            return i;
+
+        }
         public static ExpressionBlock Parse(IFsDataProvider context, String exp, List<SyntaxErrorData> serrors)
         {
             return Parse(context, exp, out var node, serrors);
@@ -1389,12 +1546,21 @@ namespace funcscript.core
             var i = GetSpaceSepratedStringListExpression(context, exp, 0, out var prog, out var parseNode, serrors);
             return prog;
         }
+        public static ExpressionBlock ParseFsTemplate(IFsDataProvider context, String exp, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            var i = GetFSTemplate(context, exp, 0,out var block, out parseNode, serrors);
+            return block;
+        }
         public static ExpressionBlock Parse(IFsDataProvider context, String exp, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
             if (DefaultFsDataProvider.Trace)
                 DefaultFsDataProvider.WriteTraceLine($"Parsing {exp}");
             var i = GetExpression(context, exp, 0, out var prog, out parseNode, serrors);
             return prog;
+        }
+        public static ExpressionBlock ParseFsTemplate(IFsDataProvider context, String exp, List<SyntaxErrorData> serrors)
+        {
+            return ParseFsTemplate(context, exp, out var node, serrors);
         }
     }
 }

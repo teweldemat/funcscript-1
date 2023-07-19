@@ -3,6 +3,7 @@ using funcscript.model;
 using funcscript.error;
 using NUnit.Framework;
 using System;
+using System.Numerics;
 
 namespace funcscript.test
 {
@@ -120,8 +121,8 @@ namespace funcscript.test
         [TestCase("\"12\"+3", "123")]
         [TestCase("\"a\\\"b\"", "a\"b")]
 
-        [TestCase("{x:5; return \"a{x}b\"; }", "a5b")]
-        [TestCase("{x:5; return \"a\\{x}b\"; }", "a{x}b")]
+        [TestCase("{x:5; return f\"a{x}b\"; }", "a5b")]
+        [TestCase("{x:5; return f\"a\\{x}b\"; }", "a{x}b")]
 
         [TestCase("{return 3}",3)] //single white space
         [TestCase("{return\t3}", 3)] //tab white space
@@ -217,7 +218,20 @@ namespace funcscript.test
             Assert.IsTrue(res is double, ".net data type not double");
             Assert.AreEqual((double)res,double.Parse(exp));
         }
-        
+
+        [Test]
+        [TestCase(@"''","")]
+        [TestCase(@"'\n'", "\n")]
+        [TestCase(@"'\t'", "\t")]
+        [TestCase(@"'\\n'", @"\n")]
+        public void TesStringParser(string exp,string expected)
+        {
+
+            var res = AssertSingleResultType(exp, typeof(string));
+            Assert.IsTrue(res is string, ".net data type not string");
+            Assert.AreEqual(expected, (string)res);
+        }
+
         [Test]
         [TestCase("12.E2+2", "1202")]
         [TestCase("12.0E2+2", "1202")]
@@ -340,6 +354,15 @@ return j;
             
             Assert.IsNull(FuncScript.Evaluate("null map (x)=>x"));
             Assert.IsNull(FuncScript.Evaluate("y map (x)=>x"));
+        }
+
+        [TestCase(null,"3 in null")]
+        [TestCase(true, "3 in [2,3]")]
+        [TestCase(false, "null in [2,3]")]
+        [TestCase(false, "null in [2,null]")]
+        public void InFunction(object expected,string exp)
+        {
+            Assert.AreEqual(expected, FuncScript.Evaluate(exp));
         }
         
     }
