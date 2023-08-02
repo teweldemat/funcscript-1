@@ -19,11 +19,16 @@ namespace funcscript.sql
                 SqlInt32 sqlInt32 => sqlInt32.Value,
                 SqlInt64 sqlInt64 => sqlInt64.Value,
                 SqlSingle sqlSingle => sqlSingle.Value,
-                SqlString sqlString => sqlString.Value,
+                SqlString sqlString => RemoveNullBytes(sqlString.Value),
                 SqlMoney sqlMoney => sqlMoney.Value,
+                string str => RemoveNullBytes(str),
                 _ => obj,
             };
         }
 
+        private static string RemoveNullBytes(string str)
+        {
+            return str.Replace("\0", string.Empty);
+        }
     }
 }
