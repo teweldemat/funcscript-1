@@ -2,11 +2,6 @@
 using funcscript.error;
 using funcscript.model;
 using Newtonsoft.Json.Linq;
-using System.Buffers.Text;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -22,11 +17,11 @@ namespace funcscript
             {
                 ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver()
             };
-            _useJson = new HashSet<Type>(); 
+            _useJson = new HashSet<Type>();
         }
         public static void NormalizeUsingJson<T>()
         {
-            var t=typeof(T);    
+            var t = typeof(T);
             if (!_useJson.Contains(t))
                 _useJson.Add(t);
         }
@@ -110,7 +105,7 @@ namespace funcscript
             }
             var t = value.GetType();
 
-            
+
             if (value == null
                 || value is bool || value is long || value is Guid || value is string  //simple dataa
                 || value is DateTime
@@ -122,7 +117,7 @@ namespace funcscript
             {
                 return value; ;
             }
-            if(value is decimal)
+            if (value is decimal)
             {
                 return (double)(decimal)value;
             }
@@ -140,14 +135,14 @@ namespace funcscript
             {
                 return value.ToString();
             }
-            if (value is Delegate)
+            if (value is Delegate @delegate)
             {
-                return new DelegateFunction((Delegate)value);
+                return new DelegateFunction(@delegate);
 
             }
-            if(value is JToken)
+            if (value is JToken token)
             {
-                return collect((JToken)value);
+                return collect(token);
             }
             if (value is JsonElement)
             {
@@ -168,28 +163,20 @@ namespace funcscript
         }
         static object collect(JsonElement el)
         {
-            switch(el.ValueKind)
+            return el.ValueKind switch
             {
-                case JsonValueKind.Array:
-                    return new FsList(el.EnumerateArray().Select(x => collect(x)).ToArray());
-                case JsonValueKind.String:
-                    return el.GetString();
-                case JsonValueKind.Object:
-                    return new SimpleKeyValueCollection(el.EnumerateObject().Select(x=>
-                    new KeyValuePair<string,object>(x.Name,collect(x.Value))
-                    ).ToArray());
-                case JsonValueKind.Number:
-                    return el.GetDouble();
-                case JsonValueKind.Null:
-                    return null;
-                case JsonValueKind.False:
-                    return false;
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.Undefined:
-                    return null;
-            }
-            return null;
+                JsonValueKind.Array => new FsList(el.EnumerateArray().Select(x => collect(x)).ToArray()),
+                JsonValueKind.String => el.GetString(),
+                JsonValueKind.Object => new SimpleKeyValueCollection(el.EnumerateObject().Select(x =>
+                                    new KeyValuePair<string, object>(x.Name, collect(x.Value))
+                                    ).ToArray()),
+                JsonValueKind.Number => el.GetDouble(),
+                JsonValueKind.Null => null,
+                JsonValueKind.False => false,
+                JsonValueKind.True => true,
+                JsonValueKind.Undefined => null,
+                _ => null,
+            };
         }
         static object collect(JToken obj)
         {
@@ -235,7 +222,7 @@ namespace funcscript
         private const int BREAK_LINE_THRUSHOLD = 80;
         public static bool IsAttomicType(object val)
         {
-            return val==null ||
+            return val == null ||
                 val is bool ||
                     val is int ||
                     val is long ||
@@ -254,9 +241,9 @@ namespace funcscript
             bool asFuncScriptLiteral = false,
             bool asJsonLiteral = false)
         {
-            
-               
-            Format("", sb, val, format,asFuncScriptLiteral,asJsonLiteral,true);
+
+
+            Format("", sb, val, format, asFuncScriptLiteral, asJsonLiteral, true);
         }
         static String TestFormat(object val, string format = null,
             bool asFuncScriptLiteral = false,
@@ -269,14 +256,14 @@ namespace funcscript
         static void Format(String indent, StringBuilder sb, object val,
             string format,
             bool asFuncScriptLiteral,
-            bool asJsonLiteral,bool adaptiveLineBreak)
+            bool asJsonLiteral, bool adaptiveLineBreak)
         {
             if (val == null)
             {
                 sb.Append("null");
                 return;
             }
-            if(val is ByteArray)
+            if (val is ByteArray)
             {
                 if (asFuncScriptLiteral || asFuncScriptLiteral)
                     sb.Append("");
@@ -289,7 +276,7 @@ namespace funcscript
             {
                 var list = (FsList)val;
                 bool useLineBreak = false;
-                if(adaptiveLineBreak)
+                if (adaptiveLineBreak)
                 {
                     var test = TestFormat(val, format, asFuncScriptLiteral, asJsonLiteral);
                     useLineBreak = test.Length > BREAK_LINE_THRUSHOLD;
@@ -297,21 +284,21 @@ namespace funcscript
                 sb.Append($"[");
                 if (list.Data.Length > 0)
                 {
-                    if(useLineBreak)
+                    if (useLineBreak)
                         sb.Append($"\n{indent}{TAB}");
                     else
                         sb.Append($" ");
-                    Format($"{indent}{TAB}", sb, list.Data[0], format, asFuncScriptLiteral, asJsonLiteral,adaptiveLineBreak);
+                    Format($"{indent}{TAB}", sb, list.Data[0], format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
                     for (int i = 1; i < list.Data.Length; i++)
                     {
-                        if(useLineBreak)
+                        if (useLineBreak)
                             sb.Append($",\n{indent}{TAB}");
                         else
                             sb.Append($", ");
                         Format($"{indent}{TAB}", sb, list.Data[i], format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
                     }
                 }
-                if(useLineBreak)
+                if (useLineBreak)
                     sb.Append($"\n{indent}]");
                 else
                     sb.Append($" ]");
@@ -327,7 +314,7 @@ namespace funcscript
                 }
 
                 var kv = (KeyValueCollection)val;
-                if(useLineBreak)
+                if (useLineBreak)
                     sb.Append($"{{\n");
                 else
                     sb.Append("{ ");
@@ -335,11 +322,11 @@ namespace funcscript
                 if (pairs.Count > 0)
                 {
                     var pair = pairs[0];
-                    if(useLineBreak)
+                    if (useLineBreak)
                         sb.Append($"{indent}{TAB}\"{pair.Key}\":");
                     else
                         sb.Append($"\"{pair.Key}\":");
-                    Format($"{indent}{TAB}", sb, pair.Value, format, asFuncScriptLiteral, asJsonLiteral,adaptiveLineBreak);
+                    Format($"{indent}{TAB}", sb, pair.Value, format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
                     for (int i = 1; i < pairs.Count; i++)
                     {
                         if (useLineBreak)
@@ -348,20 +335,20 @@ namespace funcscript
                             sb.Append(", ");
 
                         pair = pairs[i];
-                        if(useLineBreak)
+                        if (useLineBreak)
                             sb.Append($"{indent}{TAB}\"{pair.Key}\":");
                         else
                             sb.Append($"\"{pair.Key}\":");
                         Format($"{indent}{TAB}", sb, pair.Value, format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
                     }
                 }
-                if(useLineBreak)
+                if (useLineBreak)
                     sb.Append($"\n{indent}}}");
                 else
                     sb.Append("}");
                 return;
             }
-            if(val is bool)
+            if (val is bool)
             {
                 sb.Append((bool)val ? "true" : "false");
                 return;
@@ -388,7 +375,7 @@ namespace funcscript
                     sb.Append("L");
                 return;
             }
-            if(val is double)
+            if (val is double)
             {
                 if (format == null)
                     sb.Append(val.ToString());
@@ -435,8 +422,8 @@ namespace funcscript
                 {
                     sb.Append("\"");
                     foreach (var ch in (string)val)
-                    { 
-                        switch(ch)
+                    {
+                        switch (ch)
                         {
                             case '\n':
                                 sb.Append(@"\n");
@@ -451,7 +438,7 @@ namespace funcscript
                                 sb.Append(@"\""");
                                 break;
                             case '{':
-                                if(asFuncScriptLiteral)
+                                if (asFuncScriptLiteral)
                                     sb.Append(@"\{");
                                 else
                                     sb.Append(@"{");
@@ -472,7 +459,7 @@ namespace funcscript
             }
             if (asJsonLiteral || asFuncScriptLiteral)
                 sb.Append("\"");
-            sb.Append(val.ToString().Replace("\"","\\\""));
+            sb.Append(val.ToString().Replace("\"", "\\\""));
             if (asJsonLiteral || asFuncScriptLiteral)
                 sb.Append("\"");
         }
@@ -505,7 +492,7 @@ namespace funcscript
                 return FSDataType.List;
             if (value is KeyValueCollection)
                 return FSDataType.KeyValueCollection;
-            if(value is IFsFunction)
+            if (value is IFsFunction)
                 return FSDataType.Function;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
@@ -591,15 +578,15 @@ namespace funcscript
                 return false;
             }
         }
-        
+
         public static object Evaluate(string expression)
         {
-            return Evaluate(expression, new DefaultFsDataProvider(),null,ParseMode.Standard);
+            return Evaluate(expression, new DefaultFsDataProvider(), null, ParseMode.Standard);
         }
 
-        public static T ConvertFromFSObject<T>(object obj) where T:class
+        public static T ConvertFromFSObject<T>(object obj) where T : class
         {
-            if(obj is KeyValueCollection)
+            if (obj is KeyValueCollection)
             {
                 return (T)((KeyValueCollection)obj).ConvertTo(typeof(T));
             }
@@ -611,13 +598,13 @@ namespace funcscript
         {
             return Evaluate(expression, new DefaultFsDataProvider(), null, ParseMode.SpaceSeparatedList);
         }
-        public static object EvaluateWithVars(string expression,object vars)
+        public static object EvaluateWithVars(string expression, object vars)
         {
             return Evaluate(expression, new DefaultFsDataProvider(), vars, ParseMode.Standard);
         }
         public static object Evaluate(IFsDataProvider providers, string expression)
         {
-            return Evaluate(expression, providers, null,ParseMode.Standard);
+            return Evaluate(expression, providers, null, ParseMode.Standard);
         }
         public enum ParseMode
         {
@@ -625,9 +612,9 @@ namespace funcscript
             SpaceSeparatedList,
             FsTemplate
         }
-        public static object Evaluate(string expression, IFsDataProvider provider,object vars,ParseMode mode)
+        public static object Evaluate(string expression, IFsDataProvider provider, object vars, ParseMode mode)
         {
-            if(vars!=null)
+            if (vars != null)
             {
                 provider = new KvcProvider(new ObjectKvc(vars), provider);
             }
@@ -636,23 +623,23 @@ namespace funcscript
             switch (mode)
             {
                 case ParseMode.Standard:
-                    exp= core.FuncScriptParser.Parse(provider, expression, serrors);
+                    exp = core.FuncScriptParser.Parse(provider, expression, serrors);
                     break;
                 case ParseMode.SpaceSeparatedList:
                     return core.FuncScriptParser.ParseSpaceSepratedList(provider, expression, serrors);
                 case ParseMode.FsTemplate:
-                    exp= core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
+                    exp = core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
                     break;
                 default:
-                    exp=null;
+                    exp = null;
                     break;
             }
-            
+
             if (exp == null)
                 throw new error.SyntaxError(serrors);
             return Evaluate(exp, expression, provider, vars);
         }
-        public static object Evaluate(ExpressionBlock exp, string expression,IFsDataProvider provider, object vars)
+        public static object Evaluate(ExpressionBlock exp, string expression, IFsDataProvider provider, object vars)
         {
             try
             {
@@ -669,7 +656,7 @@ namespace funcscript
             }
         }
 
-        
+
 
 
     }
