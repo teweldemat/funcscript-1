@@ -2,7 +2,7 @@
 
 namespace funcscript.sql
 {
-    internal class FuncScriptSql
+    public class FuncScriptSql
     {
         internal static object? NormalizeDataType(object obj)
         {

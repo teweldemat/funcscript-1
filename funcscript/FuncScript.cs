@@ -415,46 +415,53 @@ namespace funcscript
                     sb.Append(((double)val).ToString(format));
                 return;
             }
-            if (val is string)
+            if (val is string valStr)
             {
                 if (asJsonLiteral || asFuncScriptLiteral)
 
                 {
                     sb.Append("\"");
-                    foreach (var ch in (string)val)
+                    foreach (var ch in valStr)
                     {
-                        switch (ch)
+                        if (char.IsControl(ch)) // check if it's a control character
                         {
-                            case '\n':
-                                sb.Append(@"\n");
-                                break;
-                            case '\r':
-                                sb.Append(@"\r");
-                                break;
-                            case '\t':
-                                sb.Append(@"\t");
-                                break;
-                            case '"':
-                                sb.Append(@"\""");
-                                break;
-                            case '{':
-                                if (asFuncScriptLiteral)
-                                    sb.Append(@"\{");
-                                else
-                                    sb.Append(@"{");
-                                break;
-                            case '\\':
-                                sb.Append(@"\\");
-                                break;
-                            default:
-                                sb.Append(ch);
-                                break;
+                            sb.Append("\\u" + ((int)ch).ToString("x4")); // append it in \uxxxx form
+                        }
+                        else
+                        {
+                            switch (ch)
+                            {
+                                case '\n':
+                                    sb.Append(@"\n");
+                                    break;
+                                case '\r':
+                                    sb.Append(@"\r");
+                                    break;
+                                case '\t':
+                                    sb.Append(@"\t");
+                                    break;
+                                case '"':
+                                    sb.Append(@"\""");
+                                    break;
+                                case '{':
+                                    if (asFuncScriptLiteral)
+                                        sb.Append(@"\{");
+                                    else
+                                        sb.Append(@"{");
+                                    break;
+                                case '\\':
+                                    sb.Append(@"\\");
+                                    break;
+                                default:
+                                    sb.Append(ch);
+                                    break;
+                            }
                         }
                     }
                     sb.Append("\"");
                 }
                 else
-                    sb.Append((string)val);
+                    sb.Append(valStr);
                 return;
             }
             if (asJsonLiteral || asFuncScriptLiteral)
