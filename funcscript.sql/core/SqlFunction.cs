@@ -2,7 +2,7 @@
 using funcscript.model;
 using System.Data.SqlClient;
 
-namespace funcscript.sql
+namespace funcscript.sql.core
 {
     public class SqlFunction : IFsFunction
     {
@@ -17,10 +17,10 @@ namespace funcscript.sql
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars[0] is not string connectionStr)
-                throw new InvalidOperationException($"{this.Symbol} - {ParName(0)} is required");
+                throw new InvalidOperationException($"{Symbol} - {ParName(0)} is required");
 
             if (pars[1] is not string query)
-                throw new InvalidOperationException($"{this.Symbol} - {ParName(1)} is required");
+                throw new InvalidOperationException($"{Symbol} - {ParName(1)} is required");
 
             using var conn = new SqlConnection(connectionStr);
             conn.Open();
