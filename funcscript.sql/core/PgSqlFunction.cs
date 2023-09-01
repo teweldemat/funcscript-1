@@ -1,16 +1,16 @@
 ﻿using funcscript.core;
 using funcscript.model;
-using System.Data.SqlClient;
+using Npgsql;
 
 namespace funcscript.sql.core
 {
-    public class SqlFunction : IFsFunction
+    public class PgSqlFunction : IFsFunction
     {
         public int MaxParsCount => 3;
 
         public CallType CallType => CallType.Prefix;
 
-        public string Symbol => "sql";
+        public string Symbol => "pgsql";
 
         public int Precidence => 0;
 
@@ -22,10 +22,10 @@ namespace funcscript.sql.core
             if (pars[1] is not string query)
                 throw new InvalidOperationException($"{Symbol} - {ParName(1)} is required");
 
-            using var conn = new SqlConnection(connectionStr);
+            using var conn = new NpgsqlConnection(connectionStr);
             conn.Open();
 
-            using var cmd = new SqlCommand(query, conn);
+            using var cmd = new NpgsqlCommand(query, conn);
             cmd.CommandTimeout = 0;
 
             if (pars.Count > 2 && pars[2] is not null)
