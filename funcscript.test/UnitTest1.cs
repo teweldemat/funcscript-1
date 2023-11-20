@@ -42,14 +42,14 @@ namespace funcscript.test
         public static object AssertSingleResult(string expStr)
         {
             var p = new DefaultFsDataProvider();
-            var ret=FuncScript.Evaluate(p,expStr);
+            var ret = FuncScript.Evaluate(p, expStr);
             Assert.AreEqual(ret, FuncScript.NormalizeDataType(ret));
             return ret;
         }
         public static object AssertSingleResultType(string expStr, System.Type type)
         {
             var p = new DefaultFsDataProvider();
-            var res=FuncScript.Evaluate(p,expStr);
+            var res = FuncScript.Evaluate(p, expStr);
             Assert.AreEqual(res, FuncScript.NormalizeDataType(res));
 
             if (type == null)
@@ -64,24 +64,24 @@ namespace funcscript.test
         void ShouldReturnEmpty(string expStr)
         {
             var p = new DefaultFsDataProvider();
-            var res=FuncScript.Evaluate(p,expStr);
-            Assert.IsTrue(res == null , $"Must returl empty result, got {res}");
+            var res = FuncScript.Evaluate(p, expStr);
+            Assert.IsTrue(res == null, $"Must returl empty result, got {res}");
         }
 
         [Test]
         public void TestConstant()
         {
             int val = 1;
-            var res=AssertSingleResultType($"{val}", typeof(int));
-            Assert.IsTrue(res!=null && (int)res== val,"Incorrect result");
+            var res = AssertSingleResultType($"{val}", typeof(int));
+            Assert.IsTrue(res != null && (int)res == val, "Incorrect result");
         }
         [Test]
-        [TestCase("12",12)]
+        [TestCase("12", 12)]
         [TestCase("12.", 12.0)]
         [TestCase("12.0", 12.0)]
         [TestCase("12e1", 120)]
         [TestCase("12.0e1", 120.0)]
-        
+
         [TestCase("-12", -12)]
         [TestCase("-12.", -12.0)]
         [TestCase("-12.0", -12.0)]
@@ -100,21 +100,21 @@ namespace funcscript.test
         [TestCase("5/2", 2)]
         [TestCase("1.0+5", 6.0)]
         [TestCase("5+1/2", 5)]
-        [TestCase("1+2+3",6)]
+        [TestCase("1+2+3", 6)]
         [TestCase("(1+2+3)+5", 11)]
         [TestCase("1+2*3", 7)]
         [TestCase("1+2*3+4", 11)]
         [TestCase("\"a\"+\"b\"+3+\"c\"", "ab3c")]
         [TestCase("If(1=0,1,\n3)", 3)] //ignores line feed
-        [TestCase("{r:2; return R;}",2)] //ignore cases
+        [TestCase("{r:2; return R;}", 2)] //ignore cases
         [TestCase("{r:(a)=>A*A; return R(2);}", 4)] //ignore cases
         [TestCase("{R:(a)=>A*A; return r(2);}", 4)] //ignore cases
-        public void TestNumberAndStringParsing(string exp,object val)
+        public void TestNumberAndStringParsing(string exp, object val)
         {
             var res = AssertSingleResultType(exp, val.GetType());
-            Assert.AreEqual(val,res);
+            Assert.AreEqual(val, res);
         }
-        
+
         [Test]
         [TestCase("\"12\"+\"34\"", "1234")]
         [TestCase("3+\"12\"", "312")]
@@ -124,7 +124,7 @@ namespace funcscript.test
         [TestCase("{x:5; return f\"a{x}b\"; }", "a5b")]
         [TestCase("{x:5; return f\"a\\{x}b\"; }", "a{x}b")]
 
-        [TestCase("{return 3}",3)] //single white space
+        [TestCase("{return 3}", 3)] //single white space
         [TestCase("{return\t3}", 3)] //tab white space
         [TestCase("{return\n3}", 3)] //line break
         [TestCase("{return\r3}", 3)] //line fee
@@ -132,7 +132,7 @@ namespace funcscript.test
         public void TestStringConcatenation(string exp, object val)
         {
             var res = AssertSingleResultType(exp, val.GetType());
-            Assert.AreEqual(val,res );
+            Assert.AreEqual(val, res);
         }
 
         [Test]
@@ -143,9 +143,9 @@ namespace funcscript.test
         [TestCase("FAlse", false)]
         public void KeyWordLiteralLiterals(string exp, object val)
         {
-            var res = AssertSingleResultType(exp, val==null?null:val.GetType());
-            if(val==null)
-                Assert.IsNull(res , "Incorrect result");
+            var res = AssertSingleResultType(exp, val == null ? null : val.GetType());
+            if (val == null)
+                Assert.IsNull(res, "Incorrect result");
             else
                 Assert.IsTrue(res != null && res.Equals(val), "Incorrect result");
         }
@@ -153,7 +153,7 @@ namespace funcscript.test
         [Test]
         public void TestOverflow()
         {
-            Assert.Throws<error.SyntaxError>( ()=>
+            Assert.Throws<error.SyntaxError>(() =>
             {
                 FuncScript.Evaluate($"{long.MaxValue}0");
             });
@@ -186,7 +186,7 @@ namespace funcscript.test
         {
 
             var res = AssertSingleResultType("Reduce(Map([1,2,4],(x)=>x*x),(c,p)=>p+c)", typeof(int));
-            Assert.AreEqual(1*1+2*2+4*4 , res);
+            Assert.AreEqual(1 * 1 + 2 * 2 + 4 * 4, res);
         }
         [Test]
         public void SumListWthInitial()
@@ -202,7 +202,7 @@ namespace funcscript.test
             var res = AssertSingleResultType("[1,2,4]", typeof(FsList));
             Assert.IsTrue(res is FsList, ".net data type not ListData");
         }
-        
+
         [Test]
         [TestCase("12.3")]
         [TestCase("-12.3")]
@@ -216,15 +216,15 @@ namespace funcscript.test
 
             var res = AssertSingleResultType(exp, typeof(double));
             Assert.IsTrue(res is double, ".net data type not double");
-            Assert.AreEqual((double)res,double.Parse(exp));
+            Assert.AreEqual((double)res, double.Parse(exp));
         }
 
         [Test]
-        [TestCase(@"''","")]
+        [TestCase(@"''", "")]
         [TestCase(@"'\n'", "\n")]
         [TestCase(@"'\t'", "\t")]
         [TestCase(@"'\\n'", @"\n")]
-        public void TesStringParser(string exp,string expected)
+        public void TesStringParser(string exp, string expected)
         {
 
             var res = AssertSingleResultType(exp, typeof(string));
@@ -236,7 +236,7 @@ namespace funcscript.test
         [TestCase("12.E2+2", "1202")]
         [TestCase("12.0E2+2", "1202")]
         [TestCase("12.0E-2+2", "2.12")]
-        public void TesDoubleParser(string exp,double resVal)
+        public void TesDoubleParser(string exp, double resVal)
         {
 
             var res = AssertSingleResultType(exp, typeof(double));
@@ -249,7 +249,7 @@ namespace funcscript.test
         {
 
             var res = AssertSingleResultType("{x:{\"a\":23}; return x.a;}", typeof(int));
-            Assert.IsTrue(res!=null && (int)res== 23, "Incorrect result");
+            Assert.IsTrue(res != null && (int)res == 23, "Incorrect result");
         }
 
         [Test]
@@ -257,7 +257,7 @@ namespace funcscript.test
         {
             int val_a = 3;
             var res = AssertSingleResultType($"((a)=>a*a+a)({val_a})", typeof(int));
-            Assert.IsTrue((int)res== val_a*val_a+val_a,"Incorrect result");
+            Assert.IsTrue((int)res == val_a * val_a + val_a, "Incorrect result");
         }
 
         [Test]
@@ -265,7 +265,7 @@ namespace funcscript.test
         {
             int val_a = 3;
             var res = AssertSingleResultType($"{{x:{val_a};return x*x;}}", typeof(int));
-            Assert.IsTrue(res!=null && (int)res== val_a * val_a , "Incorrect result");
+            Assert.IsTrue(res != null && (int)res == val_a * val_a, "Incorrect result");
         }
         [Test]
         public void TestNullFuncCall()
@@ -280,18 +280,18 @@ namespace funcscript.test
         [TestCase("2-1", 1)] //simple subtraction
         [TestCase("1/2", 0)]
         [TestCase("If(1=0,10,5-1)", 4)]
-        [TestCase("((a)=>a*a)(3)",9)]
-        
-    [TestCase(
+        [TestCase("((a)=>a*a)(3)", 9)]
+
+        [TestCase(
 @"{
     x:3;
     return x*x+{return 2;};
-}",3*3+2)]
+}", 3 * 3 + 2)]
         [TestCase(
 @"{
     x:(a)=>a*a;
     return x(3);
-}", 3 * 3 )]
+}", 3 * 3)]
         [TestCase(
 @"{j:{
 		""age"":30,
@@ -305,64 +305,70 @@ return j.parts.x;
 @"{j:(a)=>a*a;
 return j;
 }(4)", 16)]
-[TestCase(
+        [TestCase(
 @"{b:{""x"":(a)=>a*a};
 	return (b.x)(2);
 }", 4)]
         [TestCase(
 @"{return (x)=>3;}(3)", 3)]
-        public void IntResultTest(string expStr,int expectedRes)
+        public void IntResultTest(string expStr, int expectedRes)
         {
             var res = AssertSingleResultType(expStr, typeof(int));
-            Assert.AreEqual(expectedRes,res);
+            Assert.AreEqual(expectedRes, res);
         }
 
         [Test]
         public void TestSpread()
         {
             var res = AssertSingleResultType("Select({'a':1,'b':2},{'b':5,'c':8})", typeof(KeyValueCollection));
-            var expected= FuncScript.Evaluate(null,"{'a':1,'b':5,'c':8}");
-            Assert.AreEqual(expected,res);
+            var expected = FuncScript.Evaluate(null, "{'a':1,'b':5,'c':8}");
+            Assert.AreEqual(expected, res);
         }
 
         [Test]
         public void TestDotnetObject()
         {
-            var res = new ObjectKvc(new { a = 1,b=5,c=8});
-            var expected = FuncScript.Evaluate(null,"{'a':1,'b':5,'c':8}");
+            var res = new ObjectKvc(new { a = 1, b = 5, c = 8 });
+            var expected = FuncScript.Evaluate(null, "{'a':1,'b':5,'c':8}");
             Assert.AreEqual(expected, res);
         }
         [Test]
         public void TestSpread2()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(g,"Select({'a':1,'b':5,'c':8},{'a':null,'b':null})");
-            var expected = new ObjectKvc(new { a = 1, b = 5});
+            var res = FuncScript.Evaluate(g, "Select({'a':1,'b':5,'c':8},{'a':null,'b':null})");
+            var expected = new ObjectKvc(new { a = 1, b = 5 });
             Assert.AreEqual(expected, res);
         }
         [Test]
         public void TestIdenKey()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(g,"Select({a:3,b:4},{a,c:5})");
+            var res = FuncScript.Evaluate(g, "Select({a:3,b:4},{a,c:5})");
             var expected = new ObjectKvc(new { a = 3, c = 5 });
             Assert.AreEqual(expected, res);
         }
         [Test]
         public void MapNull()
         {
-            
+
             Assert.IsNull(FuncScript.Evaluate("null map (x)=>x"));
             Assert.IsNull(FuncScript.Evaluate("y map (x)=>x"));
         }
 
-        [TestCase(null,"3 in null")]
+        [TestCase(null, "3 in null")]
         [TestCase(true, "3 in [2,3]")]
         [TestCase(false, "null in [2,3]")]
         [TestCase(false, "null in [2,null]")]
-        public void InFunction(object expected,string exp)
+        public void InFunction(object expected, string exp)
         {
             Assert.AreEqual(expected, FuncScript.Evaluate(exp));
+        }
+        [Test]
+        public void LambdaFunctionCaseIssue()
+        {
+            var exp = "((X)=>X)('t')";
+            Assert.AreEqual("t", FuncScript.Evaluate(exp));
         }
         
     }
