@@ -137,11 +137,22 @@ namespace funcscript.test
         //}
 
         [Test]
+        [TestCase("case 30", 30)]
         [TestCase("case 1>2:1, 2>3:2, 10",10)]
         [TestCase("case 1>2:1, 2>1:2, 10", 2)]
         [TestCase("case 1>2:1, 10", 10)]
         [TestCase("(case 1>2:[1], [10])[0]", 10)]
         public void CaseExpression(string exp,object expected)
+        {
+            Assert.AreEqual(expected, FuncScript.Evaluate(exp));
+        }
+
+        [Test]
+        [TestCase("switch 30", null)]
+        [TestCase("switch 4, 1:'a', 2:'b', 4:'c'", "c")]
+        [TestCase("switch 4, 1:'a', 2:'b', 3:'c'", null)]
+        [TestCase("switch 4, 1:'a', 2:'b', 3:'c','that'", "that")]
+        public void SwtichExpression(string exp, object expected)
         {
             Assert.AreEqual(expected, FuncScript.Evaluate(exp));
         }
