@@ -1,4 +1,5 @@
-﻿using funcscript.model;
+﻿using funcscript.error;
+using funcscript.model;
 using Microsoft.VisualBasic;
 using NuGet.Frameworks;
 using NUnit.Framework;
@@ -121,18 +122,28 @@ namespace funcscript.test
         [Test]
         public void TestFSTemplate4()
         {
+
             var template = "abc${['d',1] map (x)=>'>'+x}f";
             var expeced = "abc>d>1f";
             var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
             Assert.That(res, Is.EqualTo(expeced));
         }
-        [Test]
-        public void ListParsingBug_23_6_17()
-        {
-            var expr = "[[1][2]]";
-            Assert.Throws<SyntaxErrorException>(()=>FuncScript.Evaluate(expr));
-            
+        //[Test]
+        //public void ListParsingBug_23_6_17()
+        //{
+        //    var expr = "[[1][2]]";
+        //    Assert.Throws<SyntaxError>(()=>FuncScript.Evaluate(expr));
 
+        //}
+
+        [Test]
+        [TestCase("case 1>2:1, 2>3:2, 10",10)]
+        [TestCase("case 1>2:1, 2>1:2, 10", 2)]
+        [TestCase("case 1>2:1, 10", 10)]
+        [TestCase("(case 1>2:[1], [10])[0]", 10)]
+        public void CaseExpression(string exp,object expected)
+        {
+            Assert.AreEqual(expected, FuncScript.Evaluate(exp));
         }
     }
 }

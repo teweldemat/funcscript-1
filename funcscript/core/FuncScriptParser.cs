@@ -2,6 +2,7 @@
 using funcscript.funcs.math;
 using System.Collections.Generic;
 using System.Text;
+using System.Xml.Serialization;
 
 namespace funcscript.core
 {
@@ -30,7 +31,8 @@ namespace funcscript.core
             KeyValuePair,
             KeyValueCollection,
             List,
-            Key
+            Key,
+            Case
         }
 
         public class SyntaxErrorData
@@ -71,6 +73,7 @@ namespace funcscript.core
         
 
         const string KW_RETURN = "return";
+        const string KW_CASE = "case";
         static HashSet<string> s_KeyWords;
         static FuncScriptParser()
         {
@@ -1062,6 +1065,74 @@ namespace funcscript.core
             parseNode = new ParseNode(ParseNodeType.Comment, index, i - index);
             return i;
         }
+        static int GetCaseExpression(IFsDataProvider context, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            prog = null;
+            parseNode = null;
+            var i = index;
+            var i2 = GetLiteralMatch(exp,i, KW_CASE);
+            if(i2==i) 
+                return index;
+            i = SkipSpace(exp, i2);
+            var pars = new List<ExpressionBlock>();
+            var childNodes = new List<ParseNode>();
+            do
+            {
+                if (pars.Count == 0)
+                {
+
+                    i2 = GetExpression(context, exp, i, out var part1, out var part1Node, serrors);
+                    if (i2 == i)
+                    {
+                        serrors.Add(new SyntaxErrorData(i, 1, "Case condition expected"));
+                        return index;
+                    }
+                    pars.Add(part1);
+                    childNodes.Add(part1Node);
+                    i = SkipSpace(exp, i2);
+                }
+                else
+                {
+                    i2 = GetLiteralMatch(exp, i, ",", ";");
+                    if (i2 == i)
+                        break;
+                    i = SkipSpace(exp, i2);
+                    i2 = GetExpression(context, exp, i, out var part1, out var part1Node, serrors);
+                    if (i2 == i)
+                        break;
+                    pars.Add(part1);
+                    childNodes.Add(part1Node);
+                    i = SkipSpace(exp, i2);
+                }
+
+                i2 = GetLiteralMatch(exp, i, ":");
+                if(i2==i)
+                {
+                    break;
+                }
+
+                i = SkipSpace(exp, i2);
+                i2 = GetExpression(context, exp, i, out var part2, out var part2Node, serrors);
+                if(i2==i)
+                {
+                    serrors.Add(new SyntaxErrorData(i, 1, "Case value expected"));
+                    return index;
+                }
+                pars.Add(part2);
+                childNodes.Add(part2Node);
+                i = SkipSpace(exp, i2);
+            } while (true);
+            prog = new FunctionCallExpression
+            {
+                Function = new LiteralBlock(context.GetData(KW_CASE)),
+                Pos = index,
+                Length = i - index,
+                Parameters = pars.ToArray(),
+            };
+            parseNode = new ParseNode(ParseNodeType.Case, index, index - i);
+            parseNode.Childs = childNodes;
+            return i;
+        }
         static int GetMemberAccess(IFsDataProvider context, ExpressionBlock source, String exp, int index, out ExpressionBlock prog, out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
             var i2=GetMemberAccess(context,".",source,exp, index, out prog, out parseNode, serrors);
@@ -1275,16 +1346,16 @@ namespace funcscript.core
                 prog.Length = i - index;
                 return i;
             }
-            //expression collection
-            /*i = GetExpressionCollection(provider, exp, index, out var col);
+            
+            i = GetCaseExpression(provider, exp, i, out var caseExp, out var caseNode, serrors);
             if (i > index)
             {
-                prog = col;
+                parseNode = caseNode;
+                prog = caseExp;
                 prog.Pos = index;
                 prog.Length = i - index;
                 return i;
-            }*/
-
+            }
 
             //expression function
             i = GetLambdaExpression(provider, exp, index, out var ef, out nodeUnit, serrors);

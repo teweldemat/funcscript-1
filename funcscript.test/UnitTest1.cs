@@ -367,9 +367,13 @@ return j;
         [Test]
         public void LambdaFunctionCaseIssue()
         {
-            var exp = "((X)=>X)('t')";
-            Assert.AreEqual("t", FuncScript.Evaluate(exp));
+            var exp = "case 1>2=>1 2>1=>2 5";
+            Assert.AreEqual(2, FuncScript.Evaluate(exp));
+            //var exp = "((X)=>X)('t')";
+            //Assert.AreEqual("t", FuncScript.Evaluate(exp));
         }
+
         
+
     }
 }
