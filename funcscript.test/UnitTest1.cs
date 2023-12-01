@@ -367,13 +367,25 @@ return j;
         [Test]
         public void LambdaFunctionCaseIssue()
         {
-            var exp = "case 1>2=>1 2>1=>2 5";
-            Assert.AreEqual(2, FuncScript.Evaluate(exp));
-            //var exp = "((X)=>X)('t')";
-            //Assert.AreEqual("t", FuncScript.Evaluate(exp));
+            var exp = "((X)=>X)('t')";
+            Assert.AreEqual("t", FuncScript.Evaluate(exp));
+        }
+        [Test]
+        public void EmptyKeyValueCollection()
+        {
+            var exp = "{}";
+            var res = FuncScript.Evaluate(exp) as KeyValueCollection;
+            Assert.IsNotNull(res);
+            Assert.That(res.GetAll().Count,Is.EqualTo(0));
         }
 
-        
-
+        [Test]
+        public void EmptyList()
+        {
+            var exp = "[]";
+            var res = FuncScript.Evaluate(exp) as FsList;
+            Assert.IsNotNull(res);
+            Assert.That(res.Data.Length, Is.EqualTo(0));
+        }
     }
 }

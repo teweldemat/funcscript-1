@@ -872,8 +872,8 @@ namespace funcscript.core
                 return index;//we didn't find '{'
 
             var kvs = new List<KvcExpression.KeyValueExpression>();
-            i = SkipSpace(exp, i);
             var nodeItems = new List<ParseNode>();
+            /*i = SkipSpace(exp, i);
             var i2 = GetKvcItem(context, exp, i, out var firstItem, out var nodeFirstItem);
             if (i2 == i)
             {
@@ -883,14 +883,19 @@ namespace funcscript.core
 
             kvs.Add(firstItem);
             nodeItems.Add(nodeFirstItem);
-            i = i2;
+            
+            i = i2;*/
+            int i2;
             do
             {
                 i = SkipSpace(exp, i);
-                i2 = GetLiteralMatch(exp, i, ",", ";");
-                if (i2 == i)
-                    break;
-                i = i2;
+                if (kvs.Count > 0)
+                {
+                    i2 = GetLiteralMatch(exp, i, ",", ";");
+                    if (i2 == i)
+                        break;
+                    i = i2;
+                }
 
                 i = SkipSpace(exp, i);
                 i2 = GetKvcItem(context, exp, i, out var otherItem, out var nodeOtherItem);
