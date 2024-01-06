@@ -364,6 +364,17 @@ return j;
         {
             Assert.AreEqual(expected, FuncScript.Evaluate(exp));
         }
+
+        [Test]
+        public void NegativeOperatorBug()
+
+        {
+            var exp = @"{
+x:-5;
+return -x;
+}";         var res = FuncScript.Evaluate(exp);
+            Assert.AreEqual(5, res);
+        }
         
     }
 }
