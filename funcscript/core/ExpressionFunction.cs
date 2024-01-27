@@ -29,7 +29,7 @@ namespace funcscript.core
             this.ParamterNameIndex = new Dictionary<String, int>();
             var i = 0;
             foreach(var n in pars)
-                this.ParamterNameIndex.Add(n,i++);
+                this.ParamterNameIndex.Add(n.ToLower(),i++);
         }
         public int MaxParsCount => Parameters.Length;
         public CallType CallType => CallType.Infix;
