@@ -249,6 +249,15 @@ d";
             Assert.IsTrue(sb.ToString().Contains("AbC"));
 
         }
+        [Test]
+        public void IndexKvcSensitivyBug()
+        {
+            var exp = @"{
+'A':5
+}['A']";
+            var res = FuncScript.Evaluate(exp);
+            Assert.AreEqual(5, res);  
+        }
     }
 
 }
