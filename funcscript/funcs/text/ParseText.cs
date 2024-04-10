@@ -43,6 +43,8 @@ namespace funcscript.funcs.text
                     return Convert.ToInt32("0x" + str, 16);
                 case "l":
                     return Convert.ToInt64(str);
+                case "fs":
+                    return FuncScript.Evaluate(parent, str);
             }
             return str;
         }
