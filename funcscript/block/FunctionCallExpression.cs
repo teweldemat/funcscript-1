@@ -96,7 +96,7 @@ namespace funcscript.block
                 if (index is string key)
                 {
                     var kvc = collection;
-                    var value = kvc.Get(key);
+                    var value = kvc.Get(key.ToLower());
                     return value;
                 }
                 else
