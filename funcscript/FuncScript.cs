@@ -47,7 +47,14 @@ namespace funcscript
                 case JTokenType.Comment:
                     return null;
                 case JTokenType.Integer:
-                    return (int)p;
+                    try
+                    {
+                        return (int)p;
+                    }
+                    catch (OverflowException)
+                    {
+                        return (long)p;
+                    }
                 case JTokenType.Float:
                     return (double)(float)p;
                 case JTokenType.String:
@@ -71,7 +78,7 @@ namespace funcscript
                 case JTokenType.TimeSpan:
                     return null;
                 default:
-                    return null; ;
+                    return null;
             }
         }
         static KeyValueCollection FromJObject(JObject jobj)
