@@ -9,11 +9,11 @@ namespace funcscript.core
         {
             public IParameterList pars;
             public IFsDataProvider parentSymbolProvider;
-            public ExpressionFunction parent;
+            public ExpressionFunction expressionFunction;
             public object GetData(string name)
             {
-                if (parent.ParamterNameIndex.ContainsKey(name))
-                    return pars[parent.ParamterNameIndex[name]];
+                if (expressionFunction.ParamterNameIndex.ContainsKey(name))
+                    return pars.GetParameter(parentSymbolProvider, expressionFunction.ParamterNameIndex[name]);
                 return parentSymbolProvider.GetData(name);
             }
         }
@@ -40,7 +40,11 @@ namespace funcscript.core
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            return Expression.Evaluate(new ParamerDataProvider { parent = this, parentSymbolProvider = parent, pars = pars });
+            return Expression.Evaluate(new ParamerDataProvider { 
+                expressionFunction = this, 
+                parentSymbolProvider = parent, 
+                pars = pars 
+            });
         }
 
         public string ParName(int index)

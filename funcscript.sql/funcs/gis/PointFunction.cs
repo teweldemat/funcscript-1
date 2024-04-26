@@ -18,8 +18,8 @@ namespace funcscript.sql.funcs.gis
             if (pars.Count != this.MaxParsCount)
                 throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
 
-            var x = Convert.ToDouble(pars[0]);
-            var y = Convert.ToDouble(pars[1]);
+            var x = Convert.ToDouble(pars.GetParameter(parent, 0));
+            var y = Convert.ToDouble(pars.GetParameter(parent, 1));
 
             return new Point(x, y);
         }

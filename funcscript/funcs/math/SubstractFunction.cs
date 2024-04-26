@@ -18,10 +18,12 @@ namespace funcscript.funcs.math
             int intTotal = 1;
             long longTotal = 1;
             double doubleTotal = 1;
-            int c = pars.Count;
-            if(c>0)
+            int count = pars.Count;
+
+            if (count > 0)
             {
-                var d = pars[0];
+                var d = pars.GetParameter(parent, 0);
+
                 if (d is int)
                 {
                     isInt = true;
@@ -35,7 +37,7 @@ namespace funcscript.funcs.math
                 else if (d is double)
                 {
                     isDouble = true;
-                    doubleTotal= (double)d;
+                    doubleTotal = (double)d;
                 }
                 else
                 {
@@ -43,9 +45,11 @@ namespace funcscript.funcs.math
                     intTotal = 0;
                 }
             }
-            for (int i = 1; i < c; i++)
+
+            for (int i = 1; i < count; i++)
             {
-                var d = pars[i];
+                var d = pars.GetParameter(parent, i);
+
                 if (isInt)
                 {
                     if (d is int)
@@ -62,8 +66,8 @@ namespace funcscript.funcs.math
                         isDouble = true;
                         doubleTotal = intTotal;
                     }
-
                 }
+
                 if (isLong)
                 {
                     if (d is int)
@@ -79,8 +83,8 @@ namespace funcscript.funcs.math
                         isDouble = true;
                         doubleTotal = longTotal;
                     }
-
                 }
+
                 if (isDouble)
                 {
                     if (d is int)
@@ -95,16 +99,18 @@ namespace funcscript.funcs.math
                     {
                         doubleTotal -= (double)d;
                     }
-
                 }
-
             }
+
             if (isDouble)
                 return doubleTotal;
+
             if (isLong)
                 return longTotal;
+
             if (isInt)
                 return intTotal;
+
             return null;
         }
 

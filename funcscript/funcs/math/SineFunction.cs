@@ -14,20 +14,24 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var val=pars[0];
-            if(val is int)
+            var val = pars.GetParameter(parent, 0);
+
+            if (val is int)
             {
                 return Math.Sin((double)(int)val);
             }
+
             if (val is double)
             {
                 return Math.Sin((double)val);
             }
+
             if (val is long)
             {
-                return Math.Sin((long)val);
+                return Math.Sin((double)(long)val);
             }
-            throw new error.TypeMismatchError($"{this.Symbol}: number expected");
+
+            throw new error.TypeMismatchError($"{this.Symbol}: A number was expected.");
         }
 
         public string ParName(int index)
@@ -48,7 +52,7 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var val = pars[0];
+            var val = pars.GetParameter(parent,0);
             if (val is int)
             {
                 return Math.Cos((double)(int)val);

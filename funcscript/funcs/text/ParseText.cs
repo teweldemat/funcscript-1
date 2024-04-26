@@ -23,15 +23,15 @@ namespace funcscript.funcs.text
         {
             if (pars.Count == 0)
                 throw new error.TypeMismatchError($"{this.Symbol} requires at least one parameter");
-            var par0 = pars[0];
+            var par0 = pars.GetParameter(parent, 0);
             if (par0 == null)
                 return null;
             var str = par0.ToString();
             object par1;
             string format = null;
-            if (pars.Count > 1 && (par1 = pars[1]) != null)
+            if (pars.Count > 1 && (par1 = pars.GetParameter(parent, 1)) != null)
             {
-                format = pars[1].ToString();
+                format = par1.ToString();
             }
             if (format == null)
                 return str;
@@ -48,7 +48,6 @@ namespace funcscript.funcs.text
             }
             return str;
         }
-
         public string ParName(int index)
         {
             switch (index)

@@ -18,8 +18,8 @@ namespace funcscript.funcs.strings
             if (pars.Count != this.MaxParsCount)
                 throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
 
-            var par0 = pars[0];
-            var par1 = pars[1];
+            var par0 = pars.GetParameter(parent, 0);
+            var par1 = pars.GetParameter(parent, 1);
 
             if (par0 == null || par1 == null)
                 return false;
@@ -32,7 +32,6 @@ namespace funcscript.funcs.strings
 
             return mainString.EndsWith(ending, StringComparison.Ordinal);
         }
-
         public string ParName(int index)
         {
             switch (index)

@@ -21,7 +21,7 @@ namespace funcscript.funcs.os
             if (pars.Count != this.MaxParsCount)
                 throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
 
-            var par0 = pars[0];
+            var par0 = pars.GetParameter(parent, 0);
             if (par0 == null || !(par0 is string))
                 throw new error.TypeMismatchError($"Function {this.Symbol}. Invalid parameter type, expected a string");
 
@@ -31,7 +31,7 @@ namespace funcscript.funcs.os
                 throw new error.TypeMismatchError($"Function {this.Symbol}. Directory '{directoryPath}' does not exist");
             try
             {
-                var files = Directory.GetDirectories(directoryPath).Concat( Directory.GetFiles(directoryPath)).ToArray();
+                var files = Directory.GetDirectories(directoryPath).Concat(Directory.GetFiles(directoryPath)).ToArray();
                 return new FsList(files);
             }
             catch (Exception ex)

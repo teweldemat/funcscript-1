@@ -22,17 +22,24 @@ namespace funcscript.funcs.logic
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
-            var par0=pars[0];
+                throw new error.EvaluationTimeException(
+                    $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+
+            var par0 = pars.GetParameter(parent, 0);
 
             if (par0 == null)
                 return null;
-            
+
             if (!(par0 is string))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. Type mistmatch");
+                throw new error.TypeMismatchError(
+                    $"Function {this.Symbol}: Type mismatch. Expected a string.");
+
             var str = (string)par0;
-            if(!Guid.TryParse(str,out var guid))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. String '{par0}' not guid");
+
+            if (!Guid.TryParse(str, out var guid))
+                throw new error.TypeMismatchError(
+                    $"Function {this.Symbol}: String '{par0}' is not a valid GUID.");
+
             return guid;
         }
 

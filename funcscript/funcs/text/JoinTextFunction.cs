@@ -21,10 +21,10 @@ namespace funcscript.funcs.math
 
             int c = pars.Count;
             FsList? list;
-            if (c < 1 || (list = pars[0] as FsList) == null)
+            if (c < 1 || (list = pars.GetParameter(parent, 0) as FsList) == null)
                 throw new funcscript.error.TypeMismatchError($"{this.Symbol}: list expected");
             String? separator;
-            if (c < 2 || (separator = pars[1] as String) == null)
+            if (c < 2 || (separator = pars.GetParameter(parent, 1) as String) == null)
                 throw new funcscript.error.TypeMismatchError($"{this.Symbol}: separator expected");
 
             for (int i = 0; i < list.Data.Length; i++)
@@ -39,7 +39,6 @@ namespace funcscript.funcs.math
             }
             return sb.ToString();
         }
-
         public string ParName(int index)
         {
             switch (index)

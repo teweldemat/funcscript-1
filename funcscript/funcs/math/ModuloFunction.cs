@@ -18,10 +18,12 @@ namespace funcscript.funcs.math
             int intTotal = 1;
             long longTotal = 1;
             double doubleTotal = 1;
-            int c = pars.Count;
-            if (c > 0)
+            int count = pars.Count;
+
+            if (count > 0)
             {
-                var d = pars[0];
+                var d = pars.GetParameter(parent, 0);
+
                 if (d is int)
                 {
                     isInt = true;
@@ -43,68 +45,72 @@ namespace funcscript.funcs.math
                     intTotal = 1;
                 }
             }
-             for (int i = 1; i < c; i++)
+
+            for (int i = 1; i < count; i++)
+            {
+                var d = pars.GetParameter(parent, i);
+
+                if (isInt)
                 {
-                    var d = pars[i];
-                    if (isInt)
+                    if (d is int)
                     {
-                        if (d is int)
-                        {
-                            intTotal %= (int)d;
-                        }
-                        else if (d is long)
-                        {
-                            isLong = true;
-                            longTotal = intTotal;
-                        }
-                        else if (d is double)
-                        {
-                            isDouble = true;
-                            doubleTotal = intTotal;
-                        }
-
+                        intTotal %= (int)d;
                     }
-                    if (isLong)
+                    else if (d is long)
                     {
-                        if (d is int)
-                        {
-                            longTotal %= (long)(int)d;
-                        }
-                        else if (d is long)
-                        {
-                            longTotal %= (long)d;
-                        }
-                        else if (d is double)
-                        {
-                            isDouble = true;
-                            doubleTotal = longTotal;
-                        }
-
+                        isLong = true;
+                        longTotal = intTotal;
                     }
-                    if (isDouble)
+                    else if (d is double)
                     {
-                        if (d is int)
-                        {
-                            doubleTotal %= (double)(int)d;
-                        }
-                        else if (d is long)
-                        {
-                            doubleTotal %= (double)(long)d;
-                        }
-                        else if (d is double)
-                        {
-                            doubleTotal %= (double)d;
-                        }
-
+                        isDouble = true;
+                        doubleTotal = intTotal;
                     }
-
                 }
+
+                if (isLong)
+                {
+                    if (d is int)
+                    {
+                        longTotal %= (long)(int)d;
+                    }
+                    else if (d is long)
+                    {
+                        longTotal %= (long)d;
+                    }
+                    else if (d is double)
+                    {
+                        isDouble = true;
+                        doubleTotal = longTotal;
+                    }
+                }
+
+                if (isDouble)
+                {
+                    if (d is int)
+                    {
+                        doubleTotal %= (double)(int)d;
+                    }
+                    else if (d is long)
+                    {
+                        doubleTotal %= (double)(long)d;
+                    }
+                    else if (d is double)
+                    {
+                        doubleTotal %= (double)d;
+                    }
+                }
+            }
+
             if (isDouble)
                 return doubleTotal;
+
             if (isLong)
                 return longTotal;
+
             if (isInt)
                 return intTotal;
+
             return null;
         }
 

@@ -42,7 +42,7 @@ namespace funcscript.model
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            return this.f.DynamicInvoke(Enumerable.Range(0, pars.Count).Select(x => pars[x]).ToArray());
+            return this.f.DynamicInvoke(Enumerable.Range(0, pars.Count).Select(x => pars.GetParameter(parent, x)).ToArray());
         }
 
         public string ParName(int index)

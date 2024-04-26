@@ -514,7 +514,7 @@ namespace funcscript
         {
             return val is int || val is double || val is long;
         }
-        internal static bool ConvertToCommonNumbericType(object v1, object v2, out object v1out, out object v2out)
+        internal static bool ConvertToCommonNumericType(object v1, object v2, out object v1out, out object v2out)
         {
             if (v1.GetType() == v2.GetType())
             {

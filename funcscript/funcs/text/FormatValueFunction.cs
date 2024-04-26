@@ -24,8 +24,8 @@ namespace funcscript.funcs.text
             var c = pars.Count;
             if (c == 0)
                 return "";
-            var par0 = pars[0];
-            var format = pars[1] as string;
+            var par0 = pars.GetParameter(parent, 0);
+            var format = pars.GetParameter(parent, 1) as string;
             var sb = new StringBuilder();
             FuncScript.Format(sb, par0, format);
             return sb.ToString();
@@ -51,17 +51,17 @@ namespace funcscript.funcs.text
             var c = pars.Count;
             if (c == 0)
                 return "";
-            var str = pars[0] as string;
+            var str = pars.GetParameter(parent, 0) as string;
             if (str == null)
                 return null;
 
             int index = 0;
-            var par1 = pars[1];
+            var par1 = pars.GetParameter(parent, 1);
             if (par1 is int)
                 index = (int)par1;
 
             int count = 0;
-            var par2 = pars[2];
+            var par2 = pars.GetParameter(parent, 2);
             if (par2 is int)
                 count = (int)par2;
             if (index >= str.Length)

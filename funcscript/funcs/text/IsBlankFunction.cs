@@ -18,10 +18,10 @@ namespace funcscript.funcs.math
             if (pars.Count < 1)
                 throw new error.TypeMismatchError($"{this.Symbol}: argument expected");
 
-            if (pars[0] == null)
+            if (pars.GetParameter(parent, 0) == null)
                 return true;
 
-            if (pars[0] is not string str)
+            if (pars.GetParameter(parent, 0) is not string str)
                 throw new error.TypeMismatchError($"{this.Symbol}: string expected");
 
             return string.IsNullOrEmpty(str.Trim());

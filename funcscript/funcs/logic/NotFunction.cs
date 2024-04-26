@@ -21,17 +21,19 @@ namespace funcscript.funcs.logic
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
-            var par0=pars[0];
+                throw new error.EvaluationTimeException(
+                    $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+
+            var par0 = pars.GetParameter(parent, 0);
 
             if (par0 == null)
                 return null;
 
             if (par0 is bool)
                 return !(bool)par0;
-            
-            throw new error.TypeMismatchError($"Fun {this.Symbol} can't compare this data types.{par0.GetType()}");
 
+            throw new error.TypeMismatchError(
+                $"Function {this.Symbol} can't compare these data types: {par0.GetType()}");
         }
 
         public string ParName(int index)
