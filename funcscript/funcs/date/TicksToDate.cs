@@ -15,18 +15,21 @@ namespace funcscript.funcs.logic
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count > this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. Max of {this.MaxParsCount} expected got {pars.Count}");
+                throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected a maximum of {this.MaxParsCount}, but got {pars.Count}");
 
-            var par0 = pars[0];
+            var par0 = pars.GetParameter(parent, 0);
 
             if (par0 == null)
                 return null;
 
             if (!(par0 is long))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. Type mistmatch. Expecting a long.");
+                throw new error.TypeMismatchError($"Function {this.Symbol}: Type mismatch. Expected a long.");
+
             var ticks = (long)par0;
+
             return new DateTime(ticks);
         }
+
 
         public string ParName(int index)
         {

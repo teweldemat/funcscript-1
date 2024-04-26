@@ -16,7 +16,7 @@ namespace funcscript.core
     public interface IParameterList
     {
         int Count { get; }
-        object this[int index] { get; }
+        object GetParameter(IFsDataProvider provider, int index);
     }
 
     public enum CallType

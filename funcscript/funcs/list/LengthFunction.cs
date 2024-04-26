@@ -21,17 +21,20 @@ namespace funcscript.funcs.list
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
-            var par0 = pars[0];
+                throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+
+            var par0 = pars.GetParameter(parent, 0);
+
             if (par0 == null)
                 return 0;
 
             if (par0 is FsList)
                 return ((FsList)par0).Data.Length;
+
             if (par0 is string)
                 return ((string)par0).Length;
-            throw new error.TypeMismatchError($"{this.Symbol} functiond doesn't apply to {par0.GetType()}");
 
+            throw new error.TypeMismatchError($"{this.Symbol} function doesn't apply to {par0.GetType()}");
         }
 
         public string ParName(int index)
