@@ -17,29 +17,27 @@ namespace funcscript.funcs.list
         {
             public object X;
             public object Y;
-            public object this[int index]
-            {
-                get
-                {
-                    return index switch
-                    {
-                        0 => X,
-                        1 => Y,
-                        _ => null,
-                    };
-                }
-            }
 
             public int Count => 2;
+
+            public object GetParameter(IFsDataProvider provider, int index)
+            {
+                return index switch
+                {
+                    0 => X,
+                    1 => Y,
+                    _ => null,
+                };
+            }
         }
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
+                throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
-            var container = pars[0];
-            var item = pars[1];
+            var container = pars.GetParameter(parent, 0);
+            var item = pars.GetParameter(parent, 1);
 
             if (container is FsList list)
             {
@@ -54,11 +52,11 @@ namespace funcscript.funcs.list
                 }
                 else
                 {
-                    throw new error.TypeMismatchError($"{this.Symbol} function: second parameter should be a string when the first is a string");
+                    throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter should be a string when the first is a string");
                 }
             }
 
-            throw new error.TypeMismatchError($"{this.Symbol} function: first parameter should be a list or a string");
+            throw new error.TypeMismatchError($"{this.Symbol} function: The first parameter should be a list or a string");
         }
 
         public string ParName(int index)

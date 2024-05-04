@@ -22,39 +22,51 @@ namespace funcscript.funcs.logic
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
-            var par0 = pars[0];
-            var par1 = pars[1];
+                throw new error.EvaluationTimeException(
+                    $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+
+            var par0 = pars.GetParameter(parent, 0);
+            var par1 = pars.GetParameter(parent, 1);
+
             if (par1 == null)
                 return null;
 
             if (!(par1 is FsList))
-                throw new error.EvaluationTimeException($"{this.Symbol} function: {this.ParName(1)} should be a list");
+                throw new error.EvaluationTimeException(
+                    $"{this.Symbol} function: {this.ParName(1)} should be a list");
 
-            var par0Numeric = FuncScript.IsNumeric(par0);
+            bool par0Numeric = FuncScript.IsNumeric(par0);
+
             foreach (var val in ((FsList)par1).Data)
             {
-                object left, right;
                 if (val == null)
                     continue;
+
+                object left, right;
+
                 if (par0Numeric && FuncScript.IsNumeric(val))
                 {
-                    FuncScript.ConvertToCommonNumbericType(par0, val, out left, out right);
+                    FuncScript.ConvertToCommonNumericType(par0, val, out left, out right);
                 }
                 else
                 {
                     left = par0;
                     right = val;
                 }
+
                 if (left == null && right == null)
                     return true;
+
                 if (left == null || right == null)
                     return false;
+
                 if (left.GetType() != right.GetType())
                     continue;
+
                 if (left.Equals(right))
-                return true;
+                    return true;
             }
+
             return false;
         }
 

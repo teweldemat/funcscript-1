@@ -20,15 +20,15 @@ namespace funcscript.funcs.misc
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            if (pars.Count ==0)
+            if (pars.Count == 0)
                 throw new error.EvaluationTimeException($"{this.Symbol} function: {this.ParName(0)} expected");
-            
-            var tag = pars.Count > 1 ? $"({pars[1].ToString()})": "";
-            var output= pars.Count > 2 ? (pars[2] is bool ? (bool)pars[2] :false):true;
+
+            var tag = pars.Count > 1 ? $"({pars.GetParameter(parent, 1).ToString()})" : "";
+            var output = pars.Count > 2 ? (pars.GetParameter(parent, 2) is bool ? (bool)pars.GetParameter(parent, 2) : false) : true;
             Console.WriteLine($"FuncScript: Evaluating {tag}");
             try
             {
-                var res = pars[0];
+                var res = pars.GetParameter(parent, 0);
                 if (output)
                 {
                     Console.WriteLine($"FuncScript: Result{tag}:\n{(res == null ? "<null>" : res.ToString())}");
@@ -38,11 +38,11 @@ namespace funcscript.funcs.misc
                     Console.WriteLine($"Done {tag}");
                 return res;
             }
-            catch(Exception ex) 
+            catch (Exception ex)
             {
                 Console.WriteLine($"FuncScript: Error evaluating {tag}");
                 var thisEx = ex;
-                while(thisEx != null)
+                while (thisEx != null)
                 {
                     Console.WriteLine(thisEx.Message);
                     Console.WriteLine(thisEx.StackTrace);
@@ -50,10 +50,7 @@ namespace funcscript.funcs.misc
                 }
                 throw;
             }
-
         }
-
-
         public string ParName(int index)
         {
             switch(index)

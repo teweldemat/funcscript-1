@@ -19,19 +19,23 @@ namespace funcscript.funcs.logic
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var i = 0;
-            for(i = 0; i < pars.Count / 2; i++)
+            int count = pars.Count;
+
+            for (int i = 0; i < count / 2; i++)
             {
-                var cond = pars[2*i];
-                if(cond is Boolean && (Boolean)cond)
+                var cond = pars.GetParameter(parent, 2 * i);
+
+                if (cond is bool && (bool)cond)
                 {
-                    return pars[2 * i + 1];
+                    return pars.GetParameter(parent, 2 * i + 1);
                 }
             }
-            if(pars.Count % 2==1)
+
+            if (count % 2 == 1)
             {
-                return pars[pars.Count-1];
+                return pars.GetParameter(parent, count - 1);
             }
+
             return null;
         }
 

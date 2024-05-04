@@ -21,7 +21,7 @@ namespace funcscript.funcs.os
         {
             if (pars.Count != this.MaxParsCount)
                 throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected got {pars.Count}");
-            var par0 = pars[0];
+            var par0 = pars.GetParameter(parent, 0);
 
             if (par0 == null)
                 return null;
@@ -31,12 +31,11 @@ namespace funcscript.funcs.os
             var fileName = (string)par0;
             if (!System.IO.File.Exists(fileName))
                 throw new error.TypeMismatchError($"Function {this.Symbol}. File '{par0}' doesn't exist");
-            if(new System.IO.FileInfo(fileName).Length>1000000)
+            if (new System.IO.FileInfo(fileName).Length > 1000000)
                 throw new error.TypeMismatchError($"Function {this.Symbol}. File '{par0}' is too big");
             return System.IO.File.ReadAllText(fileName);
 
         }
-
         public string ParName(int index)
         {
             switch (index)

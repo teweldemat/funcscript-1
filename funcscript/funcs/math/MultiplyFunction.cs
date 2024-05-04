@@ -16,10 +16,12 @@ namespace funcscript.funcs.math
             int intTotal = 1;
             long longTotal = 1;
             double doubleTotal = 1;
-            int c = pars.Count;
-            for (int i = 0; i < c; i++)
+            int count = pars.Count;
+
+            for (int i = 0; i < count; i++)
             {
-                var d = pars[i];
+                var d = pars.GetParameter(parent, i);
+
                 if (isNull)
                 {
                     if (d is int)
@@ -29,6 +31,7 @@ namespace funcscript.funcs.math
                     else if (d is double)
                         isDouble = true;
                 }
+
                 if (isInt)
                 {
                     if (d is int)
@@ -45,8 +48,8 @@ namespace funcscript.funcs.math
                         isDouble = true;
                         doubleTotal = intTotal;
                     }
-            
                 }
+
                 if (isLong)
                 {
                     if (d is int)
@@ -62,8 +65,8 @@ namespace funcscript.funcs.math
                         isDouble = true;
                         doubleTotal = longTotal;
                     }
-
                 }
+
                 if (isDouble)
                 {
                     if (d is int)
@@ -78,16 +81,18 @@ namespace funcscript.funcs.math
                     {
                         doubleTotal *= (double)d;
                     }
-
                 }
-
             }
+
             if (isDouble)
                 return doubleTotal;
+
             if (isLong)
                 return longTotal;
+
             if (isInt)
                 return intTotal;
+
             return null;
         }
 

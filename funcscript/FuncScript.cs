@@ -47,7 +47,14 @@ namespace funcscript
                 case JTokenType.Comment:
                     return null;
                 case JTokenType.Integer:
-                    return (int)p;
+                    try
+                    {
+                        return (int)p;
+                    }
+                    catch (OverflowException)
+                    {
+                        return (long)p;
+                    }
                 case JTokenType.Float:
                     return (double)(float)p;
                 case JTokenType.String:
@@ -71,7 +78,7 @@ namespace funcscript
                 case JTokenType.TimeSpan:
                     return null;
                 default:
-                    return null; ;
+                    return null;
             }
         }
         static KeyValueCollection FromJObject(JObject jobj)
@@ -507,7 +514,7 @@ namespace funcscript
         {
             return val is int || val is double || val is long;
         }
-        internal static bool ConvertToCommonNumbericType(object v1, object v2, out object v1out, out object v2out)
+        internal static bool ConvertToCommonNumericType(object v1, object v2, out object v1out, out object v2out)
         {
             if (v1.GetType() == v2.GetType())
             {

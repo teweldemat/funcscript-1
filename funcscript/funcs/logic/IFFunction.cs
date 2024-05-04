@@ -8,17 +8,21 @@ namespace funcscript.funcs.logic
     {
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var cond = pars[0];
+            var cond = pars.GetParameter(parent, 0);
+
             if (!(cond is bool))
             {
-                throw new error.TypeMismatchError("First parameter must be boolean value");
+                throw new error.TypeMismatchError("The first parameter must be a boolean value");
             }
+
             if ((bool)cond)
             {
-                return pars[1];
+                return pars.GetParameter(parent, 1);
             }
-            return pars[2];
+
+            return pars.GetParameter(parent, 2);
         }
+
 
         public string ParName(int index)
         {

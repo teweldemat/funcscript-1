@@ -20,7 +20,7 @@ namespace funcscript.funcs.html
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var str = pars[0];
+            var str = pars.GetParameter(parent, 0);
             return str == null ? null : System.Web.HttpUtility.HtmlEncode(str);
         }
 

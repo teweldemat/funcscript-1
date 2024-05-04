@@ -9,25 +9,20 @@ namespace funcscript.block
     {
         public ExpressionBlock Function;
         public ExpressionBlock[] Parameters;
-        IFsDataProvider _provider;
-        public object this[int index]
+        public object GetParameter(IFsDataProvider provider, int index)
         {
-            get
+            var ret = index < 0 || index >= Parameters.Length ? null : Parameters[index].Evaluate(provider);
+            if (DefaultFsDataProvider.Trace)
             {
-                var ret = index < 0 || index >= Parameters.Length ? null : Parameters[index].Evaluate(_provider);
-                if (DefaultFsDataProvider.Trace)
-                {
-                    DefaultFsDataProvider.WriteTraceLine($"Par {index} - {ret}");
-                }
-                return ret;
+                DefaultFsDataProvider.WriteTraceLine($"Par {index} - {ret}");
             }
+            return ret;
         }
 
         public int Count => Parameters.Length;
 
         public override object Evaluate(IFsDataProvider provider)
         {
-            _provider = provider;
             var func = Function.Evaluate(provider);
             if (func is IFsFunction)
             {
@@ -62,7 +57,7 @@ namespace funcscript.block
             }
             else if (func is FsList)
             {
-                var index = this[0];
+                var index = GetParameter(provider, 0);
                 if (DefaultFsDataProvider.Trace)
                 {
                     DefaultFsDataProvider.IncreateTraceIndent();
@@ -90,7 +85,7 @@ namespace funcscript.block
             }
             else if (func is KeyValueCollection collection)
             {
-                var index = this[0];
+                var index = GetParameter(provider, 0);
 
                 object ret;
                 if (index is string key)

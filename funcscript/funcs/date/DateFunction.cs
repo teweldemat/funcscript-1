@@ -1,4 +1,5 @@
 ﻿using funcscript.core;
+using System;
 using System.Runtime.Serialization;
 
 namespace funcscript.funcs.logic
@@ -16,28 +17,33 @@ namespace funcscript.funcs.logic
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count > this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. Max of {this.MaxParsCount} expected got {pars.Count}");
-            var par0 = pars[0];
+                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. Max of {this.MaxParsCount} expected, got {pars.Count}");
+
+            var par0 = pars.GetParameter(parent, 0);
 
             if (par0 == null)
                 return null;
 
             if (!(par0 is string))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. Type mistmatch");
+                throw new error.TypeMismatchError($"Function {this.Symbol}: Type mismatch, expected string");
+
             var str = (string)par0;
-            var par1 = pars[1] as string;
             DateTime date;
+
+            var par1 = pars.GetParameter(parent, 1) as string;
+
             if (par1 == null)
             {
                 if (!DateTime.TryParse(str, out date))
-                    throw new error.TypeMismatchError($"Function {this.Symbol}. String '{par0}' can't be converted to date");
+                    throw new error.TypeMismatchError($"Function {this.Symbol}: String '{str}' can't be converted to date");
             }
             else
             {
                 var f = new DateTimeFormat(par1);
-                if (!DateTime.TryParse(str,f.FormatProvider,System.Globalization.DateTimeStyles.AssumeUniversal, out date))
-                    throw new error.TypeMismatchError($"Function {this.Symbol}. String '{par0}' can't be converted to date");
+                if (!DateTime.TryParse(str, f.FormatProvider, System.Globalization.DateTimeStyles.AssumeUniversal, out date))
+                    throw new error.TypeMismatchError($"Function {this.Symbol}: String '{str}' can't be converted to date with format '{par1}'");
             }
+
             return date;
         }
 

@@ -370,9 +370,10 @@ return j;
 
         {
             var exp = @"{
-x:-5;
-return -x;
-}";         var res = FuncScript.Evaluate(exp);
+            x:-5;
+            return -x;
+            }";
+            var res = FuncScript.Evaluate(exp);
             Assert.AreEqual(5, res);
         }
         
@@ -398,6 +399,18 @@ return -x;
             var res = FuncScript.Evaluate(exp) as FsList;
             Assert.IsNotNull(res);
             Assert.That(res.Data.Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ResursiveCall()
+        {
+            var exp = 
+@"{
+    fib:(x)=>if(x<2,1,fib(x-2)+fib(x-1));
+    return fib(3);
+}";
+            var res=FuncScript.Evaluate(exp);
+            Assert.That(res,Is.EqualTo(3));
         }
     }
 }

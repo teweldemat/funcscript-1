@@ -40,7 +40,7 @@ namespace funcscript.funcs.math
             for (int i = 0; i < c; i++)
             {
 
-                var o = pars[i];
+                var o = pars.GetParameter(parent, i);
                 if (o is FsList)
                     MergeList(sb, (FsList)o);
                 else

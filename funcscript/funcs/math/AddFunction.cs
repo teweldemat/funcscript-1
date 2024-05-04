@@ -34,7 +34,7 @@ namespace funcscript.funcs.math
             int c = pars.Count;
             for(int i=0;i<c;i++)
             {
-                var d=pars[i];
+                var d=pars.GetParameter(parent,i);
                 if(isNull)
                 {
                     if (d is int)
