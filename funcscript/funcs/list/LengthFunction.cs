@@ -1,4 +1,4 @@
-﻿using funcscript.core;
+using funcscript.core;
 using funcscript.model;
 using System;
 using System.Collections;
@@ -26,16 +26,14 @@ namespace funcscript.funcs.list
             var par0 = pars.GetParameter(parent, 0);
             if (par0 is ValueReferenceDelegate)
                 return CallRef.Create(parent, this, pars);
-            if (par0 == null)
-                return 0;
 
-            if (par0 is FsList)
-                return ((FsList)par0).Length;
-
-            if (par0 is string)
-                return ((string)par0).Length;
-
-            throw new error.TypeMismatchError($"{this.Symbol} function doesn't apply to {par0.GetType()}");
+            return par0 switch
+            {
+                null => 0,
+                FsList list => list.Data.Length,
+                string s => s.Length,
+                _ => throw new error.TypeMismatchError($"{this.Symbol} function doesn't apply to {par0.GetType()}")
+            };
         }
 
         public string ParName(int index)

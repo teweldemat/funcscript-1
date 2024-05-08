@@ -371,9 +371,10 @@ return j;
 
         {
             var exp = @"{
-x:-5;
-return -x;
-}";         var res = FuncScript.Evaluate(exp);
+            x:-5;
+            return -x;
+            }";
+            var res = FuncScript.Evaluate(exp);
             Assert.AreEqual(5, res);
         }
         

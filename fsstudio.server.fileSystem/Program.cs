@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using fsstudio.server.fileSystem.exec;
 
 
@@ -8,18 +8,30 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
-        builder.WebHost.UseWebRoot("wwwroot"); // Adjust the path as necessary
-        builder.Services.AddCors(options =>
+        var options = new WebApplicationOptions
         {
-            options.AddPolicy("AllowSpecificOrigin",
-                builder =>
-                {
-                    builder.WithOrigins("http://localhost:3000") 
-                        .AllowAnyHeader()
-                        .AllowAnyMethod();
-                });
-        });
+            Args = args,
+            WebRootPath = "wwwroot", 
+            ApplicationName = "FsStudio",
+        };
+
+        var builder = WebApplication.CreateBuilder(options);
+        //var builder = WebApplication.CreateBuilder(args);
+        var env = builder.Environment;
+        //builder.WebHost.UseWebRoot("wwwroot");
+        if (env.IsDevelopment())
+        {
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowSpecificOrigin",
+                    builder =>
+                    {
+                        builder.WithOrigins("http://localhost:3000")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod();
+                    });
+            });
+        }
 
         builder.Services.AddControllers().AddJsonOptions(options =>
         {
@@ -28,8 +40,10 @@ internal class Program
         builder.Services.AddSingleton<RemoteLogger>();
         builder.Services.AddSingleton<SessionManager>();
         var app = builder.Build();
-
-        app.UseCors("AllowSpecificOrigin");
+        if (env.IsDevelopment())
+        {
+            app.UseCors("AllowSpecificOrigin");
+        }
         app.MapControllers();
         
         app.UseWebSockets();
@@ -41,6 +55,35 @@ internal class Program
         app.UseDefaultFiles(defaultFileOptions);
         app.UseStaticFiles(); 
         
+        if (env.IsEnvironment("Desktop"))
+        {
+            // Launch the browser after the server starts
+            app.Lifetime.ApplicationStarted.Register(() =>
+            {
+                try
+                {
+                    string url = "http://localhost:5091"; // Ensure this is the correct URL
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                    }
+                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        Process.Start("xdg-open", url);
+                    }
+                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    {
+                        Process.Start("open", url);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log the exception if needed
+                    Console.WriteLine($"Failed to launch browser: {ex.Message}");
+                }
+            });
+        }
+
         app.Run();
     }
     

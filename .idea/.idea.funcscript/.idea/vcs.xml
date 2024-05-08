@@ -4,7 +4,6 @@
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/.." vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../orch-core" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/../../maui/Maui" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../../nrlais" vcs="Git" />
   </component>
 </project>
