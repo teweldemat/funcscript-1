@@ -9,7 +9,7 @@ internal class Program
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
+        builder.WebHost.UseWebRoot("wwwroot"); // Adjust the path as necessary
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("AllowSpecificOrigin",
@@ -34,6 +34,12 @@ internal class Program
         
         app.UseWebSockets();
         app.UseMiddleware<WebSocketMiddleware>();
+        
+        var defaultFileOptions = new DefaultFilesOptions();
+        defaultFileOptions.DefaultFileNames.Clear(); 
+        defaultFileOptions.DefaultFileNames.Add("index.html"); 
+        app.UseDefaultFiles(defaultFileOptions);
+        app.UseStaticFiles(); 
         
         app.Run();
     }

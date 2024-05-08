@@ -30,9 +30,19 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
 {
     private string _nameLower;
     private string _name;
+    private IFsDataProvider _prentNode = null;
 
+    public void SetParent(IFsDataProvider parent)
+    {
+        this._prentNode = parent;
+        foreach (var ch in Children)
+        {
+            ch.SetParent(this);   
+        }
+    }
+    
     public string NameLower => _nameLower;
-
+    
     public string Name
     {
         get => _name;
@@ -45,7 +55,7 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
 
     public ExpressionType ExpressionType { get; set; } = ExpressionType.FuncScript;
     public string? Expression { get; set; }
-    public List<ExecutionNode?> Children = new List<ExecutionNode?>();
+    public IList<ExecutionNode> Children { get; set; }= new List<ExecutionNode>();
 
     public object Evaluate(IFsDataProvider provider)
     {
@@ -91,6 +101,9 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
 
     public object GetData(string name)
     {
-        return this.Get(name);
+        var ch = Children.FirstOrDefault(c => c._nameLower.Equals(name));
+        if (ch == null)
+            return _prentNode.GetData(name);
+        return ch.Evaluate(this);
     }
 }

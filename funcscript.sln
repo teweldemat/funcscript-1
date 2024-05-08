@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "funcscript.sql", "funcscrip
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fsstudio.server.fileSystem", "fsstudio.server.fileSystem\fsstudio.server.fileSystem.csproj", "{3C1B3626-5C0A-4EC8-980E-ED25A6C303BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fsstudio.test", "fsstudio.test\fsstudio.test.csproj", "{A399F111-98CE-48B9-B0D2-55B38339D447}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{3C1B3626-5C0A-4EC8-980E-ED25A6C303BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C1B3626-5C0A-4EC8-980E-ED25A6C303BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C1B3626-5C0A-4EC8-980E-ED25A6C303BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A399F111-98CE-48B9-B0D2-55B38339D447}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A399F111-98CE-48B9-B0D2-55B38339D447}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A399F111-98CE-48B9-B0D2-55B38339D447}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A399F111-98CE-48B9-B0D2-55B38339D447}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

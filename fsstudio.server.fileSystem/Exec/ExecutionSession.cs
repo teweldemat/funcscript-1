@@ -1,15 +1,17 @@
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using funcscript;
 using funcscript.core;
 using funcscript.funcs.misc;
 using funcscript.model;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace fsstudio.server.fileSystem.exec;
 
 public class ExecutionSession : IFsDataProvider
 {
-    readonly List<ExecutionNode> _nodes;
-    private readonly IFsDataProvider _provider;
+    List<ExecutionNode> _nodes;
+    private IFsDataProvider _provider;
     readonly string fileName;
     public Guid SessionId { get; private set; } = Guid.NewGuid();
     private ObjectKvc _sessionVars;
@@ -26,14 +28,23 @@ public class ExecutionSession : IFsDataProvider
         
         this.fileName = fileName;
         var json=System.IO.File.ReadAllText(fileName);
-        _nodes = System.Text.Json.JsonSerializer.Deserialize<List<ExecutionNode>>(json)??[];
+        InitFromNodes(System.Text.Json.JsonSerializer.Deserialize<List<ExecutionNode>>(json)??[]);
+    }
 
+    void InitFromNodes(IEnumerable<ExecutionNode> nodes)
+    {
+        _nodes =nodes.ToList() ;
+        foreach(var n in _nodes)
+            n.SetParent(this);
         _sessionVars = new ObjectKvc(new
         {
             app=new ObjectKvc(_appNode=new FssAppNode()),
         });
         this._provider = new KvcProvider(_sessionVars, new DefaultFsDataProvider());
-        
+    }
+    public ExecutionSession(IEnumerable<ExecutionNode> nodes)
+    {
+        InitFromNodes(nodes);
     }
    
     private ExecutionNode? FindNodeByPath(string nodePath)
@@ -55,18 +66,39 @@ public class ExecutionSession : IFsDataProvider
 
     public void CreateNode(string? parentNodePath, string name, string expression,ExpressionType expressionType)
     {
-        var nodes = parentNodePath == null ?this._nodes: this.FindNodeByPath(parentNodePath)?.Children;
+        if (!ValidName(name))
+            throw new InvalidOperationException($"{name} is invalid");
+
+        var parentNode =parentNodePath==null?null:  this.FindNodeByPath(parentNodePath);
+        var nodes = parentNodePath == null ? this._nodes : parentNode?.Children;
         if (nodes == null)
             throw new InvalidOperationException($"Path {parentNodePath} not found");
         var nameLower = name.ToLower();
         if (nodes.Any(n => n.NameLower == nameLower))
             throw new InvalidOperationException($"Name: {name} already used");
-        nodes.Add(new ExecutionNode
+        var n = new ExecutionNode
         {
             Name = name,
             Expression = expression,
             ExpressionType = expressionType
-        });
+        };
+        if (parentNode != null)
+        {
+            if(!string.IsNullOrEmpty(parentNode.Expression))
+            {
+                var backupChild = new ExecutionNode
+                {
+                    Name = $"{parentNode.Name}_backup",
+                    Expression = parentNode.Expression,
+                    ExpressionType = parentNode.ExpressionType
+                };
+                parentNode.Children.Add(backupChild);
+            }
+            parentNode.ExpressionType = ExpressionType.FsStudioParentNode;
+            parentNode.Expression = null;
+        }
+        n.SetParent(parentNode==null?this:parentNode);
+        nodes.Add(n);
         UpdateFile();
     }
 
@@ -75,24 +107,55 @@ public class ExecutionSession : IFsDataProvider
     {
         var segments = nodePath.Split('.');
         var parentNodePath = string.Join(".", segments.Take(segments.Length - 1));
-        var nodes=segments.Length==1?this._nodes:FindNodeByPath(parentNodePath)?.Children;
+        ExecutionNode ? parentNode=null;
+        var nodes=segments.Length==1?this._nodes:(parentNode=FindNodeByPath(parentNodePath))?.Children;
         if (nodes == null)
             throw new InvalidOperationException($"Path {parentNodePath} not found");
 
-        var nodeToRemove = nodes.FirstOrDefault(n => n.NameLower == segments.Last().ToLower());
-        if (nodeToRemove != null)
+        var nodeName = segments.Last().ToLower();
+        var index = nodes.Select(n=>n.NameLower).ToList().IndexOf(nodeName);
+        if (index != -1)
         {
-            nodes.Remove(nodeToRemove);
+            nodes.RemoveAt(index);
+            if (nodes.Count == 0 && parentNode != null)
+            {
+                parentNode.ExpressionType = ExpressionType.FuncScript;
+            }
+                
         }
         UpdateFile();
     }
 
+    public ExecutionNode? GetParentPath(string nodePath)
+    {
+        var segments = nodePath.Split('.');
+        if (segments.Length == 1)
+            return null;
+        var parentNodePath = string.Join(".", segments.Take(segments.Length - 1));
+        return FindNodeByPath(parentNodePath);
+    }
+
+    public static bool ValidName(string name)
+    {
+        // Regular expression for a valid JavaScript identifier
+        Regex regex = new Regex(@"^[a-zA-Z_$][a-zA-Z0-9_$]*$");
+        return regex.IsMatch(name);
+    }
+
     public void RenameNode(string nodePath, string newName)
     {
+        if (!ValidName(newName))
+            throw new InvalidOperationException($"{newName} is invalid");
         var node = FindNodeByPath(nodePath);
         if (node == null)
             throw new Exception("Node not found.");
-
+        var parent = GetParentPath(nodePath);
+        var _namelower = newName.ToLower();
+        if (parent != null)
+        {
+            if (parent.Children.Any(ch => ch.NameLower == _namelower))
+                throw new InvalidOperationException($"{newName} already exists");
+        }
         node.Name = newName;
         UpdateFile();
     }
@@ -111,7 +174,8 @@ public class ExecutionSession : IFsDataProvider
         var node = FindNodeByPath(nodePath);
         if (node == null)
             throw new Exception("Node not found.");
-
+        if (node.Children.Count > 0)
+            throw new Exception("Expression can't be set to a parent node");
         node.Expression = expression;
         UpdateFile();
     }
@@ -155,8 +219,12 @@ public class ExecutionSession : IFsDataProvider
         var n = FindNodeByPath(nodePath);
         if (n == null)
             return null;
+        var segments = nodePath.Split('.');
+        var parentNodePath = string.Join(".", segments.Take(segments.Length - 1));
+        IFsDataProvider provider= (segments.Length > 1)?FindNodeByPath(parentNodePath)!:this;
+        
         _appNode.ClearSink();
-        var ret= n.Evaluate(this);
+        var ret= n.Evaluate(provider);
         try
         {
             _appNode.ActivateSignal();

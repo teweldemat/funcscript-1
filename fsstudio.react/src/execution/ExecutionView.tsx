@@ -10,6 +10,7 @@ import TextLogger from './RemoteLogger';
 import { json } from 'stream/consumers';
 import { useCodeMirror } from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
+import { isDisabled } from '@testing-library/user-event/dist/utils';
 
 interface ErrorItem {
     type: string;
@@ -25,24 +26,40 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
     const [expression, setExpression] = useState<string | null>(null);
     const [lastSavedExpression, setLastSavedExpression] = useState<string | null>(null);
-    const [generalTextOutput, setGeneralTextOutput] = useState('');
-    const [textLog, setTextLog] = useState('');
+    const [resultText, setResultText] = useState('');
     const [tabIndex, setTabIndex] = useState(0);
     const [saveStatus, setSaveStatus] = useState('All changes saved');
     const [messages,setMessages]=useState<string[]>([])
     const [ws, setWs] = useState<WebSocket | null>(null);
+    const [activeSessionId,setActiveSessionId]=useState<string|null>(null);
 
     useEffect(() => {
+        if(activeSessionId!=null)
+            {
+                if(selectedNode!=null && expression!=lastSavedExpression)
+                    saveExpression(selectedNode.path!,expression,false);
+            }
         setSelectedNode(null);
         setExpression(null);
+        setActiveSessionId(sessionId);
+        
         setMessages([]);
+        setResultText("");
     }, [sessionId]);
 
-    const handleNodeSelect = (nodePath: string) => {
+    const handleNodeSelect = (nodePath: string|null) => {
         console.log('selected ' + nodePath);
         if (selectedNode && expression !== lastSavedExpression) {
             saveExpression(selectedNode.path!, expression,false);
         }
+        if(nodePath==null)
+            {
+                setSelectedNode(null);
+                setExpression("");
+                setLastSavedExpression(null);
+                setSaveStatus("All changes saved");
+                return;
+            }
         axios.get(`${SERVER_URL}/api/sessions/${sessionId}/node`, { params: { nodePath } })
             .then(response => {
                 setSelectedNode({...response.data, path: nodePath});
@@ -69,7 +86,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
 
     const saveExpression = (nodePath: string, newExpression: string | null,thenEvalute:boolean) => {
         if (newExpression === null) return;
-        axios.post(`${SERVER_URL}/api/sessions/${sessionId}/node/expression/${nodePath}`, { expression: newExpression })
+        axios.post(`${SERVER_URL}/api/sessions/${activeSessionId}/node/expression/${nodePath}`, { expression: newExpression })
             .then(() => {
                 setLastSavedExpression(newExpression);
                 setSaveStatus('All changes saved');
@@ -93,21 +110,21 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const executeExpression = () => {
         if (!selectedNode) return;
         if (selectedNode && expression === lastSavedExpression) {
-            axios.get(`${SERVER_URL}/api/sessions/${sessionId}/node/value`, { params: { nodePath: selectedNode.path } })
+            axios.get(`${SERVER_URL}/api/sessions/${activeSessionId}/node/value`, { params: { nodePath: selectedNode.path } })
                 .then(response => {
                     if (typeof response.data === 'string') {
-                        setGeneralTextOutput(response.data);
+                        setResultText(response.data);
                     } else {
-                        setGeneralTextOutput(JSON.stringify(response.data));
+                        setResultText(JSON.stringify(response.data));
                     }
                     
                 })
                 .catch(error => {
                     console.error('Failed to evaluate expression:', error);
                     if (error.response) {
-                        setGeneralTextOutput(formatErrorData(error.response.data as ErrorData));
+                        setResultText(formatErrorData(error.response.data as ErrorData));
                     } else {
-                        setGeneralTextOutput('Failed to evaluate expression');
+                        setResultText('Failed to evaluate expression');
                     }
                 });
         }
@@ -148,7 +165,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                     border: '1px solid #ccc',
                     padding: '10px',
                     fontFamily: '"Lucida Console", monospace',
-                  }}>{generalTextOutput}</pre></Typography>;
+                  }}>{resultText}</pre></Typography>;
             case 1:
                 return <TextLogger messages={messages}/>;
             default:
@@ -161,7 +178,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const { state, view }= useCodeMirror({
         container: editorRef.current!,
         value: expression || '',
-        extensions: [javascript()],
+        extensions: selectedNode?.expressionType===ExpressionType.FuncScript?[javascript()]:[],
         onChange:  value => {
             setExpression(value);
             setSaveStatus('Unsaved changes');
@@ -195,13 +212,16 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                     <IconButton onClick={() => selectedNode && expression !== lastSavedExpression && saveExpression(selectedNode.path!, expression, false)} color="secondary">
                         <SaveIcon />
                     </IconButton>
-                    <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 10 }}>
+                    <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 2 }}>
                         {saveStatus}
                     </Typography>
+                    <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 2 }}>
+                        {selectedNode?.path}
+                    </Typography>
                 </Toolbar>
-                <div ref={editorRef} style={{ height: '200px',overflow: 'auto', border: '1px solid #ccc' }} />
+                <div ref={editorRef}  style={{ height: '200px',overflow: 'auto', border: '1px solid #ccc' }} />
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
-                    <Tab label="General Text Output" />
+                    <Tab label="Result" />
                     <Tab label="Log" />
                 </Tabs>
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -209,18 +229,18 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                 </Box>
             </Grid>
             <Grid item xs={4}>
-                <EvalNodeComponent
+                {activeSessionId && (<EvalNodeComponent
                     node={{
                         name: "Root Node",
                         expressionType: ExpressionType.FuncScript,
                         childrenCount: 0,
                         expression: null,
                     }}
-                    sessionId={sessionId}
+                    sessionId={activeSessionId}
                     onSelect={handleNodeSelect}
                     onModify={() => {}}
                     selectedNode={selectedNode?.path}
-                />
+                />)}
             </Grid>
         </Grid>
     );
