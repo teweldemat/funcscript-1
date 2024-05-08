@@ -54,12 +54,12 @@ namespace funcscript.funcs.list
 
             var lst = (FsList)par0;
 
-            for (int i = 0; i < lst.Data.Length; i++)
+            for (int i = 0; i < lst.Length; i++)
             {
-                var result = func.Evaluate(parent, new ParList { X = lst.Data[i], I = i });
+                var result = func.Evaluate(parent, new ParList { X = lst[i], I = i });
 
                 if (result is bool && (bool)result)
-                    return lst.Data[i];
+                    return lst[i];
             }
 
             return null;

@@ -1,5 +1,6 @@
 using funcscript.core;
 using System;
+using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
@@ -8,19 +9,37 @@ namespace funcscript.funcs.logic
     {
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var cond = pars.GetParameter(parent, 0);
-
-            if (!(cond is bool))
+            if (pars.Count < 3)
             {
-                throw new error.TypeMismatchError("The first parameter must be a boolean value");
+                throw new error.TypeMismatchError("IfConditionFunction requires three parameters: condition, trueResult, and falseResult.");
             }
 
-            if ((bool)cond)
+            // First, evaluate or prepare to defer the condition
+            var condition = pars.GetParameter(parent, 0);
+            if (condition is ValueReferenceDelegate condRef)
             {
-                return pars.GetParameter(parent, 1);
+                // Defer the entire evaluation if the condition is a reference
+                return FunctionRef.Create(parent, this, pars);
             }
 
-            return pars.GetParameter(parent, 2);
+            if (!(condition is bool))
+            {
+                throw new error.TypeMismatchError("The first parameter must be a boolean value.");
+            }
+
+            // Evaluate the condition and decide which result parameter to evaluate or defer
+            bool evalCondition = (bool)condition;
+            int resultIndex = evalCondition ? 1 : 2;
+
+            var result = pars.GetParameter(parent, resultIndex);
+            if (result is ValueReferenceDelegate resultRef)
+            {
+                // Defer the evaluation of the result if it is a reference
+                return FunctionRef.Create(parent, this, pars);
+            }
+
+            // Return the result directly if it's already a concrete value
+            return result;
         }
 
 

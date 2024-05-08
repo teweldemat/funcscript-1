@@ -56,9 +56,9 @@ namespace funcscript.funcs.list
 
             var lst = (FsList)par0;
 
-            for (int i = 0; i < lst.Data.Length; i++)
+            for (int i = 0; i < lst.Length; i++)
             {
-                total = func.Evaluate(parent, new DoListFuncPar { S = total, X = lst.Data[i], I = i });
+                total = func.Evaluate(parent, new DoListFuncPar { S = total, X = lst[i], I = i });
             }
 
             return FuncScript.NormalizeDataType(total);

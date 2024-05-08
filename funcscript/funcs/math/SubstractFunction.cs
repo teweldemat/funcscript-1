@@ -1,4 +1,5 @@
 ﻿using funcscript.core;
+using funcscript.model;
 
 namespace funcscript.funcs.math
 {
@@ -23,7 +24,8 @@ namespace funcscript.funcs.math
             if (count > 0)
             {
                 var d = pars.GetParameter(parent, 0);
-
+                if (d is ValueReferenceDelegate)
+                    return CallRef.Create(parent, this, pars);
                 if (d is int)
                 {
                     isInt = true;

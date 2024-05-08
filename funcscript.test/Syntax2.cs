@@ -36,6 +36,23 @@ namespace funcscript.test
         }
 
         [Test]
+        public void StringDoubleEscapeBug()
+        {
+            var exp = @"'test\'\''";
+            var p = new KvcProvider(new ObjectKvc(new { x = 100 }),
+                new DefaultFsDataProvider());
+            var res = FuncScript.Evaluate(p, exp);
+            Assert.That(res,Is.EqualTo("test''"));
+        }
+
+        [Test]
+        public void ParseUnicodeString()
+        {
+            var exp = @"'test\u0020'";
+            var res = FuncScript.Evaluate(exp);
+            Assert.That(res,Is.EqualTo("test "));
+        }
+        [Test]
         public void NullSafeGetMemberNullValue()
         {
             var p = new DefaultFsDataProvider();

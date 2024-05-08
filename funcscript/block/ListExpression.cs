@@ -1,17 +1,19 @@
 ﻿using funcscript.core;
 using funcscript.model;
 using System.Text;
+using Newtonsoft.Json.Serialization;
 
 namespace funcscript.block
 {
     public class ListExpression:ExpressionBlock
     {
         public ExpressionBlock[] ValueExpressions;
+
+       
         public override object Evaluate(IFsDataProvider provider)
         {
-            var kv = ValueExpressions.Select(x => x.Evaluate(provider)).ToArray();
-
-            return new FsList(kv);
+            var lst = ValueExpressions.Select(x => x.Evaluate(provider)).ToArray();
+            return new ArrayFsList(lst);
         }
         public override IList<ExpressionBlock> GetChilds()
         {

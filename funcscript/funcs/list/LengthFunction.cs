@@ -24,12 +24,13 @@ namespace funcscript.funcs.list
                 throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
-
+            if (par0 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
             if (par0 == null)
                 return 0;
 
             if (par0 is FsList)
-                return ((FsList)par0).Data.Length;
+                return ((FsList)par0).Length;
 
             if (par0 is string)
                 return ((string)par0).Length;

@@ -32,7 +32,7 @@ namespace funcscript.funcs.os
             try
             {
                 var files = Directory.GetDirectories(directoryPath).Concat(Directory.GetFiles(directoryPath)).ToArray();
-                return new FsList(files);
+                return new ArrayFsList(files);
             }
             catch (Exception ex)
             {

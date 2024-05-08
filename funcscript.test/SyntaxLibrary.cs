@@ -186,7 +186,7 @@ namespace funcscript.test
         public void TestSeriesFunction()
         {
             var res = FuncScript.Evaluate("series(1,5)");
-            var expected = new FsList(new object[] { 1, 2, 3, 4, 5 });
+            var expected = new ArrayFsList(new object[] { 1, 2, 3, 4, 5 });
             Assert.AreEqual(expected, res);
         }
 

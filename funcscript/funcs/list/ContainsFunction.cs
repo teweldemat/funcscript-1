@@ -38,7 +38,9 @@ namespace funcscript.funcs.list
 
             var container = pars.GetParameter(parent, 0);
             var item = pars.GetParameter(parent, 1);
-
+            if (container is ValueReferenceDelegate || item is ValueReferenceDelegate)
+                return FunctionRef.Create(parent, this, pars);
+            
             if (container is FsList list)
             {
                 return list.Data.Contains(item);

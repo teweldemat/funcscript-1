@@ -35,6 +35,8 @@ namespace funcscript.funcs.math
             for(int i=0;i<c;i++)
             {
                 var d=pars.GetParameter(parent,i);
+                if (d is ValueReferenceDelegate)
+                    return FunctionRef.Create(parent, this, pars);
                 if(isNull)
                 {
                     if (d is int)
@@ -131,7 +133,7 @@ namespace funcscript.funcs.math
 
                     else if (d is KeyValueCollection)
                     {
-                        throw new error.TypeMismatchError("Keyvalue collection not expected");
+                        throw new error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
                     }
 
                 }
@@ -164,7 +166,7 @@ namespace funcscript.funcs.math
 
                     else if (d is KeyValueCollection)
                     {
-                        throw new error.TypeMismatchError("Keyvalue collection not expected");
+                        throw new error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
                     }
                 }
                 if (isString)
@@ -199,7 +201,7 @@ namespace funcscript.funcs.math
                     }
                     else if (d is KeyValueCollection)
                     {
-                        throw new error.TypeMismatchError("Keyvalue collection not expected");
+                        throw new error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
                     }
                 }
                 if(isKv)
@@ -225,7 +227,7 @@ namespace funcscript.funcs.math
 
             }
             if (isList)
-                return new FsList(listTotal);
+                return new ArrayFsList(listTotal);
             if (isString)
                 return stringTotal.ToString();
             if (isDouble)

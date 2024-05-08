@@ -57,15 +57,15 @@ namespace funcscript.funcs.list
             if (n <= 0)
                 return lst;
 
-            if (n >= lst.Data.Length)
-                return new FsList(new object[] { });
+            if (n >= lst.Length)
+                return new ArrayFsList(new object[] { });
 
-            int newArrayLength = lst.Data.Length - n;
+            int newArrayLength = lst.Length - n;
             object[] newArray = new object[newArrayLength];
 
-            Array.Copy(lst.Data, n, newArray, 0, newArrayLength);
+            Array.Copy(lst.Data.ToArray(), n, newArray, 0, newArrayLength);
 
-            return new FsList(newArray);
+            return new ArrayFsList(newArray);
         }
 
         public string ParName(int index)

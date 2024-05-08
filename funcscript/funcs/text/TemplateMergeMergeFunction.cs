@@ -41,6 +41,8 @@ namespace funcscript.funcs.math
             {
 
                 var o = pars.GetParameter(parent, i);
+                if (o is ValueReferenceDelegate)
+                    return CallRef.Create(parent, this, pars);
                 if (o is FsList)
                     MergeList(sb, (FsList)o);
                 else

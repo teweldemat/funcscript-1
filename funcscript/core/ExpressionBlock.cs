@@ -40,6 +40,6 @@ namespace funcscript.core
         /// <param name="provider"></param>
         /// <returns></returns>
         public abstract String AsExpString(IFsDataProvider provider);
-    }
 
+    }
 }

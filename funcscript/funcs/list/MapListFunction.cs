@@ -42,7 +42,8 @@ namespace funcscript.funcs.list
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
-
+            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
+                return FunctionRef.Create(parent, this, pars);
             if (par0 == null)
                 return null;
 
@@ -58,14 +59,14 @@ namespace funcscript.funcs.list
                 throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter didn't evaluate to a function");
 
             var lst = (FsList)par0;
-            var res = new object[lst.Data.Length];
+            var res = new object[lst.Length];
 
-            for (int i = 0; i < lst.Data.Length; i++)
+            for (int i = 0; i < lst.Length; i++)
             {
-                res[i] = func.Evaluate(parent, new DoListFuncPar { X = lst.Data[i], I = i });
+                res[i] = func.Evaluate(parent, new DoListFuncPar { X = lst[i], I = i });
             }
 
-            return new FsList(res);
+            return new ArrayFsList(res);
         }
 
         public string ParName(int index)

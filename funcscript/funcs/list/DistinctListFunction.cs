@@ -47,15 +47,15 @@ namespace funcscript.funcs.list
             var distinctValues = new HashSet<object>();
             var res = new List<object>();
 
-            for (int i = 0; i < lst.Data.Length; i++)
+            for (int i = 0; i < lst.Length; i++)
             {
-                if (distinctValues.Add(lst.Data[i]))
+                if (distinctValues.Add(lst[i]))
                 {
-                    res.Add(lst.Data[i]);
+                    res.Add(lst[i]);
                 }
             }
 
-            return new FsList(res);
+            return new ArrayFsList(res);
         }
 
         public string ParName(int index)

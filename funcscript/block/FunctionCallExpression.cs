@@ -1,48 +1,47 @@
-﻿using funcscript.core;
+﻿using System.Runtime.InteropServices;
+using funcscript.core;
 using funcscript.error;
 using funcscript.model;
 using System.Text;
 
 namespace funcscript.block
 {
-    public class FunctionCallExpression : ExpressionBlock, IParameterList
+    public class FunctionCallExpression : ExpressionBlock
     {
         public ExpressionBlock Function;
         public ExpressionBlock[] Parameters;
-        public object GetParameter(IFsDataProvider provider, int index)
+
+        
+        class FuncParameterList : IParameterList
         {
-            var ret = index < 0 || index >= Parameters.Length ? null : Parameters[index].Evaluate(provider);
-            if (DefaultFsDataProvider.Trace)
+            public FunctionCallExpression parent;
+            public int Count => parent.Parameters.Length;
+            public object GetParameter(IFsDataProvider provider, int index)
             {
-                DefaultFsDataProvider.WriteTraceLine($"Par {index} - {ret}");
+                var ret = index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider);
+                return ret;
             }
-            return ret;
         }
+
 
         public int Count => Parameters.Length;
 
+        
         public override object Evaluate(IFsDataProvider provider)
         {
             var func = Function.Evaluate(provider);
+            var paramList=new FuncParameterList
+            {
+                parent = this
+            };
             if (func is IFsFunction)
             {
                 string fn = null;
-                if (DefaultFsDataProvider.Trace)
-                {
-                    DefaultFsDataProvider.IncreateTraceIndent();
-                    fn = ((IFsFunction)func).Symbol;
-                    if (fn == null)
-                        fn = func.ToString();
-                    DefaultFsDataProvider.WriteTraceLine($"Evaluating function {fn}");
-                }
+                
                 try
                 {
-                    var ret = ((IFsFunction)func).Evaluate(provider, this);
-                    if (DefaultFsDataProvider.Trace)
-                    {
-                        DefaultFsDataProvider.DecreaseTraceIndent();
-                        DefaultFsDataProvider.WriteTraceLine($"Result of {fn}: {ret}");
-                    }
+                   
+                    var ret = ((IFsFunction)func).Evaluate(provider, paramList);
                     return ret;
                 }
                 catch (error.EvaluationException)
@@ -57,35 +56,24 @@ namespace funcscript.block
             }
             else if (func is FsList)
             {
-                var index = GetParameter(provider, 0);
-                if (DefaultFsDataProvider.Trace)
-                {
-                    DefaultFsDataProvider.IncreateTraceIndent();
-                    DefaultFsDataProvider.WriteTraceLine($"Acccesing list element {func} ({index})");
-                }
+                var index = paramList.GetParameter(provider, 0);
                 object ret;
                 if (index is int)
                 {
                     var i = (int)index;
                     var lst = (FsList)func;
-                    if (i < 0 || i >= lst.Data.Length)
+                    if (i < 0 || i >= lst.Length)
                         ret = null;
                     else
-                        ret = lst.Data[i];
+                        ret = lst[i];
                 }
                 else
                     ret = null;
-                if (DefaultFsDataProvider.Trace)
-                {
-                    DefaultFsDataProvider.WriteTraceLine($"Result {ret}");
-                    DefaultFsDataProvider.DecreaseTraceIndent();
-
-                }
                 return ret;
             }
             else if (func is KeyValueCollection collection)
             {
-                var index = GetParameter(provider, 0);
+                var index = paramList.GetParameter(provider, 0);
 
                 object ret;
                 if (index is string key)
@@ -98,10 +86,12 @@ namespace funcscript.block
                     ret = null;
                 return ret;
             }
+            else if (func is ValueReferenceDelegate r)
+            {
+                return CallRef.Create(provider, r, paramList);
+            }
             throw new EvaluationException(this.Pos, this.Length,
                 new TypeMismatchError($"Function part didn't evaluate to a function or a list. {FuncScript.GetFsDataType(func)}"));
-
-
         }
         public override IList<ExpressionBlock> GetChilds()
         {

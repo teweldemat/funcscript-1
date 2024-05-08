@@ -4,6 +4,7 @@ using funcscript.error;
 using NUnit.Framework;
 using System;
 using System.Numerics;
+using System.Text;
 
 namespace funcscript.test
 {
@@ -178,7 +179,7 @@ namespace funcscript.test
         {
 
             var res = AssertSingleResultType("Map([1,2,4],(x)=>x*x)", typeof(FsList));
-            Assert.IsTrue(((FsList)res).Data[2].Equals(16), "Result  not correct");
+            Assert.IsTrue(((FsList)res)[2].Equals(16), "Result  not correct");
         }
 
         [Test]
@@ -397,7 +398,7 @@ return -x;
             var exp = "[]";
             var res = FuncScript.Evaluate(exp) as FsList;
             Assert.IsNotNull(res);
-            Assert.That(res.Data.Length, Is.EqualTo(0));
+            Assert.That(res.Length, Is.EqualTo(0));
         }
 
         [Test]
@@ -410,6 +411,23 @@ return -x;
 }";
             var res=FuncScript.Evaluate(exp);
             Assert.That(res,Is.EqualTo(3));
+        }
+
+        [Test]
+        public void TestFormatAsJson()
+        {
+            var exp =
+                @"{x:5,y:6}";
+            var obj = FuncScript.Evaluate(exp);
+            var sb = new StringBuilder();
+            FuncScript.Format(sb,obj,asJsonLiteral:true);
+            var json = sb.ToString();
+            Assert.That(json
+                    .Replace(" ","")
+                    .Replace("\n","")
+                    .Replace("\"","")
+                    .ToLower()
+                ,Is.EqualTo(exp.Replace("\"","")));
         }
     }
 }

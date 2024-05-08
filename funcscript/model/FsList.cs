@@ -4,33 +4,11 @@ using System.Text;
 
 namespace funcscript.model
 {
-    public class FsList
+    public abstract class FsList
     {
-        enum ListInternalType
-        {
-            Null,
-            IList,
-            IListGeneric,
-            NotList
-        }
-
-        object[] _data;
-        public object[] Data
-        {
-            get
-            {
-                return _data;
-            }
-            set
-            {
-                _data = value;
-            }
-        }
-        public FsList(object[] data)
-        {
-            _data = data;
-        }
-       
+        public abstract  IEnumerable<object> Data { get; }
+        public abstract object this[int index] { get; }
+        public abstract int Length { get; }
         public override bool Equals(object obj)
         {
             if (obj == null || GetType() != obj.GetType())
@@ -38,12 +16,14 @@ namespace funcscript.model
                 return false;
             }
             var other = (FsList)obj;
-            if (other.Data.Length != _data.Length)
+            var otherData = other.Data.ToArray();
+            var thisData = this.Data.ToArray();
+            if (otherData.Length != thisData.Length)
                 return false;
-            for(int i=0;i<other.Data.Length;i++)
+            for(int i=0;i<otherData.Length;i++)
             {
-                var val1 = _data[i];
-                var val2 = other.Data[i];
+                var val1 = thisData[i];
+                var val2 = otherData[i];
                 if (val1==null && val2==null)
                     return true;
                 if (val1 == null || val2 == null)
@@ -55,23 +35,24 @@ namespace funcscript.model
         }
         public override string ToString()
         {
-            if (_data == null)
+            if (this.Data == null)
                 return "Uninitialized list";
             var sb = new StringBuilder();
             sb.Append("[");
-            if (Data.Length > 0)
+            if (Data.Any())
             {
-                if (_data[0] == null)
-                    sb.Append("null");
-                else
-                    sb.Append(_data[0].ToString());
-                for (int i = 1; i < _data.Length; i++)
+                var first = true;
+                foreach (var d in this.Data)
                 {
-                    sb.Append(",");
-                    if (_data[i] == null)
+                    if (first)
+                        first = false;
+                    else
+                        sb.Append(",");
+                    if (d == null)
                         sb.Append("null");
                     else
-                        sb.Append(_data[i].ToString());
+                        sb.Append(d.ToString());
+
                 }
             }
             sb.Append("]");
@@ -80,10 +61,22 @@ namespace funcscript.model
         // override object.GetHashCode
         public override int GetHashCode()
         {
-            return _data.GetHashCode();
+            return this.Data.GetHashCode();
+        }
+        public static bool IsListType(Type t) =>
+            t.IsAssignableTo(typeof(System.Collections.IEnumerable)) || t.IsAssignableTo(typeof(System.Collections.IList)) || IsGenericList(t);
+        static bool IsGenericList(Type t)
+        {
+            return t != typeof(byte[]) && t.IsGenericType && (t.GetGenericTypeDefinition().IsAssignableTo(typeof(IList<>))
+                || t.GetGenericTypeDefinition().IsAssignableTo(typeof(List<>)));
         }
         
-        public FsList(object data)
+    }
+
+    public class ArrayFsList : FsList
+    {
+        object[] _data;
+        public ArrayFsList(object data)
         {
             if (data == null)
                 throw new error.TypeMismatchError("Null can't be converted to list");
@@ -112,14 +105,9 @@ namespace funcscript.model
             }
         }
 
-        public static bool IsListType(Type t) =>
-            t.IsAssignableTo(typeof(System.Collections.IEnumerable)) || t.IsAssignableTo(typeof(System.Collections.IList)) || IsGenericList(t);
-        static bool IsGenericList(Type t)
-        {
-            return t != typeof(byte[]) && t.IsGenericType && (t.GetGenericTypeDefinition().IsAssignableTo(typeof(IList<>))
-                || t.GetGenericTypeDefinition().IsAssignableTo(typeof(List<>)));
-        }
-        
-        
+        public override IEnumerable<object> Data => _data;
+
+        public override object this[int index] => (index<0||index>=_data.Length)?null:_data[index];
+        public override int Length =>_data.Length;
     }
 }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.XPath;
 
 namespace funcscript.funcs.keyvalue
 {
@@ -26,7 +27,11 @@ namespace funcscript.funcs.keyvalue
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
-
+            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
+            {
+                return FunctionRef.Create(parent, this, pars);
+            }
+                
             if (!(par1 is string))
                 throw new error.TypeMismatchError($"{Symbol} function: The second parameter should be {ParName(1)}");
 

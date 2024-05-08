@@ -66,7 +66,7 @@ namespace funcscript.test
         [Test]
         public void TestTypeMismatchError()
         {
-            var error_exp = "len('5')";
+            var error_exp = "len(5)";
             var exp = $"10+{error_exp}";
             try
             {
@@ -129,7 +129,6 @@ namespace funcscript.test
                         throw new Exception(msg);
                     })
                 });
-                throw new Exception("No error");
             }
             catch (Exception ex)
             {

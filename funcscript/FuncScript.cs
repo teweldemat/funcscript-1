@@ -4,6 +4,8 @@ using funcscript.model;
 using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Xml.XPath;
+using Newtonsoft.Json.Serialization;
 
 namespace funcscript
 {
@@ -39,7 +41,7 @@ namespace funcscript
                     object[] a = new object[jarr.Count];
                     for (int i = 0; i < a.Length; i++)
                         a[i] = FromJToken(jarr[i]);
-                    return new FsList(a);
+                    return new ArrayFsList(a);
                 case JTokenType.Constructor:
                     return null;
                 case JTokenType.Property:
@@ -120,6 +122,10 @@ namespace funcscript
                 || value is IFsFunction    //we treat function as a data. Function objects should not retain state
                 || value is ByteArray
                 || value is FsList
+                || value is ValueReferenceDelegate
+                || value is ValueSinkDelegate
+                || value is SignalSourceDelegate
+                || value is SignalListenerDelegate
                 )
             {
                 return value; ;
@@ -163,16 +169,16 @@ namespace funcscript
             }
             if (FsList.IsListType(t))
             {
-                return new FsList(value);
+                return new ArrayFsList(value);
             }
-
+            
             return new ObjectKvc(value);
         }
         static object collect(JsonElement el)
         {
             return el.ValueKind switch
             {
-                JsonValueKind.Array => new FsList(el.EnumerateArray().Select(x => collect(x)).ToArray()),
+                JsonValueKind.Array => new ArrayFsList(el.EnumerateArray().Select(x => collect(x)).ToArray()),
                 JsonValueKind.String => el.GetString(),
                 JsonValueKind.Object => new SimpleKeyValueCollection(el.EnumerateObject().Select(x =>
                                     new KeyValuePair<string, object>(x.Name, collect(x.Value))
@@ -289,20 +295,21 @@ namespace funcscript
                     useLineBreak = test.Length > BREAK_LINE_THRUSHOLD;
                 }
                 sb.Append($"[");
-                if (list.Data.Length > 0)
+                if (list.Length > 0)
+                if (list.Length > 0)
                 {
                     if (useLineBreak)
                         sb.Append($"\n{indent}{TAB}");
                     else
                         sb.Append($" ");
-                    Format($"{indent}{TAB}", sb, list.Data[0], format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
-                    for (int i = 1; i < list.Data.Length; i++)
+                    Format($"{indent}{TAB}", sb, list[0], format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
+                    for (int i = 1; i < list.Length; i++)
                     {
                         if (useLineBreak)
                             sb.Append($",\n{indent}{TAB}");
                         else
                             sb.Append($", ");
-                        Format($"{indent}{TAB}", sb, list.Data[i], format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
+                        Format($"{indent}{TAB}", sb, list[i], format, asFuncScriptLiteral, asJsonLiteral, adaptiveLineBreak);
                     }
                 }
                 if (useLineBreak)
@@ -508,6 +515,14 @@ namespace funcscript
                 return FSDataType.KeyValueCollection;
             if (value is IFsFunction)
                 return FSDataType.Function;
+            if (value is ValueReferenceDelegate)
+                return FSDataType.ValRef;
+            if (value is ValueSinkDelegate)
+                return FSDataType.ValSink;
+            if (value is SignalSourceDelegate)
+                return FSDataType.SigSource;
+            if (value is SignalListenerDelegate)
+                return FSDataType.SigSink;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
         public static bool IsNumeric(object val)
@@ -670,8 +685,21 @@ namespace funcscript
             }
         }
 
+        public static object Dref(object obj)
+        {
+            if (obj is ValueReferenceDelegate d)
+                return Dref(d());
+            if (obj is FsList lst)
+            {
+                return new ArrayFsList(lst.Data.Select(x => Dref(x)).ToArray());
+            }
 
-
-
+            if (obj is KeyValueCollection kvc)
+            {
+                return new SimpleKeyValueCollection(kvc.GetAll().Select(x=>KeyValuePair.Create<string,object>(x.Key,Dref(x.Value))).ToArray());
+            }
+            return obj;
+        }
+    
     }
 }

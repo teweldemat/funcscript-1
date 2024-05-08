@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using funcscript.model;
 
 namespace funcscript.funcs.text
 {
@@ -51,12 +52,18 @@ namespace funcscript.funcs.text
             var c = pars.Count;
             if (c == 0)
                 return "";
-            var str = pars.GetParameter(parent, 0) as string;
+            var par0 = pars.GetParameter(parent, 0);
+            if (par0 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
+            var str =par0 as string;
             if (str == null)
                 return null;
 
             int index = 0;
             var par1 = pars.GetParameter(parent, 1);
+            if (par1 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
+
             if (par1 is int)
                 index = (int)par1;
 

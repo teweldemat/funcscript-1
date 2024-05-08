@@ -71,7 +71,7 @@ namespace funcscript.funcs.list
                 return (int)result;
             });
 
-            return new FsList(res);
+            return new ArrayFsList(res);
         }
 
         public string ParName(int index)

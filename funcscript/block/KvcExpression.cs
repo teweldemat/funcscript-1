@@ -7,6 +7,8 @@ namespace funcscript.block
 {
     public class KvcExpression : ExpressionBlock
     {
+        
+       
         class KvcProvider : IFsDataProvider
         {
             IFsDataProvider ParentProvider;
@@ -42,12 +44,21 @@ namespace funcscript.block
             public String KeyLower;
             public ExpressionBlock ValueExpression;
         }
+
+        public class ConnectionExpression
+        {
+            public ExpressionBlock Source;
+            public ExpressionBlock Sink;
+            public ExpressionBlock Catch;
+        }
         IList<KeyValueExpression> _keyValues;
+        private IList<ConnectionExpression> _connections;
         Dictionary<string, KeyValueExpression> index;
         KeyValueExpression singleReturn = null;
-        public String SetKeyValues(IList<KeyValueExpression> kv)
+        public String SetKeyValues(IList<KeyValueExpression> kv,IList<ConnectionExpression> conns)
         {
             _keyValues = kv;
+            _connections = conns;   
             if (_keyValues == null)
                 index = null;
             {
@@ -77,10 +88,22 @@ namespace funcscript.block
         public override object Evaluate(IFsDataProvider provider)
         {
             var p = new KvcProvider(this, provider);
+            foreach (var connection in this._connections)
+            {
+                var source = connection.Source.Evaluate(p);
+                var sink = connection.Sink.Evaluate(p);
+                if (sink is ValueSinkDelegate valSink)
+                    valSink(source);
+                else if (source is SignalSourceDelegate sigSource)
+                    sigSource(sink,connection.Catch?.Evaluate(p));
+                else 
+                    throw new error.EvaluationTimeException("Invalid connection");
+                
+            }
             if (this.singleReturn == null)
             {
-                var kv = KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, p.GetData(x.KeyLower))).ToArray();
-                return new SimpleKeyValueCollection(kv);
+                var kvc = KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, p.GetData(x.KeyLower))).ToArray();
+                return new SimpleKeyValueCollection(kvc);
             }
             else
             {

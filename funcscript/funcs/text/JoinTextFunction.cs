@@ -21,15 +21,22 @@ namespace funcscript.funcs.math
 
             int c = pars.Count;
             FsList? list;
-            if (c < 1 || (list = pars.GetParameter(parent, 0) as FsList) == null)
+            if (c < 2)
+                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: two paramters expected");
+            var par0 = pars.GetParameter(parent, 0);
+            var par1 = pars.GetParameter(parent, 1);
+            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
+            if ((list = par0 as FsList) == null)
                 throw new funcscript.error.TypeMismatchError($"{this.Symbol}: list expected");
+            
             String? separator;
-            if (c < 2 || (separator = pars.GetParameter(parent, 1) as String) == null)
+            if ((separator = par1 as String) == null)
                 throw new funcscript.error.TypeMismatchError($"{this.Symbol}: separator expected");
 
-            for (int i = 0; i < list.Data.Length; i++)
+            for (int i = 0; i < list.Length; i++)
             {
-                var o = list.Data[i];
+                var o = list[i];
                 if (o != null)
                 {
                     if (sb.Length > 0)

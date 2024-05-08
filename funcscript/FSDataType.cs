@@ -19,6 +19,10 @@ namespace funcscript
         ByteArray,
         List,
         KeyValueCollection,
-        Function
+        Function,
+        ValRef,
+        ValSink,
+        SigSource,
+        SigSink
     }
 }

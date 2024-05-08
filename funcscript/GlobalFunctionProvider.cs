@@ -11,21 +11,6 @@ namespace funcscript
 {
     public class DefaultFsDataProvider : IFsDataProvider
     {
-        public static bool Trace = false;
-        public static string TraceIndent = null;
-        public static void IncreateTraceIndent()
-        {
-            TraceIndent = TraceIndent == null ? "->" : TraceIndent + "->";
-        }
-        public static void DecreaseTraceIndent()
-        {
-            if (TraceIndent != null && TraceIndent.Length >= 2)
-                TraceIndent = TraceIndent.Substring(0, TraceIndent.Length - 2);
-        }
-        public static void WriteTraceLine(string line)
-        {
-            Console.WriteLine(TraceIndent + line);
-        }
         static Dictionary<string, IFsFunction> s_funcByName = new Dictionary<string, IFsFunction>();
         static DefaultFsDataProvider()
         {

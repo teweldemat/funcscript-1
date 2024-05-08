@@ -8,8 +8,34 @@ using System.Threading.Tasks;
 
 namespace funcscript.funcs.misc
 {
+    public abstract class Fslogger
+    {
+        public abstract void WriteLine(string text);
+        public abstract void Clear();
+        
+        
+        private static Fslogger _fslogger;
+
+        public static void SetDefaultLogger(Fslogger logger)
+        {
+            _fslogger = logger;
+        }
+        public static Fslogger DefaultLogger =>_fslogger;
+
+        static Fslogger()
+        {
+            SetDefaultLogger(new ConsoleLogger());
+        }
+    }
+
+    public class ConsoleLogger : Fslogger
+    {
+        public override void WriteLine(string text) => Console.WriteLine(text);
+        public override void Clear() => Console.Clear();
+    }
     public class LogFunction : IFsFunction
     {
+        
         public int MaxParsCount => 2;
 
         public CallType CallType => CallType.Infix;
@@ -25,27 +51,27 @@ namespace funcscript.funcs.misc
 
             var tag = pars.Count > 1 ? $"({pars.GetParameter(parent, 1).ToString()})" : "";
             var output = pars.Count > 2 ? (pars.GetParameter(parent, 2) is bool ? (bool)pars.GetParameter(parent, 2) : false) : true;
-            Console.WriteLine($"FuncScript: Evaluating {tag}");
+            Fslogger.DefaultLogger.WriteLine($"FuncScript: Evaluating {tag}");
             try
             {
                 var res = pars.GetParameter(parent, 0);
                 if (output)
                 {
-                    Console.WriteLine($"FuncScript: Result{tag}:\n{(res == null ? "<null>" : res.ToString())}");
-                    Console.WriteLine($"End Result {tag}");
+                    Fslogger.DefaultLogger.WriteLine($"FuncScript: Result{tag}:\n{(res == null ? "<null>" : res.ToString())}");
+                    Fslogger.DefaultLogger.WriteLine($"End Result {tag}");
                 }
                 else
-                    Console.WriteLine($"Done {tag}");
+                    Fslogger.DefaultLogger.WriteLine($"Done {tag}");
                 return res;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"FuncScript: Error evaluating {tag}");
+                Fslogger.DefaultLogger.WriteLine($"FuncScript: Error evaluating {tag}");
                 var thisEx = ex;
                 while (thisEx != null)
                 {
-                    Console.WriteLine(thisEx.Message);
-                    Console.WriteLine(thisEx.StackTrace);
+                    Fslogger.DefaultLogger.WriteLine(thisEx.Message);
+                    Fslogger.DefaultLogger.WriteLine(thisEx.StackTrace);
                     thisEx = thisEx.InnerException;
                 }
                 throw;

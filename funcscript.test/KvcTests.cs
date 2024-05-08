@@ -79,7 +79,7 @@ namespace funcscript.test
         {
             var g = new DefaultFsDataProvider();
             var res = FuncScript.Evaluate(g, "[{a:4,b:5,c:6},{a:7,b:8,c:9}]\n{a,c}");
-            var expected = new FsList(new object[]{new ObjectKvc(new { a = 4, c=6})
+            var expected = new ArrayFsList(new object[]{new ObjectKvc(new { a = 4, c=6})
             ,new ObjectKvc(new { a = 7, c = 9})
             });
             Assert.AreEqual(expected, res);
@@ -102,7 +102,7 @@ z:Map([1,2,3],(x)=>x*x),
 return Map(z,(x)=>x*x);
 }") as FsList;
             Assert.IsNotNull(res);
-            var expected = new FsList(new object[] { 1, 16, 81 });
+            var expected = new ArrayFsList(new object[] { 1, 16, 81 });
 
             Assert.AreEqual(expected.Data, res.Data);
         }
@@ -187,8 +187,8 @@ d";
         public void TestListParse2()
         {
             var exp = @" [ [ 3, 4 ] , [ 5 , 6 ] ]";
-            var expected = new FsList(new object[] { new FsList(new object[] { 3,4}) ,
-                 new FsList(new object[] { 5, 6 }) });
+            var expected = new ArrayFsList(new object[] { new ArrayFsList(new object[] { 3,4}) ,
+                 new ArrayFsList(new object[] { 5, 6 }) });
             var res = FuncScript.Evaluate(exp) as FsList;
             Assert.NotNull(res);
             Assert.AreEqual(expected, res);
@@ -197,8 +197,8 @@ d";
         public void TestListParse3()
         {
             var exp = " \n [ \n [ \n 3 \n , \n 4 \n ] \n , \n [ \n 5 \n , \n 6 \n ] \n ] \n ";
-            var expected = new FsList(new object[] { new FsList(new object[] { 3,4}) ,
-                 new FsList(new object[] { 5, 6 }) });
+            var expected = new ArrayFsList(new object[] { new ArrayFsList(new object[] { 3,4}) ,
+                 new ArrayFsList(new object[] { 5, 6 }) });
             var res = FuncScript.Evaluate(exp) as FsList;
             Assert.NotNull(res);
             Assert.AreEqual(expected, res);

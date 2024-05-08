@@ -42,7 +42,7 @@ namespace funcscript.block
             if (sourceVal is FsList)
             {
                 var lst = (FsList)sourceVal;
-                var ret = new object[lst.Data.Length];
+                var ret = new object[lst.Length];
                 int i = 0;
                 var sel=new SelectorProvider
                 {
@@ -54,7 +54,7 @@ namespace funcscript.block
                     sel.SourceVal = l;
                     ret[i++] = Selector.Evaluate(sel);
                 }
-                return new FsList(ret);
+                return new ArrayFsList(ret);
             }
             else
             {

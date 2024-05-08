@@ -17,12 +17,16 @@ namespace funcscript.funcs.list
         {
             var par0 = pars.GetParameter(parent, 0);
 
+            if (par0 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
             if (!(par0 is int))
                 throw new error.TypeMismatchError($"{this.Symbol}: {ParName(0)} must be an integer");
 
             int start = (int)par0;
 
             var par1 = pars.GetParameter(parent, 1);
+            if (par1 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
 
             if (!(par1 is int))
                 throw new error.TypeMismatchError($"{this.Symbol}: {ParName(1)} must be an integer");
@@ -36,7 +40,7 @@ namespace funcscript.funcs.list
                 ret.Add(start + i);
             }
 
-            return new FsList(ret);
+            return new ArrayFsList(ret);
         }
 
         public string ParName(int index)

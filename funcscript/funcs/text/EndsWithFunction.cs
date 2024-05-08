@@ -1,5 +1,6 @@
 ﻿using funcscript.core;
 using System;
+using funcscript.model;
 
 namespace funcscript.funcs.strings
 {
@@ -20,7 +21,8 @@ namespace funcscript.funcs.strings
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
-
+            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
+                return FunctionRef.Create(parent, this, pars);
             if (par0 == null || par1 == null)
                 return false;
 
