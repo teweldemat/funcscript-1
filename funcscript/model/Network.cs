@@ -115,6 +115,28 @@ public class CallRef : IFsDataProvider, IParameterList
         throw new NotImplementedException();
     }
 
+    public class LambdaWrapper : IFsFunction
+    {
+        private ExpressionFunction _exp;
+        private IFsDataProvider _parent;
+        public LambdaWrapper(IFsDataProvider parent, ExpressionFunction exp)
+        {
+            this._exp = exp;
+            this._parent = parent;
+        }
+
+        public object Evaluate(IFsDataProvider parent, IParameterList pars)
+        {
+            return _exp.Evaluate(_parent, pars);
+        }
+
+        public string ParName(int index) => _exp.ParName(index);
+
+        public int MaxParsCount => _exp.MaxParsCount;
+        public CallType CallType => _exp.CallType;
+        public string Symbol => _exp.Symbol;
+        public int Precidence => _exp.Precidence;
+    }
     public static ValueReferenceDelegate Create(IFsDataProvider provider, object f, IParameterList pars)
     {
         var r = new CallRef();
@@ -125,13 +147,13 @@ public class CallRef : IFsDataProvider, IParameterList
             r._vals[i] = pars.GetParameter(provider, i-1);
         }
 
-        foreach (var val in r._vals)
+        for (int i=0;i<r._vals.Length;i++)
         {
+            var val = r._vals[i];
             if (val is ExpressionFunction expF)
             {
-                expF.PreEvaluate(provider);
+                r._vals[i] = new LambdaWrapper(provider, expF);
             }
-
         }
         return r.DRef;
     }
@@ -172,9 +194,10 @@ public class SignalSinkInfo
     {
         public String Message { get; set; }
         public String ErrorType { get; set; }
+        public String? AdditionalInfo { get; set; }
     }
 
-    private static ConcurrentDictionary<int, ObjectKvc> ThreadErrorObjects =
+    public static ConcurrentDictionary<int, ObjectKvc> ThreadErrorObjects =
         new ConcurrentDictionary<int, ObjectKvc>();
 
     public static ValueReferenceDelegate ErrorDelegate => () =>
@@ -204,7 +227,10 @@ public class SignalSinkInfo
                 ThreadErrorObjects.TryRemove(System.Threading.Thread.CurrentThread.ManagedThreadId, out _);
             }
             else
+            {
+                Console.WriteLine($"Unhandled: {ex.Message}");
                 throw;
+            };
         }
     }
 

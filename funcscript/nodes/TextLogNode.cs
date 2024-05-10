@@ -18,7 +18,7 @@ class TextLogNode
         _source = source;
     };
 
-    public SignalListenerDelegate WriteLine => () =>
+    public SignalListenerDelegate Log => () =>
     {
         var dr = FuncScript.Dref(_source);
         Fslogger.DefaultLogger.WriteLine(dr.ToString());
@@ -49,6 +49,6 @@ public class CreateTextLogFunction : IFsFunction
 
     public int MaxParsCount => 0; // No parameters
     public CallType CallType => CallType.Prefix;
-    public string Symbol => "TextLog";
+    public string Symbol => "logger";
     public int Precidence => 0;
 }

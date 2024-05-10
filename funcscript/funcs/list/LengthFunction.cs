@@ -1,4 +1,4 @@
-using funcscript.core;
+﻿using funcscript.core;
 using funcscript.model;
 using System;
 using System.Collections;
@@ -30,7 +30,7 @@ namespace funcscript.funcs.list
             return par0 switch
             {
                 null => 0,
-                FsList list => list.Data.Length,
+                FsList list => list.Length,
                 string s => s.Length,
                 _ => throw new error.TypeMismatchError($"{this.Symbol} function doesn't apply to {par0.GetType()}")
             };

@@ -231,7 +231,8 @@ public class ExecutionSession : IFsDataProvider
         }
         catch (Exception e)
         {
-            Fslogger.DefaultLogger.WriteLine("General error sending start signal: ");
+            Fslogger.DefaultLogger.WriteLine("General error sending start signal: \n"+e.Message);
+            
         }
         return ret;
     }

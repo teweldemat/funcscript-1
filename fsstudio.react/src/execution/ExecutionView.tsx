@@ -4,7 +4,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
 
 import EvalNodeComponent, { ExpressionType, NodeItem } from './EvalNodeComponent'; // Assuming EvalNodeComponent is in the same directory
-import { SERVER_URL } from '../backend';
+import { SERVER_URL, SERVER_WS_URL } from '../backend';
 import axios from 'axios';
 import TextLogger from './RemoteLogger';
 import { json } from 'stream/consumers';
@@ -72,18 +72,6 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
             .catch(error => console.error('Failed to fetch node:', error));
     };
 
-    const handleExpressionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setExpression(event.target.value);
-        setSaveStatus('Unsaved changes');
-    };
-
-    const handleExpressionBlur = () => {
-        console.log('blur');
-        if (selectedNode && expression !== lastSavedExpression) {
-            saveExpression(selectedNode.path!, expression,false);
-        }
-    };
-
     const saveExpression = (nodePath: string, newExpression: string | null,thenEvalute:boolean) => {
         if (newExpression === null) return;
         axios.post(`${SERVER_URL}/api/sessions/${activeSessionId}/node/expression/${nodePath}`, { expression: newExpression })
@@ -132,7 +120,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     
 
     useEffect(() => {
-        const websocket = new WebSocket('ws://localhost:5091');
+        const websocket = new WebSocket(SERVER_WS_URL);
         websocket.onmessage = (event) => {
             console.log('ws'+event.data)
             var msg=JSON.parse(event.data);
@@ -158,14 +146,14 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const renderTabContent = () => {
         switch (tabIndex) {
             case 0:
-                return <Typography variant="body1" gutterBottom><pre style={{
+                return <pre style={{
                     whiteSpace: 'pre-wrap',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
                     border: '1px solid #ccc',
                     padding: '10px',
                     fontFamily: '"Lucida Console", monospace',
-                  }}>{resultText}</pre></Typography>;
+                  }}>{resultText}</pre>
             case 1:
                 return <TextLogger messages={messages}/>;
             default:
@@ -183,24 +171,9 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
             setExpression(value);
             setSaveStatus('Unsaved changes');
         },
-        onBlur:handleExpressionBlur
     });
     
-    useEffect(() => {
-        if (view) {
-            const blurHandler = () => {
-                handleExpressionBlur();
-            };
 
-            // Attach the blur event listener
-            view.dom.addEventListener('blur', blurHandler);
-
-            // Cleanup function to remove the event listener
-            return () => {
-                view.dom.removeEventListener('blur', blurHandler);
-            };
-        }
-    }, [view]); // Dependency on `view` to ensure re-binding if the view changes
 
     return (
         <Grid container spacing={2}>
@@ -219,7 +192,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                         {selectedNode?.path}
                     </Typography>
                 </Toolbar>
-                <div ref={editorRef}  style={{ height: '200px',overflow: 'auto', border: '1px solid #ccc' }} />
+                <div ref={editorRef}  style={{ height: '400px',overflow: 'auto', border: '1px solid #ccc' }} />
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
                     <Tab label="Result" />
                     <Tab label="Log" />

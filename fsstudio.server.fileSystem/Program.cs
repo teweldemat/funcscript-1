@@ -11,8 +11,9 @@ internal class Program
         var options = new WebApplicationOptions
         {
             Args = args,
-            WebRootPath = "wwwroot", 
-            ApplicationName = "FsStudio",
+            ApplicationName = "fsstudio.server.fileSystem",
+            ContentRootPath = AppContext.BaseDirectory,
+            WebRootPath =  "wwwroot"
         };
 
         var builder = WebApplication.CreateBuilder(options);

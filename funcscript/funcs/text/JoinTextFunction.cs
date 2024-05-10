@@ -39,9 +39,11 @@ namespace funcscript.funcs.math
                 var o = list[i];
                 if (o != null)
                 {
-                    if (sb.Length > 0)
+                    if (i> 0)
                         sb.Append(separator);
-                    sb.Append(o.ToString());
+                    if (o is ValueReferenceDelegate)
+                        return CallRef.Create(parent, this,pars);
+                    sb.Append(FuncScript.Dref(o)??"".ToString());
                 }
             }
             return sb.ToString();

@@ -1,9 +1,10 @@
+using System.Security.Authentication.ExtendedProtection;
 using funcscript.core;
 using funcscript.model;
 
 namespace funcscript.nodes;
 
-class StoreNode
+public class StoreNode
 {
     private object _value = null;
     private object _source = null;
@@ -26,7 +27,10 @@ public class CreateStoreFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new ObjectKvc(new StoreNode());      
+        var n = new StoreNode();
+        if (pars.Count > 0)
+            n.In(pars.GetParameter(parent, 0));
+        return new ObjectKvc(n);      
     }
 
     public string ParName(int index)

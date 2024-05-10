@@ -63,7 +63,10 @@ namespace funcscript.funcs.list
 
             for (int i = 0; i < lst.Length; i++)
             {
-                res[i] = func.Evaluate(parent, new DoListFuncPar { X = lst[i], I = i });
+                var item = lst[i];
+                if (item is ValueReferenceDelegate)
+                    return CallRef.Create(parent, this,pars); 
+                res[i] = func.Evaluate(parent, new DoListFuncPar { X = item, I = i });
             }
 
             return new ArrayFsList(res);

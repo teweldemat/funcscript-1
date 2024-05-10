@@ -26,7 +26,12 @@ namespace funcscript.funcs.text
             if (c == 0)
                 return "";
             var par0 = pars.GetParameter(parent, 0);
-            var format = pars.GetParameter(parent, 1) as string;
+            if (par0 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
+            var par1 = pars.GetParameter(parent, 1);
+            if (par1 is ValueReferenceDelegate)
+                return CallRef.Create(parent, this, pars);
+            var format = par1 as string;
             var sb = new StringBuilder();
             FuncScript.Format(sb, par0, format);
             return sb.ToString();

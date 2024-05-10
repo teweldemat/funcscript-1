@@ -29,7 +29,7 @@ namespace funcscript.funcs.logic
             var par1 = pars.GetParameter(parent, 1);
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
             {
-                return FunctionRef.Create(parent, this,pars);
+                return CallRef.Create(parent, this,pars);
             }
             if (par0 == null && par1 == null)
                 return true;

@@ -195,7 +195,7 @@ const EvalNodeComponent: React.FC<EvalNodeComponentProps> = ({ node, sessionId, 
             case ExpressionType.FuncScript:
                 return <FunctionsIcon />;
             case ExpressionType.FuncScriptTextTemplate:
-                return <><CodeIcon /><DescriptionIcon /></>; // Displaying both icons
+                return <><FunctionsIcon /><DescriptionIcon /></>; // Displaying both icons
             case ExpressionType.FsStudioParentNode:
                 return <CodeIcon />; // Assuming curly brace representation
             default:

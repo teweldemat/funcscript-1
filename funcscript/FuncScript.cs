@@ -687,7 +687,20 @@ namespace funcscript
 
         public static object Dref(object obj)
         {
-            if (obj is ValueReferenceDelegate d)
+             /*if(obj is ValueReferenceDelegate d)
+                return d();
+            if (obj is FsList lst)
+            {
+                return new ArrayFsList(lst.Data.Select(x => Dref(x)).ToArray());
+            }
+
+            if (obj is KeyValueCollection kvc)
+            {
+                return new SimpleKeyValueCollection(kvc.GetAll().Select(x=>KeyValuePair.Create<string,object>(x.Key,Dref(x.Value))).ToArray());
+            }
+            return obj;
+            */
+            if(obj is ValueReferenceDelegate d)
                 return Dref(d());
             if (obj is FsList lst)
             {

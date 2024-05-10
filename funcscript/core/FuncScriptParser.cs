@@ -83,7 +83,7 @@ namespace funcscript.core
         const string KW_RETURN = "return";
         const string KW_CASE = "case";
         const string KW_SWITCH = "switch";
-        private const string KW_ERROR = "error";
+        private const string KW_ERROR = "fault";
         static HashSet<string> s_KeyWords;
 
         static FuncScriptParser()
@@ -925,7 +925,8 @@ namespace funcscript.core
                 i2 = GetInfixExpression(context, exp, i, out var normalPathExp, out var normalNode, errors);
                 if (i2 == i)
                 {
-                    errors.Add(new SyntaxErrorData(i, 0, "Next signal sink expression expected"));
+                    if(pars.Count>0)
+                        errors.Add(new SyntaxErrorData(i, 0, "Next signal sink expression expected"));
                     break;
                 }
 
@@ -935,13 +936,16 @@ namespace funcscript.core
                     i2 = GetLiteralMatch(exp, i, "|");
                     if (i2 > i)
                     {
-                        i2 = GetExpression(context, exp, i, out var errorPathExp, out var errorNode, errors);
+                        i = SkipSpace(exp, i2);
+                        
+                        i2 = GetInfixExpression(context, exp, i, out var errorPathExp, out var errorNode, errors);
                         if (i2 == i)
                         {
                             errors.Add(new SyntaxErrorData(i, 0, "Error path expected"));
                             break;
                         }
-
+                        i = SkipSpace(exp, i2);
+                        
                         var listExp = new ListExpression();
                         listExp.ValueExpressions = new[] { normalPathExp, errorPathExp };
                         listExp.Pos = normalPathExp.Pos;
@@ -982,7 +986,13 @@ namespace funcscript.core
             }
 
             sigSequenceExpression.Function = new ReferenceBlock(SigSequenceFunction.SYMBOL);
-            sigSequenceExpression.Parameters = pars.ToArray();
+            sigSequenceExpression.Parameters =new []
+            {
+                new ListExpression
+                {
+                    ValueExpressions = pars.ToArray()
+                }
+            };
             sigSequenceExpression.Pos = index;
             sigSequenceExpression.Length = i - index;
             parseNode = new ParseNode(ParseNodeType.SigSequence, sigSequenceExpression.Pos,
@@ -1066,7 +1076,7 @@ namespace funcscript.core
             }
 
 
-            return i; // Return the position after the parsed sink expression.
+            return i; 
         }
 
         static int GetKvcItem(IFsDataProvider context, String exp, int index, out KvcExpression.KeyValueExpression item,
@@ -1146,7 +1156,7 @@ namespace funcscript.core
             do
             {
                 i = SkipSpace(exp, i);
-                if (kvs.Count > 0)
+                if (kvs.Count > 0 || connections.Count>0)
                 {
                     i2 = GetLiteralMatch(exp, i, ",", ";");
                     if (i2 == i)

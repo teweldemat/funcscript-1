@@ -44,6 +44,7 @@ namespace funcscript.model
             _val = val;
         }
 
+        public object GetUnderlyingValue() => _val;
         public override bool ContainsKey(string key)
         {
             if (_val == null)
