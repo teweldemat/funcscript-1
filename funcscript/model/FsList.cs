@@ -1,14 +1,17 @@
-﻿using System.ComponentModel;
+﻿using System.Collections;
+using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 
 namespace funcscript.model
 {
-    public abstract class FsList
+    public abstract class FsList:IEnumerable<object>
     {
         public abstract  IEnumerable<object> Data { get; }
         public abstract object this[int index] { get; }
         public abstract int Length { get; }
+        public abstract IEnumerator<object> GetEnumerator();
+
         public override bool Equals(object obj)
         {
             if (obj == null || GetType() != obj.GetType())
@@ -58,6 +61,12 @@ namespace funcscript.model
             sb.Append("]");
             return sb.ToString();
         }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
         // override object.GetHashCode
         public override int GetHashCode()
         {
@@ -109,5 +118,6 @@ namespace funcscript.model
 
         public override object this[int index] => (index<0||index>=_data.Length)?null:_data[index];
         public override int Length =>_data.Length;
+        public override IEnumerator<object> GetEnumerator() => ((System.Collections.Generic.IEnumerable<object>)_data).GetEnumerator();
     }
 }
