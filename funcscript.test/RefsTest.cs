@@ -464,8 +464,7 @@ public class RefsTest
     d:c.Out.x;
   },null);
   
-  app.start->logger().clear
-   >>a.store>>logger(a.Out).log
+  app.start->a.store>>logger(a.Out).log
    >>b.c.store|logger('fail').log>>logger('term').log;
 }";
 
@@ -483,7 +482,7 @@ public class RefsTest
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
-        Assert.That(logger.LogText,Is.EqualTo("term\n"));
+        Assert.That(logger.LogText,Is.EqualTo("5\nterm\n"));
     }
     [Test]
     public void TestPreEvaluatedLambda2()
