@@ -14,51 +14,6 @@ public delegate void SignalListenerDelegate();
 
 public delegate void SignalSourceDelegate(object listener, object catcher);
 
-public class FunctionRef : IFsDataProvider, IParameterList
-{
-    IFsFunction _func;
-    object[] _pars;
-
-    //OPTIMIZATION: the parameters are potentially evaluated twice because the caller need to evaluate
-    //them before calling this constructor
-
-
-    object DRef() =>
-        _func.Evaluate(this, this);
-
-    public object GetData(string name)
-    {
-        throw new NotImplementedException();
-    }
-
-    public static ValueReferenceDelegate Create(IFsDataProvider provider, IFsFunction f, IParameterList pars)
-    {
-        /*
-        var r = new FunctionRef();
-        r._func = f;
-        r._pars = new object[pars.Count];
-        for (int i = 0; i < r._pars.Length; i++)
-        {
-            var val=pars.GetParameter(provider, i);
-            if (val is ExpressionFunction expF)
-            {
-                
-            }
-            r._pars[i] = val;
-        }
-        return r.DRef;
-        */
-        return CallRef.Create(provider, f, pars);
-    }
-
-    public int Count => _pars.Length;
-
-    public object GetParameter(IFsDataProvider provider, int index)
-    {
-        return index < 0 || _pars.Length <= index ? null : FuncScript.Dref(_pars[index]);
-    }
-}
-
 public class CallRef : IFsDataProvider, IParameterList
 {
     object[] _vals;
@@ -72,7 +27,12 @@ public class CallRef : IFsDataProvider, IParameterList
     {
         var f = FuncScript.Dref(_vals[0]);
         if (f is IFsFunction func)
-            return func.Evaluate(this, this);
+        {
+            if(func is IFsDref fdref)
+                return fdref.DrefEvaluate( this);
+            throw new error.TypeMismatchError(
+                $"{f.GetType()} deoesn't implment {nameof(IFsDref)} hence can't be used in call reference");
+        }
         if (f is FsList lst)
         {
             var index = this.GetParameter(null, 0);
@@ -82,7 +42,7 @@ public class CallRef : IFsDataProvider, IParameterList
                 if (i < 0 || i >= lst.Length)
                     ret = null;
                 else
-                    ret = lst[i];
+                    ret = FuncScript.Dref(lst[i]);
             }
             else
                 ret = null;
@@ -99,7 +59,7 @@ public class CallRef : IFsDataProvider, IParameterList
             {
                 var kvc = collection;
                 var value = kvc.Get(key.ToLower());
-                ret = value;
+                ret = FuncScript.Dref(value);
             }
             else
                 ret = null;
@@ -157,12 +117,40 @@ public class CallRef : IFsDataProvider, IParameterList
         }
         return r.DRef;
     }
-    public static ValueReferenceDelegate Create(object[] vals)
+    public static ValueReferenceDelegate Create(IFsDataProvider provider, object f, object [] pars)
+    {
+        var r = new CallRef();
+        r._vals = new object[pars.Length+1];
+        r._vals[0] = f;
+        for (int i = 1; i < r._vals.Length; i++)
+        {
+            r._vals[i] = pars[i-1];
+        }
+
+        for (int i=0;i<r._vals.Length;i++)
+        {
+            var val = r._vals[i];
+            if (val is ExpressionFunction expF)
+            {
+                r._vals[i] = new LambdaWrapper(provider, expF);
+            }
+        }
+        return r.DRef;
+    }
+    public static ValueReferenceDelegate Create(IFsDataProvider provider, object[] vals)
     {
         if (vals.Length < 1)
             throw new InvalidOperationException("At least on val is required for CallRef");
         var r = new CallRef();
         r._vals = vals;
+        for (int i=0;i<r._vals.Length;i++)
+        {
+            var val = r._vals[i];
+            if (val is ExpressionFunction expF)
+            {
+                r._vals[i] = new LambdaWrapper(provider, expF);
+            }
+        }
         return r.DRef;
     }
 

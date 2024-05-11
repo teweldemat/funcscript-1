@@ -4,7 +4,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.strings
 {
-    internal class EndsWithFunction : IFsFunction
+    internal class EndsWithFunction : IFsFunction, IFsDref
     {
         public int MaxParsCount => 2;
 
@@ -16,13 +16,21 @@ namespace funcscript.funcs.strings
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
+            if (pars.Count != MaxParsCount)
+                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
 
-            var par0 = pars.GetParameter(parent, 0);
-            var par1 = pars.GetParameter(parent, 1);
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var par0 = parBuilder.GetParameter(0);
+            var par1 = parBuilder.GetParameter(1);
+
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return FunctionRef.Create(parent, this, pars);
+                return parBuilder.CreateRef();
+
+            return EvaluateInternal(par0, par1);
+        }
+
+        private object EvaluateInternal(object par0, object par1)
+        {
             if (par0 == null || par1 == null)
                 return false;
 
@@ -34,17 +42,22 @@ namespace funcscript.funcs.strings
 
             return mainString.EndsWith(ending, StringComparison.Ordinal);
         }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
+            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
+            return EvaluateInternal(par0, par1);
+        }
+
         public string ParName(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0:
-                    return "main string";
-                case 1:
-                    return "ending substring";
-                default:
-                    return null;
-            }
+                0 => "main string",
+                1 => "ending substring",
+                _ => null
+            };
         }
     }
 }

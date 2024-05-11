@@ -10,7 +10,11 @@ namespace funcscript.core
         CallType CallType { get; }
         String Symbol { get; }
         int Precidence { get; }
-        
+    }
+
+    public interface IFsDref
+    {
+        public object DrefEvaluate(IParameterList pars);
     }
     
     public interface IParameterList

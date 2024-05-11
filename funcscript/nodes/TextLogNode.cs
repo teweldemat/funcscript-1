@@ -20,7 +20,7 @@ class TextLogNode
 
     public SignalListenerDelegate Log => () =>
     {
-        var dr = FuncScript.Dref(_source);
+        var dr = FuncScript.DeepDref(_source);
         Fslogger.DefaultLogger.WriteLine(dr.ToString());
     };
     public SignalListenerDelegate Clear => () =>

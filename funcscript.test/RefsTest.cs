@@ -169,8 +169,8 @@ public class RefsTest
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res,Is.TypeOf<SignalListenerDelegate>());
         var d = (SignalListenerDelegate)res;
-        Assert.That(d.Target,Is.TypeOf<SigSequenceFunction.SigSequenceNode>());
-        var n = (SigSequenceFunction.SigSequenceNode)d.Target;
+        Assert.That(d.Target,Is.TypeOf<SigSequenceNode>());
+        var n = (SigSequenceNode)d.Target;
         Assert.That(n.Items.Length,Is.EqualTo(2));
     }
     [Test]
@@ -453,19 +453,111 @@ public class RefsTest
     }
     
     [Test]
+    public void RefBugMay11()
+    {
+        //the bug is c.Out.x unnecessarily dereferenced 
+        var script = @"{
+        y:{
+            c:store({a:5});
+            t:timer(200,false);
+            t.tick->c.store>>logger(y.c.out.a).log;
+        };
+        app.start->y.t.start;
+    }";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script, new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        });
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        sink.Signal();
+        System.Threading.Thread.Sleep(1000);
+        Assert.That(logger.LogText,Is.EqualTo("5\n"));
+    }
+    [Test]
+    public void RefBugMay11Case2()
+    {
+        //the bug is c.Out.x unnecessarily dereferenced 
+        var script = @"{
+        y:{
+            c:store({a:5});
+            t:timer(200,false);
+            t.tick->sigsequence([c.store,logger(y.c.out.a).log]);
+        };
+        app.start->y.t.start;
+    }";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script, new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        });
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        sink.Signal();
+        System.Threading.Thread.Sleep(1000);
+        Assert.That(logger.LogText,Is.EqualTo("5\n"));
+    }
+    
+    [Test]
+    public void RefBugMay11Case3()
+    {
+        //the bug is c.Out.x unnecessarily dereferenced 
+        var script = @"{
+        y:{
+            c:store({a:5});
+            t:timer(200,false);
+            t.tick->sigsequence([c.store]+[logger(y.c.out.a).log]);
+        };
+        app.start->y.t.start;
+    }";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script, new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        });
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        sink.Signal();
+        System.Threading.Thread.Sleep(1000);
+        Assert.That(logger.LogText,Is.EqualTo("5\n"));
+    }
+    [Test]
     public void RefBugMay10()
     {
+        //the bug is c.Out.x unnecessarily dereferenced 
         var script = @"
 {
   a:store(5);
   b:if(a.Out>0,
-  {
-    c:store(0);
-    d:c.Out.x;
-  },null);
+      {
+        c:store(0);
+        d:c.Out.x;
+      },null);
   
-  app.start->a.store>>logger(a.Out).log
-   >>b.c.store|logger('fail').log>>logger('term').log;
+   app.start->a.store>>(logger(a.Out).log
+   >>b.c.store|logger('fail').log>>logger('term').log);
 }";
 
         var logger = new StringTextLogger();
@@ -555,7 +647,7 @@ public class RefsTest
         var script = @"
         {
             s:series(0,3) map (x)=>store(x);
-            app.start->SigSequence(s map (x)=>x.store)>> logger((s map (x)=>x.Out) join '\n').log;
+            app.start->logger((s map (x)=>x.Out)).log;
         }";
 
         var logger = new StringTextLogger();
@@ -575,7 +667,35 @@ public class RefsTest
         
         var kvc = (KeyValueCollection)res;
         
-        Assert.That(logger.LogText, Is.EqualTo("0\n1\n2\n"));
+        Assert.That(logger.LogText, Is.EqualTo("[null,null,null]\n"));
+    }
+    [Test]
+    public void TestRefMap2()
+    {
+        var script = @"
+        {
+            s:series(0,3) map (x)=>store(x);
+            app.start->SigSequence(s map (x)=>x.store)>>logger((s map (x)=>x.Out) join '\n').log;
+        }";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script, new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        });
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        sink.Signal();
+        
+        var kvc = (KeyValueCollection)res;
+        
+            Assert.That(logger.LogText, Is.EqualTo("0\n1\n2\n"));
     }
 
 }

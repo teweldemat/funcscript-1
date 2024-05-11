@@ -4,48 +4,53 @@ using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
-
-    public class IfConditionFunction : IFsFunction
+    public class IfConditionFunction : IFsFunction, IFsDref
     {
+        public int MaxParsCount => 3;
+
+        public CallType CallType => CallType.Infix;
+
+        public string Symbol => "If";
+
+        public int Precidence => 0;
+
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            if (pars.Count < 3)
-            {
+            if (pars.Count < MaxParsCount)
                 throw new error.TypeMismatchError("IfConditionFunction requires three parameters: condition, trueResult, and falseResult.");
-            }
 
-            // First, evaluate or prepare to defer the condition
-            var condition = pars.GetParameter(parent, 0);
-            if (condition is ValueReferenceDelegate condRef)
-            {
-                // Defer the entire evaluation if the condition is a reference
-                return FunctionRef.Create(parent, this, pars);
-            }
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var condition = parBuilder.GetParameter(0);
+
+            if (condition is ValueReferenceDelegate)
+                return parBuilder.CreateRef();
 
             if (!(condition is bool))
-            {
                 throw new error.TypeMismatchError("The first parameter must be a boolean value.");
-            }
 
-            // Evaluate the condition and decide which result parameter to evaluate or defer
             bool evalCondition = (bool)condition;
             int resultIndex = evalCondition ? 1 : 2;
+            var result = parBuilder.GetParameter(resultIndex);
 
-            var result = pars.GetParameter(parent, resultIndex);
-            if (result is ValueReferenceDelegate resultRef)
-            {
-                // Defer the evaluation of the result if it is a reference
-                return FunctionRef.Create(parent, this, pars);
-            }
+            return result is ValueReferenceDelegate ? parBuilder.CreateRef() : result;
+        }
 
-            // Return the result directly if it's already a concrete value
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var condition = FuncScript.Dref(pars.GetParameter(null, 0));
+            if (!(condition is bool))
+                throw new error.TypeMismatchError("The first parameter must be a boolean value when dereferenced.");
+
+            bool evalCondition = (bool)condition;
+            int resultIndex = evalCondition ? 1 : 2;
+            var result = FuncScript.Dref(pars.GetParameter(null, resultIndex));
+
             return result;
         }
 
-
         public string ParName(int index)
         {
-            switch(index)
+            switch (index)
             {
                 case 0:
                     return "Condition";
@@ -57,16 +62,5 @@ namespace funcscript.funcs.logic
                     return "";
             }
         }
-
-        
-
-        public int MaxParsCount => 3;
-
-        public CallType CallType => CallType.Infix;
-
-        public string Symbol => "If";
-
-        public int Precidence => 0;
     }
 }
-

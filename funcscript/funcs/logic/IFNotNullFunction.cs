@@ -4,24 +4,41 @@ using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
-
-    public class IFNotNullFunction : IFsFunction
+    public class IFNotNullFunction : IFsFunction, IFsDref
     {
+        public int MaxParsCount => 2; // Updated to 2 as it seems to be the logical number of parameters expected for this function based on its behavior.
+
+        public CallType CallType => CallType.Infix;
+
+        public string Symbol => "??";
+
+        public int Precidence => 0;
+
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var val = pars.GetParameter(parent, 0);
-            if (val is ValueReferenceDelegate)
-                return  FunctionRef.Create(parent,this, pars);
-            
-            if (val == null)
-            {
-                var val2= pars.GetParameter(parent, 1);
-                if(val2 is ValueReferenceDelegate)
-                    return  FunctionRef.Create(parent,this, pars);
-                return val2;
-            }
+            if (pars.Count != MaxParsCount)
+                throw new error.TypeMismatchError($"{Symbol} function expects exactly two parameters.");
 
-            return val;
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var val = parBuilder.GetParameter(0);
+            if (val is ValueReferenceDelegate)
+                return parBuilder.CreateRef(); // Defer if the first parameter is a reference.
+
+            if (val != null)
+                return val;
+
+            var val2 = parBuilder.GetParameter(1);
+            return val2 is ValueReferenceDelegate ? parBuilder.CreateRef() : val2; // Defer if the second parameter is a reference when the first is null.
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var val = FuncScript.Dref(pars.GetParameter(null, 0));
+            if (val != null)
+                return val;
+
+            var val2 = FuncScript.Dref(pars.GetParameter(null, 1));
+            return val2;
         }
 
         public string ParName(int index)
@@ -36,16 +53,5 @@ namespace funcscript.funcs.logic
                     return "";
             }
         }
-
-        
-
-        public int MaxParsCount => 3;
-
-        public CallType CallType => CallType.Infix;
-
-        public string Symbol => "??";
-
-        public int Precidence => 0;
     }
 }
-

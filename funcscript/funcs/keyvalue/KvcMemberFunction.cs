@@ -10,7 +10,7 @@ using System.Xml.XPath;
 namespace funcscript.funcs.keyvalue
 {
 
-    public class KvcMemberFunction : IFsFunction
+    public class KvcMemberFunction : IFsFunction,IFsDref
     {
         public int MaxParsCount => 2;
 
@@ -20,18 +20,8 @@ namespace funcscript.funcs.keyvalue
 
         public int Precidence => 200;
 
-        public object Evaluate(IFsDataProvider parent, IParameterList pars)
+        private object EvaluateInternal(object par0, object par1)
         {
-            if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
-
-            var par0 = pars.GetParameter(parent, 0);
-            var par1 = pars.GetParameter(parent, 1);
-            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-            {
-                return FunctionRef.Create(parent, this, pars);
-            }
-                
             if (!(par1 is string))
                 throw new error.TypeMismatchError($"{Symbol} function: The second parameter should be {ParName(1)}");
 
@@ -42,6 +32,23 @@ namespace funcscript.funcs.keyvalue
                 throw new error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {FuncScript.GetFsDataType(par0)}");
 
             return ((KeyValueCollection)par0).Get(((string)par1).ToLower());
+
+        }
+        public object Evaluate(IFsDataProvider parent, IParameterList pars)
+        {
+            if (pars.Count != MaxParsCount)
+                throw new error.TypeMismatchError($"{Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
+
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+
+            var par0 = parBuilder.GetParameter(0);
+            var par1 = parBuilder.GetParameter(1);
+            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
+            {
+                return parBuilder.CreateRef();
+            }
+
+            return EvaluateInternal(par0, par1);
         }
 
 
@@ -56,6 +63,14 @@ namespace funcscript.funcs.keyvalue
                 default:
                     return "";
             }
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var ret= EvaluateInternal(FuncScript.Dref(pars.GetParameter(null, 0)),
+                FuncScript.Dref(pars.GetParameter(null, 1)));
+            //return FuncScript.Dref(ret);
+            return ret;
         }
     }
 }

@@ -37,7 +37,7 @@ namespace funcscript.funcs.logic
 
             bool par0Numeric = FuncScript.IsNumeric(par0);
 
-            foreach (var val in ((FsList)par1).Data)
+            foreach (var val in ((FsList)par1))
             {
                 if (val == null)
                     continue;

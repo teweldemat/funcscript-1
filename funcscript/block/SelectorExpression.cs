@@ -44,17 +44,20 @@ namespace funcscript.block
                 var lst = (FsList)sourceVal;
                 var ret = new object[lst.Length];
                 int i = 0;
-                var sel=new SelectorProvider
+                
+                foreach (var l in lst)
                 {
-                    Parent = this,
-                    Provider = provider,
-                };
-                foreach (var l in lst.Data)
-                {
-                    sel.SourceVal = l;
-                    ret[i++] = Selector.Evaluate(sel);
+                    var sel=new SelectorProvider
+                    {
+                        Parent = this,
+                        Provider = provider,
+                        SourceVal = l
+                    };
+                    ret[i] = Selector.Evaluate(sel);
+                    i++;
                 }
                 return new ArrayFsList(ret);
+            
             }
             else
             {

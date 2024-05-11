@@ -114,8 +114,8 @@ public class HttpClientNode
         {
             _errorData = null;
             _outData = null;
-            string url = FuncScript.Dref(_url).ToString();
-            string jsonData = FuncScript.Dref(_inData)?.ToString() ?? "{}";
+            string url = FuncScript.DeepDref(_url).ToString();
+            string jsonData = FuncScript.DeepDref(_inData)?.ToString() ?? "{}";
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
             HttpResponseMessage response = await SendPostRequest(url, content);

@@ -173,7 +173,7 @@ namespace funcscript.test
         }
 
         [Test]
-        public void TestListFormt()
+        public void TestListFormat()
         {
             var exp = "format([1,2,3])";
             var expected = "[1,2,3]";

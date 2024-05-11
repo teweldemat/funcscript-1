@@ -22,7 +22,9 @@ class TimerNode
     {
         _timer?.Dispose(); // Dispose previous timer if any
         var ts = new TimeSpan(0, 0, 0, 0, _interval);
-        _timer = new Timer(state => _sinks.Signal(), null,ts,  _repeating ? ts: Timeout.InfiniteTimeSpan);
+        _timer = new Timer(state => 
+            _sinks.Signal()
+            , null,ts,  _repeating ? ts: Timeout.InfiniteTimeSpan);
     };
 
     // Signal to stop the timer

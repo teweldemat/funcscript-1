@@ -1,6 +1,7 @@
 ﻿using funcscript.model;
 using NUnit.Framework;
 using System;
+using System.Linq;
 using System.Text;
 
 namespace funcscript.test
@@ -78,11 +79,22 @@ namespace funcscript.test
         public void TestSelectorOnArray()
         {
             var g = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(g, "[{a:4,b:5,c:6},{a:7,b:8,c:9}]\n{a,c}");
+            var res = FuncScript.Evaluate(g, "[{a:4,b:5,c:6},{a:7,b:8,c:9}]\n{a,c}") as FsList;
+            Assert.IsNotNull(res);
+            Assert.That(res.Length,Is.EqualTo(2));
+            var item1 = res[0] as KeyValueCollection;
+            Assert.IsNotNull(item1);
+            Assert.That(item1.Get("a"),Is.EqualTo(4));
+            Assert.That(item1.Get("c"),Is.EqualTo(6));
+            var item2 = res[1] as KeyValueCollection;
+            Assert.IsNotNull(item2);
+            Assert.That(item2.Get("a"),Is.EqualTo(7));
+            Assert.That(item2.Get("c"),Is.EqualTo(9));
+
             var expected = new ArrayFsList(new object[]{new ObjectKvc(new { a = 4, c=6})
             ,new ObjectKvc(new { a = 7, c = 9})
             });
-            Assert.AreEqual(expected, res);
+            Assert.AreEqual(expected.ToString(), res.ToString());
         }
         [Test]
         public void ChainFunctionCall()
@@ -104,7 +116,7 @@ return Map(z,(x)=>x*x);
             Assert.IsNotNull(res);
             var expected = new ArrayFsList(new object[] { 1, 16, 81 });
 
-            Assert.AreEqual(expected.Data, res.Data);
+            Assert.AreEqual(expected.ToArray(), res.ToArray());
         }
 
         [Test]
@@ -238,7 +250,7 @@ d";
         {
             var res = FuncScript.FromJson(json);
             var expected = FuncScript.Evaluate(fs);
-            Assert.AreEqual(expected, res);
+            Assert.AreEqual(expected.ToString(), res.ToString());
         }
         [Test]
         public void ObjectKvRetailCases()

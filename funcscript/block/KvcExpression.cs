@@ -1,13 +1,40 @@
-﻿using funcscript.core;
+﻿using System.ComponentModel.Design;
+using funcscript.core;
 using funcscript.model;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace funcscript.block
 {
+    
     public class KvcExpression : ExpressionBlock
     {
-        
+         class ExpressionKvc : KeyValueCollection
+        {
+            private IFsDataProvider _provider;
+            private KvcExpression _parent;
+            public ExpressionKvc(IFsDataProvider provider, KvcExpression parent)
+            {
+                this._provider = provider;
+                _parent = parent;
+            }
+
+            public override object Get(string key)
+            {
+                return _provider.GetData(key.ToLower());
+
+            }
+
+            public override bool ContainsKey(string key)
+            {
+                return _parent.index.ContainsKey(key.ToLower());
+            }
+
+            public override IList<KeyValuePair<string, object>> GetAll()
+            {
+                return _parent.KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, _provider.GetData(x.KeyLower))).ToArray();
+            }
+        }
        
         class KvcProvider : IFsDataProvider
         {
@@ -93,17 +120,35 @@ namespace funcscript.block
                 var source = connection.Source.Evaluate(p);
                 var sink = connection.Sink.Evaluate(p);
                 if (sink is ValueSinkDelegate valSink)
+                {
                     valSink(source);
+                }
                 else if (source is SignalSourceDelegate sigSource)
+                {
+                    SignalListenerDelegate sinkListner;
+                    if (sink is SignalListenerDelegate l)
+                        sinkListner = l;
+                    else
+                    {
+                        sinkListner = () =>
+                        {
+                            var x = FuncScript.Dref(sink);
+                            if (x is SignalListenerDelegate s)
+                                s();
+                        };
+                    }
+                    
                     sigSource(sink,connection.Catch?.Evaluate(p));
+                }
                 else 
                     throw new error.EvaluationTimeException("Invalid connection");
                 
             }
             if (this.singleReturn == null)
             {
-                var kvc = KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, p.GetData(x.KeyLower))).ToArray();
-                return new SimpleKeyValueCollection(kvc);
+                return new ExpressionKvc(p, this);
+                //var kvc = KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, p.GetData(x.KeyLower))).ToArray();
+                //return new SimpleKeyValueCollection(kvc);
             }
             else
             {

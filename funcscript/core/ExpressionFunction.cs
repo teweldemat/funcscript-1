@@ -41,7 +41,6 @@ namespace funcscript.core
 
         public Dictionary<string, int> ParamterNameIndex;
         public String[] _parameters;
-        private bool PreEvaluated = false;
         private ValueReferenceDelegate[] _parameterRefs = null;
         private object _expressionValue = null;
 
@@ -62,60 +61,8 @@ namespace funcscript.core
 
         public int Precidence => 0;
 
-        object CreateClone(IFsDataProvider parent, Dictionary<ValueReferenceDelegate, object> cache,
-            IParameterList pars, CallRef callRef)
-        {
-            return CallRef.Create(callRef.Vals.Select(val =>
-            {
-                if (val is ValueReferenceDelegate valRef)
-                {
-                    int parRefIndex;
-                    if (valRef.Target is CallRef cref)
-                    {
-                        return CreateClone(parent, cache, pars, cref);
-                    }
-                    else if ((parRefIndex = Array.IndexOf(_parameterRefs, valRef)) != -1)
-                    {
-                        if (cache.TryGetValue(valRef, out var parValue))
-                            return parValue;
-                        return cache[valRef] = pars.GetParameter(parent, parRefIndex);
-                    }
-                    /*else
-                        throw new InvalidOperationException(
-                            $"Type {valRef.GetType()} is not supported ExpressionFunction.Evaluate in preevaluated mode");*/
-                }
-
-                return val;
-            }).ToArray());
-        }
-
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            if (PreEvaluated)
-            {
-                var cache = new Dictionary<ValueReferenceDelegate, object>();
-
-                if (_expressionValue is ValueReferenceDelegate valRef)
-                {
-                    int parRefIndex;
-                    if (valRef.Target is CallRef cref)
-                    {
-                        return FuncScript.Dref(CreateClone(parent, cache, pars, cref));
-                    }
-                    else if ((parRefIndex = Array.IndexOf(_parameterRefs, valRef)) != -1)
-                    {
-                        if (cache.TryGetValue(valRef, out var parValue))
-                            return parValue;
-                        return cache[valRef] = pars.GetParameter(parent, parRefIndex);
-                    }
-                    /*else
-                        throw new InvalidOperationException(
-                            $"Type {valRef.GetType()} is not supported ExpressionFunction.Evaluate in pre-evaluated mode");*/
-                }
-
-                return _expressionValue;
-            }
-
             return Expression.Evaluate(new ParameterDataProvider
             {
                 expressionFunction = this,
@@ -124,22 +71,7 @@ namespace funcscript.core
             });
         }
 
-        public void PreEvaluate(IFsDataProvider provider)
-        {
-            lock (this.Expression)
-            {
-                if (PreEvaluated)
-                    return;
-                this._parameterRefs = new ValueReferenceDelegate[this._parameters.Length];
-                this._expressionValue = Expression.Evaluate(new ParameterDataProvider
-                {
-                    expressionFunction = this,
-                    preEvalMode = true,
-                    parentSymbolProvider = provider,
-                });
-                PreEvaluated = true;
-            }
-        }
+        
 
         public string ParName(int index)
         {
