@@ -40,9 +40,10 @@ namespace funcscript.funcs.keyvalue
                 throw new error.TypeMismatchError($"{Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
 
             var parBuilder = new CallRefBuilder(this,parent, pars);
-
-            var par0 = parBuilder.GetParameter(0);
+            
             var par1 = parBuilder.GetParameter(1);
+            var par0 = parBuilder.GetParameter(0);
+            
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
             {
                 return parBuilder.CreateRef();
@@ -67,8 +68,9 @@ namespace funcscript.funcs.keyvalue
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var ret= EvaluateInternal(FuncScript.Dref(pars.GetParameter(null, 0)),
-                FuncScript.Dref(pars.GetParameter(null, 1)));
+            var member = FuncScript.Dref(pars.GetParameter(null, 1));
+            var kvc = FuncScript.Dref(pars.GetParameter(null, 0));
+            var ret= EvaluateInternal(kvc,member);
             //return FuncScript.Dref(ret);
             return ret;
         }

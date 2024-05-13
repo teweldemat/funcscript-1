@@ -26,10 +26,10 @@ namespace funcscript.funcs.list
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
                 return parBuilder.CreateRef();
 
-            return EvaluateInternal(parent, par0, par1);
+            return EvaluateInternal(parent, par0, par1,false);
         }
 
-        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1)
+        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1,bool dref)
         {
             if (par0 == null)
                 return null;
@@ -47,7 +47,20 @@ namespace funcscript.funcs.list
             for (int i = 0; i < lst.Length; i++)
             {
                 var item = lst[i];
-                res.Add(func.Evaluate(parent, new ArrayParameterList(new object[] { item, i })));
+                var pars = new ArrayParameterList(new object[] { item, i });
+                if (dref)
+                {
+                    if (func is IFsDref fderf)
+                    {
+                        res.Add(fderf.DrefEvaluate(pars));
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"{func.GetType()} doesn't implement IFsDref");
+                    }
+                }
+                else
+                    res.Add(func.Evaluate(parent, pars));
             }
 
             return new ArrayFsList(res);
@@ -57,7 +70,7 @@ namespace funcscript.funcs.list
         {
             var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
             var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
-            return EvaluateInternal(null, par0, par1); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
+            return EvaluateInternal(null, par0, par1,true); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
         }
 
         public string ParName(int index)

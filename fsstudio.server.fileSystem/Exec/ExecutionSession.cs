@@ -16,6 +16,8 @@ public class ExecutionSession : IFsDataProvider
     public Guid SessionId { get; private set; } = Guid.NewGuid();
     private ObjectKvc _sessionVars;
     private FssAppNode _appNode;
+    public IFsDataProvider ParentProvider => _provider;
+
     void UpdateFile()
     {
         System.IO.File.WriteAllText(fileName, System.Text.Json.JsonSerializer.Serialize(_nodes));
@@ -214,26 +216,28 @@ public class ExecutionSession : IFsDataProvider
             return _provider.GetData(name);
         return n.Evaluate(_provider);
     }
-    public object? RunNode(string nodePath)
+
+    
+    public async Task<object?> RunNode(string nodePath)
     {
         var n = FindNodeByPath(nodePath);
         if (n == null)
             return null;
         var segments = nodePath.Split('.');
         var parentNodePath = string.Join(".", segments.Take(segments.Length - 1));
-        IFsDataProvider provider= (segments.Length > 1)?FindNodeByPath(parentNodePath)!:this;
+        IFsDataProvider provider = (segments.Length > 1) ? FindNodeByPath(parentNodePath) : this;
         
         _appNode.ClearSink();
-        var ret= n.Evaluate(provider);
-        try
-        {
-            _appNode.ActivateSignal();
-        }
-        catch (Exception e)
-        {
-            Fslogger.DefaultLogger.WriteLine("General error sending start signal: \n"+e.Message);
-            
-        }
-        return ret;
+
+        var _res = FuncScript.Evaluate(n.Expression,provider,
+            new {
+                app=_appNode
+            },FuncScript.ParseMode.Standard);
+        var res = FuncScript.Dref(_res);
+
+        _appNode.ActivateSignal();
+        return res;
+        
     }
+
 }

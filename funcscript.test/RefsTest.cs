@@ -1,5 +1,9 @@
+using System.Collections.Generic;
+using System.Dynamic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using funcscript.block;
 using funcscript.core;
 using funcscript.funcs.misc;
 using funcscript.model;
@@ -13,82 +17,114 @@ namespace funcscript.test;
 public class RefsTest
 {
 
-    
+
     [Test]
     public void TestNameReference()
     {
-        ValueReferenceDelegate v = ()=>1;
-        
-        var res=FuncScript.EvaluateWithVars( "x", new { x = v });
+        ValueReferenceDelegate v = new ConstantValue(1);
+
+        var res = FuncScript.EvaluateWithVars("x", new { x = v });
         Assert.IsNotNull(res);
         Assert.That(res is ValueReferenceDelegate);
         Assert.That(res is ValueReferenceDelegate);
         var r = (ValueReferenceDelegate)res;
-        Assert.That(r(),Is.EqualTo(1));
+        Assert.That(r.Dref(), Is.EqualTo(1));
     }
+
     [Test]
     public void TestKvcReference()
     {
-        ValueReferenceDelegate v = ()=>1;
-        var res=FuncScript.EvaluateWithVars( "{a:x,b:3}", new { x = v });
+        ValueReferenceDelegate v = new ConstantValue(1);
+        var res = FuncScript.EvaluateWithVars("{a:x,b:3}", new { x = v });
         Assert.IsNotNull(res);
         Assert.That(res is KeyValueCollection);
         var a = ((KeyValueCollection)res).Get("a");
         Assert.That(a is ValueReferenceDelegate);
         var r = (ValueReferenceDelegate)a;
-        var dr = r();
+        var dr = r.Dref();
         Assert.That(dr is int);
-        Assert.That((int)dr,Is.EqualTo(1));
+        Assert.That((int)dr, Is.EqualTo(1));
     }
+
     [Test]
     public void TestListReference()
     {
-        ValueReferenceDelegate v = ()=>1;
-        var res=FuncScript.EvaluateWithVars( "[x,3]", new { x = v });
+        ValueReferenceDelegate v = new ConstantValue(1);
+        var res = FuncScript.EvaluateWithVars("[x,3]", new { x = v });
         Assert.IsNotNull(res);
         Assert.That(res is FsList);
         var l = (FsList)res;
         Assert.That(l[0] is ValueReferenceDelegate);
         var r = (ValueReferenceDelegate)l[0];
-        var dr = r();
+        var dr = r.Dref();
         Assert.That(dr is int);
-        var i= (int)dr;
-        Assert.That(i,Is.EqualTo(1));
+        var i = (int)dr;
+        Assert.That(i, Is.EqualTo(1));
+    }
+    [Test]
+    public void TestConnectionBasic()
+    {
+        var exp =
+            @"
+{
+    app.start->logger('here').log;    
+}
+";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        var sink = new SignalSinkInfo();
+        var res = FuncScript.EvaluateWithVars(exp,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.NotNull(res);
+        Assert.That(res,Is.AssignableTo<ValueReferenceDelegate>() );
+         var r = (ValueReferenceDelegate)res;
+         r.Connect();
+         sink.Signal();
+        Assert.That(logger.LogText, Is.EqualTo("here\n"));
     }
 
-    
 
     [Test]
     public void TestConnection()
     {
         var exp =
-@"
+            @"
 {
     s:Store();
     a:10;
     b:s.Out;
     sig:s.Store;    
-    a->s.In;
+    a:->s.In;
 }
 ";
-        var res = FuncScript.Evaluate(exp);
+        var _res = FuncScript.Evaluate(exp);
+        Assert.That(_res, Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+        ((ValueReferenceDelegate)_res).Connect();
+
         Assert.NotNull(res);
         //Assert.That(res is IValRef);
-       // var r = (IValRef)res;
-       var _val = res;
+        // var r = (IValRef)res;
+        var _val = res;
         Assert.That(_val is KeyValueCollection);
         var kvc = (KeyValueCollection)_val;
         Assert.That(kvc.Get("b") is ValueReferenceDelegate);
         var dRef = (ValueReferenceDelegate)kvc.Get("b");
-        Assert.IsNull(dRef());
+        Assert.IsNull(dRef.Dref());
         _val = kvc.Get("sig");
         Assert.That(_val is SignalListenerDelegate);
         var store = (SignalListenerDelegate)_val;
         store();
-        
-        Assert.That(dRef(),Is.EqualTo(10));
+
+        Assert.That(dRef.Dref(), Is.EqualTo(10));
     }
-    
+
     [Test]
     public void TestFileStore()
     {
@@ -98,11 +134,16 @@ public class RefsTest
     s:JsonFileStore();
     x:{a:1,b:'2'};
     sig:s.Save;    
-    x->s.In;
-    'test.json'->s.FileName;
+    x:->s.In;
+    'test.json':->s.FileName;
 }
 ";
-        var res = FuncScript.Evaluate(exp);
+        var _res = FuncScript.Evaluate(exp);
+        Assert.That(_res, Is.AssignableTo<ValueReferenceDelegate>());
+        ((ValueReferenceDelegate)_res).Connect();
+
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res);
 
         var _val = res;
@@ -113,15 +154,16 @@ public class RefsTest
         Assert.That(_val is SignalListenerDelegate);
         var store = (SignalListenerDelegate)_val;
         store();
-        
+
         Assert.That(System.IO.File.Exists("test.json"));
         var eval = FuncScript.Evaluate(System.IO.File.ReadAllText("test.json"));
-        Assert.That(eval is KeyValueCollection); 
-        
+        Assert.That(eval is KeyValueCollection);
+
         kvc = (KeyValueCollection)eval;
-        Assert.That(kvc.Get("a"),Is.EqualTo(1));
-        Assert.That(kvc.Get("b"),Is.EqualTo("2"));
+        Assert.That(kvc.Get("a"), Is.EqualTo(1));
+        Assert.That(kvc.Get("b"), Is.EqualTo("2"));
     }
+
     [Test]
     public void TestSignalCount()
     {
@@ -129,17 +171,20 @@ public class RefsTest
         var script = @"
 {
    x:store();
-   (x.Out??0)+1->x.In;
+   (x.Out??0)+1:->x.In;
    sig:x.Store;
    count:x.Out;
 }";
 
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.Evaluate(script);
+        var _res = FuncScript.Evaluate(script);
+        Assert.That(_res, Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
-        
+
         var _sig = kvc.Get("sig");
         Assert.NotNull(_sig, "The signal should be correctly set up.");
         Assert.That(_sig is SignalListenerDelegate);
@@ -147,12 +192,12 @@ public class RefsTest
 
         var _out = kvc.Get("count");
         Assert.That(_out is ValueReferenceDelegate);
-        var countOut=(ValueReferenceDelegate)_out;
-        
+        var countOut = (ValueReferenceDelegate)_out;
+
         for (int i = 0; i < 10; i++)
         {
             sig.Invoke();
-            Assert.That(countOut(),Is.EqualTo(i+1));
+            Assert.That(countOut.Dref(), Is.EqualTo(i + 1));
         }
     }
 
@@ -167,54 +212,166 @@ public class RefsTest
         }";
         var res = FuncScript.Evaluate(script);
         Assert.NotNull(res, "The environment should be correctly initialized.");
-        Assert.That(res,Is.TypeOf<SignalListenerDelegate>());
+        Assert.That(res, Is.TypeOf<SignalListenerDelegate>());
         var d = (SignalListenerDelegate)res;
-        Assert.That(d.Target,Is.TypeOf<SigSequenceNode>());
+        Assert.That(d.Target, Is.TypeOf<SigSequenceNode>());
         var n = (SigSequenceNode)d.Target;
-        Assert.That(n.Items.Length,Is.EqualTo(2));
+        Assert.That(n.Items.Length, Is.EqualTo(2));
     }
+
     [Test]
-    public void TestTimerWithCount()
+    public void TestHttpNodeStackOverflowBug()
     {
-        // Setup - Create an initial script and environment
-        var script = @"
-{
-//nodes
-   x:store();
-   t:timer(300,true);
-   c:logger();
-
-//connections
-   
-   x.Out??'Nothing'->c.Text;
-   (x.Out??0)+1->x.In;
-   t.tick->c.log>>if(x.Out??0=4,t.stop,x.store);
-   app.start->t.start;
-   count:x.Out;
+        var script = @"{
+  f:(x)=>
+  {
+      h:httpclient();
+      'place holder url':->h.url;
+      {'y': x}:->h.InData;
+      return h.postjson;
+  };
+  
+  list_gpt:f('place holder');
+  app.start->list_gpt;
 }";
-
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script,new
+        var _res = FuncScript.EvaluateWithVars(script,new
         {
             app=new
             {
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        ((ValueReferenceDelegate)_res).Connect();
+
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         
         Assert.That(sink.Sink!=null);
         Assert.That(sink.Catch==null);
         sink.Signal();
-        System.Threading.Thread.Sleep(2000);
+    }
+    
+    
+    
+[Test]
+    public void TestTimerWithCount()
+    {
+        // Setup - Create an initial script and environment
+        var delay = 300;
+        var n = 4;
+        var script = $@"
+{{
+//nodes
+   x:store();
+   t:timer({delay},true);
+
+//connections
+   
+   (x.Out??0)+1:->x.In;
+   t.tick->if((x.Out??0)={n},t.stop,x.store);
+   app.start->t.start;
+   count:x.Out;
+}}";
+
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        System.Threading.Thread.Sleep(delay*2*n);
         
         var kvc = (KeyValueCollection)res;
         var _count = kvc.Get("count");
         Assert.That(_count is ValueReferenceDelegate);
         var count = (ValueReferenceDelegate)_count;
-        Assert.That( count.Invoke(),Is.EqualTo(4));
+        Assert.That( count.Dref(),Is.EqualTo(4));
+    }
+    
+    [Test]
+    public void TestSgnalReduce()
+    {
+        var delay = 100;
+        var n = 4;
+        // Setup - Create an initial script and environment
+        var script = @"
+{
+    count_st:store();
+    count_st.out??0+1:->count_st.In;
+    t:series(0,"+n+@") map (i)=>
+    {
+        x:timer(100,false);
+        sp:signalpass();
+        start:x.start;
+        done:sp.onfire;
+        x.tick->count_st.store>>logger('count:'+ count_st.out).log>>sp.fire;
+    };
+    seq:reverse(t) reduce (x,s,i)=>
+    {
+        x.done->logger('index:'+i).log>>s;
+        return x.start;
+    };
+    app.start->seq;
+    count:count_st.out;
+}";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        System.Threading.Thread.Sleep(delay*2*n);
+        
+        var kvc = (KeyValueCollection)res;
+        var _count = kvc.Get("count");
+        Assert.That(_count is ValueReferenceDelegate);
+        var count = (ValueReferenceDelegate)_count;
+        Assert.That( count.Dref(),Is.EqualTo(n));
+        
+        StringBuilder sb = new StringBuilder();
+        int startCount = 1;
+        int endIndex = n; // Adjust this to control the number of lines
+
+        for (int i = endIndex - 1; i >= 0; i--)
+        {
+            sb.AppendLine($"count:{startCount}");
+            sb.AppendLine($"index:{i}");
+            startCount++;
+        }
+        Assert.That(logger.LogText,Is.EqualTo(sb.ToString()));
     }
     [Test]
     public void TestSigLink()
@@ -226,14 +383,17 @@ public class RefsTest
 }";
 
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.Evaluate(script);
+        var _res = FuncScript.Evaluate(script);
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         
     }
 
-    class StringTextLogger : funcscript.funcs.misc.Fslogger
+    public class StringTextLogger : funcscript.funcs.misc.Fslogger
     {
         private StringBuilder sb = new StringBuilder();
         public override void WriteLine(string text)
@@ -262,13 +422,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
 
@@ -284,7 +449,7 @@ public class RefsTest
         var script = @"
 {
     s:store();
-    (s.out/0)->s.in;
+    (s.out/0):->s.in;
     app.start->logger('all good').log>>s.store|logger('error').log;
 }";
 
@@ -292,13 +457,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
 
@@ -313,7 +483,7 @@ public class RefsTest
         var script = @"
 {
     s:store();
-    (s.out/1)->s.in;
+    (s.out/1):->s.in;
     app.start->logger('all good').log>>s.store|logger('error').log>>logger('final').log;
 }";
 
@@ -321,13 +491,17 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        ((ValueReferenceDelegate)_res).Connect();
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
 
@@ -342,7 +516,7 @@ public class RefsTest
         var script = @"
 {
     s:store();
-    (s.out/0)->s.in;
+    (s.out/0):->s.in;
     app.start->logger('all good').log>>s.store|logger('error').log>>logger('final').log;
 }";
 
@@ -350,13 +524,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        ((ValueReferenceDelegate)_res).Connect();
+
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
 
@@ -378,13 +557,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        ((ValueReferenceDelegate)_res).Connect();
+
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
 
@@ -400,7 +584,7 @@ public class RefsTest
         var script = @"
 {
    x:store();
-   x.Out/0->x.In;
+   x.Out/0:->x.In;
    app.start->x.store|logger('error').log;
 }";
 
@@ -408,13 +592,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
 
@@ -431,7 +620,7 @@ public class RefsTest
         var script = @"
 {
    x:store();
-   [1,2,3]->x.In;
+   [1,2,3]:->x.In;
    app.start->x.store>>logger(x.Out map (y)=>y+1).log;
 }";
 
@@ -439,13 +628,16 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -469,13 +661,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -499,20 +696,150 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
         System.Threading.Thread.Sleep(1000);
         Assert.That(logger.LogText,Is.EqualTo("5\n"));
     }
-    
+    [Test]
+    public void RefBugMay11Case4()
+    {
+        //the bug is c.Out.x unnecessarily dereferenced 
+        var script = @"{
+  x:{
+      t:timer(100,false);
+      s:store({a:5});
+      b:s.out.a;
+      t.tick->(s.store>>logger(x.s.out.a).log);
+      return {t,s};
+  };
+  app.start->x.t.start;
+}";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var vars = new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        };
+        var provider = new KvcProvider(new ObjectKvc(vars), new DefaultFsDataProvider());
+        var errors = new List<FuncScriptParser.SyntaxErrorData>();
+        var exp=FuncScriptParser.Parse(provider, script, errors);
+        Assert.NotNull(exp);
+        Assert.That(exp is KvcExpression);
+        var kvcExp = (KvcExpression)exp;
+        Assert.That(kvcExp._keyValues.Count,Is.EqualTo(1));
+        Assert.That(kvcExp._keyValues[0].ValueExpression,Is.TypeOf<KvcExpression>());
+        kvcExp = (KvcExpression)kvcExp._keyValues[0].ValueExpression;
+        Assert.That(kvcExp._keyValues.Count,Is.EqualTo(4));
+        Assert.That(kvcExp._signalConnections.Count,Is.EqualTo(1));
+        Assert.IsNotNull(kvcExp.singleReturn);
+        
+        var _res = exp.Evaluate(provider);
+        
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        ((ValueReferenceDelegate)_res).Connect();
+
+        var valRef = (ValueReferenceDelegate)_res;
+        
+        Assert.That(valRef,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var del = (KvcExpression.ConnectionDelegate)valRef;
+        Assert.That(del.Value,Is.TypeOf<KvcExpression.ExpressionKvc>());
+        var delVal = (KeyValueCollection)del.Value;
+        Assert.That(delVal.ContainsKey("x"));
+        var _xdel = delVal.Get("x");
+        Assert.That(_xdel,Is.AssignableTo<ValueReferenceDelegate>());
+        var xdel = (ValueReferenceDelegate)_xdel;
+        Assert.That(xdel,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var x = (KvcExpression.ConnectionDelegate)xdel;
+       
+        var res = FuncScript.Dref(_res);
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        var kvc = (KeyValueCollection)res;
+        
+        sink.Signal();
+        System.Threading.Thread.Sleep(1000);
+        Assert.That(logger.LogText,Is.EqualTo("5\n"));
+    }
+    [Test]
+    public void RefBugMay11Case5()
+    {
+        //the bug is c.Out.x unnecessarily dereferenced 
+        var script = @"{
+  x:{
+      t:timer(100,false);
+      s:store({a:5});
+      b:s.out.a;
+      t.tick->s.store;
+      return {t,s};
+  };
+  app.start->x.t.start;
+}";
+
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var vars = new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        };
+        var provider = new KvcProvider(new ObjectKvc(vars), new DefaultFsDataProvider());
+        var errors = new List<FuncScriptParser.SyntaxErrorData>();
+        var exp=FuncScriptParser.Parse(provider, script, errors);
+        Assert.NotNull(exp);
+        Assert.That(exp is KvcExpression);
+        var kvcExp = (KvcExpression)exp;
+        Assert.That(kvcExp._keyValues.Count,Is.EqualTo(1));
+        Assert.That(kvcExp._keyValues[0].ValueExpression,Is.TypeOf<KvcExpression>());
+        kvcExp = (KvcExpression)kvcExp._keyValues[0].ValueExpression;
+        Assert.That(kvcExp._keyValues.Count,Is.EqualTo(4));
+        Assert.That(kvcExp._signalConnections.Count,Is.EqualTo(1));
+        Assert.IsNotNull(kvcExp.singleReturn);
+        
+        var _res = exp.Evaluate(provider);
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var valRef = (ValueReferenceDelegate)_res;
+        
+        Assert.That(valRef,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var del = (KvcExpression.ConnectionDelegate)valRef;
+        Assert.That(del.Value,Is.TypeOf<KvcExpression.ExpressionKvc>());
+        var delVal = (KeyValueCollection)del.Value;
+        Assert.That(delVal.ContainsKey("x"));
+        var _xdel = delVal.Get("x");
+        Assert.That(_xdel,Is.AssignableTo<ValueReferenceDelegate>());
+        var xdel = (ValueReferenceDelegate)_xdel;
+        Assert.That(xdel,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var x = (KvcExpression.ConnectionDelegate)xdel;
+       
+        var res = FuncScript.Dref(_res);
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        sink.Signal();
+        System.Threading.Thread.Sleep(1000);
+    }
     [Test]
     public void RefBugMay11Case3()
     {
@@ -530,13 +857,18 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -564,13 +896,17 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -592,13 +928,16 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -610,7 +949,7 @@ public class RefsTest
         var script = @"
         {
             s:store();
-            10->s.In;
+            10:->s.In;
             a:s.store>>if(s.Out=10,logger('good').log,logger('bad').log);
             app.start->a;
         }";
@@ -619,13 +958,16 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -636,7 +978,7 @@ public class RefsTest
         var _s = (ObjectKvc)a;
         Assert.That(_s.GetUnderlyingValue(),Is.TypeOf<StoreNode>());
         var s = (StoreNode)_s.GetUnderlyingValue();
-        Assert.That(s.Out(),Is.EqualTo(10));
+        Assert.That(s.Out.Dref(),Is.EqualTo(10));
         
         Assert.That(logger.LogText, Is.EqualTo("good\n"));
     }
@@ -654,13 +996,16 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -682,13 +1027,16 @@ public class RefsTest
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
         // Evaluate the script to initialize the environment and store object
-        var res = FuncScript.EvaluateWithVars(script, new
+        var _res = FuncScript.EvaluateWithVars(script, new
         {
             app = new
             {
                 start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
             }
         });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
@@ -697,5 +1045,391 @@ public class RefsTest
         
             Assert.That(logger.LogText, Is.EqualTo("0\n1\n2\n"));
     }
+    [Test]
+    public void RefBugMay12Case2()
+    {
+        //the bug is c.Out.x unnecessarily dereferenced 
+        var script = @"
+{
+  y:{
+      h:store();
+      t:timer(100,false);
+      'chat/completions':->h.In;
+  };
+  y.t.tick->logger('test').log;
+}";
 
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script, new
+        {
+            app = new
+            {
+                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+            }
+        });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        var kvc = res as KeyValueCollection;
+        var y = kvc.Get("y") as ValueReferenceDelegate;
+        Assert.NotNull(y);
+        var kvc2=y.Dref() as KvcExpression.ExpressionKvc;
+        Assert.IsNotNull(kvc2);
+        
+    }
+    
+    [Test]
+    public void TestSignalPass()
+    {
+        var script = 
+@"{
+    sp:SignalPass();
+    sp.OnFire->logger('passed').log;
+    app.start->sp.Fire;
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText, Is.EqualTo("passed\n"));
+    }
+    [Test]
+    public void May12Bug2()
+    {
+        var script = @"{
+    list_store:store(5);  
+    list:list_store.Out;
+    sections_gpt:if(list>0,
+          { 
+              c:{
+                  t:timer(100,false);
+                  s:store({a:'resp'});
+                  sp:SignalPass();
+                  success:sp.OnFire;  
+                  start:t.start;
+                  response:s.out.a;
+                  t.tick->s.store>>sp.fire;
+              };
+              c.success->logger('done').log
+                  >>logger(sections_gpt.response).log
+                    |logger(fault.message).log;
+             return c;
+          },null);
+    section_gpt_start:sigsequence([sections_gpt] map (x)=>x.start);
+
+    app.start->logger().clear>>list_store.store
+     >>sections_gpt.start;
+
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText, Is.EqualTo("done\nresp\n"));
+    }
+
+    
+    [Test]
+    public void May12Bug2Reduce1()
+    {
+        var script = @"{
+    list_store:store(5);  
+    list:list_store.Out;
+    sections_gpt:if(list>0,
+          { 
+              c:timer(100,false);
+              return c;
+          },null);
+    
+    app.start->list_store.store
+     >>sections_gpt.start;
+
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+    }
+    
+    [Test]
+    public void DeepReferenceBugIssue()
+    {
+        //reality struck, mixing mutable with immutable might not work after all
+        var script = 
+@"{
+  list_store:store(['item1']);  
+  list:list_store.Out;
+
+  sections_gpt:list map (s)=>
+          { 
+              c:{
+                  r_st:store({a:'resp'});
+                  t:timer(100,false);
+                  sp:signalpass();
+                  response:r_st.out.a;
+                  success:sp.onfire;
+                  t.tick->r_st.store>>sp.fire;
+                  start:t.start;
+              };
+              c.success->logger(sections_gpt[0].response).log;
+             return c;
+          };
+
+  app.start->list_store.store>>sections_gpt[0].start;
+
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+        
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText, Is.EqualTo("resp\n"));
+
+    }
+    [Test]
+    public void DeepReferenceBugReduce2()
+    {
+        //reality struck, mixing mutable with immutable might not work after all
+        var script = 
+@"{
+  list_store:store(5);  
+  list:list_store.Out;
+
+  sections_gpt:if(list>0,
+          { 
+              c:{
+                  r_st:store({a:'resp'});
+                  t:timer(100,false);
+                  sp:signalpass();
+                  response:r_st.out.a;
+                  success:sp.onfire;
+                  t.tick->r_st.store>>sp.fire;
+                  start:t.start;
+              };
+              c.success->logger(sections_gpt.response).log;
+             return c;
+          },null);
+
+  app.start->list_store.store>>sections_gpt.start;
+
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
+        var res = FuncScript.Dref(_res);
+        
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText, Is.EqualTo("resp\n"));
+
+    }
+    
+    [Test]
+    public void DeepReferenceBugIssueReduce1()
+    {
+        var script = 
+@"{
+  list_store:store(['item1']);  
+  list:list_store.Out;
+  seq:list map (s)=>
+          { 
+              c:{
+                  t:timer(100,false);
+                  start:t.start;
+                  t.tick->logger('tick').log;
+              };
+             return c;
+          };
+  
+  app.start->logger().clear
+     >>list_store.store>>seq[0].start;
+
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText, Is.EqualTo("tick\n"));
+
+    }
+    
+    [Test]
+    public void BugMay12_2()
+    {
+        var script = 
+            @"{
+  list_st:store([1]);
+  list:list_st.out;
+  m:list map (s,j)=>1;
+  m[len(m)-1].success->logger('final').log;  
+}";
+        var _res = FuncScript.Evaluate(script);
+        Assert.That(_res,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var res = FuncScript.Dref(_res);
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+    }
+    
+    [Test]
+    public void BugMay12_3()
+    {
+        var script = 
+            @"{
+  list_st:store([1]);
+  list:list_st.out;
+  sections_gpt:list map (s,j)=>
+          { 
+            c:{
+                t:timer(100,false);
+                s:store({a:'resp'});
+                response:s.out.a;
+                sp:signalpass();
+                success:sp.onfire;
+                start:t.start;
+                t.tick->s.store>>sp.fire;
+              };
+             c.success->logger(sections_gpt map (s,j)=>s.response).log;
+             return c;
+          };
+
+  app.start->logger().clear>>list_st.store>>sections_gpt[0].start;
+  
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var _res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        ((ValueReferenceDelegate)_res).Connect();
+
+        Assert.That(_res,Is.TypeOf<KvcExpression.ConnectionDelegate>());
+        var res = FuncScript.Dref(_res);
+
+        Assert.NotNull(res, "The environment should be correctly initialized.");
+        Assert.That(res is KeyValueCollection);
+        
+        Assert.That(sink.Sink!=null);
+        Assert.That(sink.Catch==null);
+        sink.Signal();
+        
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText, Is.EqualTo("[resp]\n"));
+
+    }
 }

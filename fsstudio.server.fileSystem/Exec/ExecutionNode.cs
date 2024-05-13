@@ -31,6 +31,8 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
     private string _nameLower;
     private string _name;
     private IFsDataProvider _prentNode = null;
+    public IFsDataProvider ParentProvider => _prentNode;
+
 
     public void SetParent(IFsDataProvider parent)
     {

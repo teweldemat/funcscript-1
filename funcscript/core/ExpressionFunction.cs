@@ -10,29 +10,14 @@ namespace funcscript.core
     {
         private class ParameterDataProvider : IFsDataProvider
         {
-            public bool preEvalMode = false;
             public IParameterList pars;
             public IFsDataProvider parentSymbolProvider;
             public ExpressionFunction expressionFunction;
-
+            public IFsDataProvider ParentProvider => parentSymbolProvider;
             public object GetData(string name)
             {
                 if (expressionFunction.ParamterNameIndex.TryGetValue(name, out var index))
-                {
-                    if (preEvalMode)
-                    {
-                        if (expressionFunction._parameterRefs[index] != null)
-                            return expressionFunction._parameterRefs[index];
-                        return expressionFunction._parameterRefs[index] = () =>
-                            throw new InvalidDataContractException(
-                                $"It is not allowed to dereference parameter {index} using the template reference");
-                    }
-                    else
-                    {
-                        return pars.GetParameter(parentSymbolProvider, index);
-                    }
-                }
-
+                    return pars.GetParameter(parentSymbolProvider, index);
                 return parentSymbolProvider.GetData(name);
             }
         }

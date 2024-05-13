@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.math
 {
-    public class SubstractFunction : IFsFunction
+    public class SubstractFunction : IFsFunction, IFsDref
     {
         public int MaxParsCount => -1;
 
@@ -15,17 +15,38 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
+            var parBuilder = new CallRefBuilder(this, parent, pars);
+            var doRef = false;
+            var ret = EvaluateInternal(pars, (i) =>
+            {
+                var ret = pars.GetParameter(parent, i);
+                if (ret is ValueReferenceDelegate)
+                {
+                    doRef = true;
+                    return (false, null);
+                }
+                return (true, ret);
+            });
+            if (doRef)
+                return parBuilder.CreateRef();
+            return ret;
+        }
+
+        object EvaluateInternal(IParameterList pars, Func<int, (bool, object)> getPar)
+        {
             bool isInt = false, isLong = false, isDouble = false;
-            int intTotal = 1;
-            long longTotal = 1;
-            double doubleTotal = 1;
+            int intTotal = 0;
+            long longTotal = 0;
+            double doubleTotal = 0;
             int count = pars.Count;
 
             if (count > 0)
             {
-                var d = pars.GetParameter(parent, 0);
-                if (d is ValueReferenceDelegate)
-                    return CallRef.Create(parent, this, pars);
+                var p = getPar(0);
+                if (!p.Item1)
+                    return null;
+                var d = p.Item2;
+
                 if (d is int)
                 {
                     isInt = true;
@@ -41,16 +62,14 @@ namespace funcscript.funcs.math
                     isDouble = true;
                     doubleTotal = (double)d;
                 }
-                else
-                {
-                    isInt = true;
-                    intTotal = 0;
-                }
             }
 
             for (int i = 1; i < count; i++)
             {
-                var d = pars.GetParameter(parent, i);
+                var p = getPar(i);
+                if (!p.Item1)
+                    return null;
+                var d = p.Item2;
 
                 if (isInt)
                 {
@@ -62,11 +81,13 @@ namespace funcscript.funcs.math
                     {
                         isLong = true;
                         longTotal = intTotal;
+                        longTotal -= (long)d;
                     }
                     else if (d is double)
                     {
                         isDouble = true;
                         doubleTotal = intTotal;
+                        doubleTotal -= (double)d;
                     }
                 }
 
@@ -84,6 +105,7 @@ namespace funcscript.funcs.math
                     {
                         isDouble = true;
                         doubleTotal = longTotal;
+                        doubleTotal -= (double)d;
                     }
                 }
 
@@ -106,14 +128,22 @@ namespace funcscript.funcs.math
 
             if (isDouble)
                 return doubleTotal;
-
             if (isLong)
                 return longTotal;
-
             if (isInt)
                 return intTotal;
 
             return null;
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var ret = EvaluateInternal(pars, (i) =>
+            {
+                var ret = FuncScript.Dref(pars.GetParameter(null, i));
+                return (true, ret);
+            });
+            return ret;
         }
 
         public string ParName(int index)

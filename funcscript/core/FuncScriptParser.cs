@@ -35,10 +35,11 @@ namespace funcscript.core
             List,
             Key,
             Case,
-            Connection,
+            DataConnection,
             NormalErrorSink,
             SigSequence,
-            ErrorKeyWord
+            ErrorKeyWord,
+            SignalConnection
         }
 
         public class SyntaxErrorData
@@ -1002,7 +1003,7 @@ namespace funcscript.core
         }
 
         static int GetConnectionItem(IFsDataProvider context, string exp, int index,
-            out KvcExpression.ConnectionExpression connectionExpression, out ParseNode parseNode)
+            out KvcExpression.ConnectionExpression connectionExpression, out ParseNode parseNode,ParseNodeType nodeType)
         {
             connectionExpression = null;
             parseNode = null;
@@ -1016,7 +1017,7 @@ namespace funcscript.core
 
             i = SkipSpace(exp, i);
             // Ensure we have a '->' after the source expression
-            var i2 = GetLiteralMatch(exp, i, "->");
+            var i2 = GetLiteralMatch(exp, i, nodeType==ParseNodeType.DataConnection?":->":"->");
             if (i2 == i)
             {
                 return index; // No '->' found immediately after the source expression.
@@ -1053,7 +1054,7 @@ namespace funcscript.core
                 };
                 parseNode = new ParseNode
                 (
-                    ParseNodeType.Connection,
+                    nodeType,
                     index,
                     i - index,
                     new ParseNode[] { nodeSourceExp, nodeSinkExp, nodeCatchExp }
@@ -1068,7 +1069,7 @@ namespace funcscript.core
                 };
                 parseNode = new ParseNode
                 (
-                    ParseNodeType.Connection,
+                    ParseNodeType.DataConnection,
                     index,
                     i - index,
                     new ParseNode[] { nodeSourceExp, nodeSinkExp }
@@ -1108,7 +1109,7 @@ namespace funcscript.core
                 {
                     Key = iden,
                     KeyLower = idenLower,
-                    ValueExpression = new ReferenceBlock(iden, idenLower)
+                    ValueExpression = new ReferenceBlock(iden, idenLower,true)
                     {
                         Pos = index,
                         Length = i - index
@@ -1126,8 +1127,9 @@ namespace funcscript.core
                 {
                     Key = iden,
                     KeyLower = idenLower,
-                    ValueExpression = new ReferenceBlock(iden, iden.ToLower())
+                    ValueExpression = new ReferenceBlock(iden, iden.ToLower(),true)
                     {
+                        
                         Pos = index,
                         Length = i - index
                     }
@@ -1149,14 +1151,15 @@ namespace funcscript.core
                 return index; //we didn't find '{'
 
             var kvs = new List<KvcExpression.KeyValueExpression>();
-            var connections = new List<KvcExpression.ConnectionExpression>();
+            var dataConnections = new List<KvcExpression.ConnectionExpression>();
+            var signalConnections = new List<KvcExpression.ConnectionExpression>();
             var nodeItems = new List<ParseNode>();
 
             int i2;
             do
             {
                 i = SkipSpace(exp, i);
-                if (kvs.Count > 0 || connections.Count>0)
+                if (kvs.Count > 0 || dataConnections.Count > 0 || signalConnections.Count > 0)
                 {
                     i2 = GetLiteralMatch(exp, i, ",", ";");
                     if (i2 == i)
@@ -1165,21 +1168,32 @@ namespace funcscript.core
                 }
 
                 i = SkipSpace(exp, i);
-                i2 = GetConnectionItem(context, exp, i, out var conItem, out var nodeConItem);
-                if (i2 == i)
+                
+                i2 = GetConnectionItem(context, exp, i, out var dataConItem, out var datanCodeConItem, ParseNodeType.DataConnection);
+                if (i2 > i)
                 {
-                    i2 = GetKvcItem(context, exp, i, out var otherItem, out var nodeOtherItem);
-                    if (i2 == i)
-                        break;
-                    kvs.Add(otherItem);
-                    nodeItems.Add(nodeOtherItem);
-                }
-                else
-                {
-                    connections.Add(conItem);
-                    nodeItems.Add(nodeConItem);
+                    dataConnections.Add(dataConItem);
+                    nodeItems.Add(datanCodeConItem);
+                    i = i2;
+                    continue;
                 }
 
+                
+                i2 = GetConnectionItem(context, exp, i, out var sigConItem, out var signNodeConItem, ParseNodeType.SignalConnection);
+                if (i2 > i)
+                {
+                    signalConnections.Add(sigConItem);
+                    nodeItems.Add(signNodeConItem);
+                    i = i2;
+                    continue;
+                }
+
+
+                i2 = GetKvcItem(context, exp, i, out var otherItem, out var nodeOtherItem);
+                if (i2 == i)
+                    break;
+                kvs.Add(otherItem);
+                nodeItems.Add(nodeOtherItem);
                 i = i2;
             } while (true);
 
@@ -1191,7 +1205,7 @@ namespace funcscript.core
             }
 
             kvcExpr = new KvcExpression();
-            var error = kvcExpr.SetKeyValues(kvs.ToArray(), connections.ToArray());
+            var error = kvcExpr.SetKeyValues(kvs.ToArray(), dataConnections.ToArray(),signalConnections.ToArray());
             if (error != null)
             {
                 serrors.Add(new SyntaxErrorData(index, i - index, error));

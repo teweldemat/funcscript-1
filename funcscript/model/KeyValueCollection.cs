@@ -83,12 +83,12 @@ namespace funcscript.model
         /// Returns the string representation of the KVC
         /// </summary>
         /// <returns></returns>
-        public override string ToString()
-        {
-            var sb = new StringBuilder();
-            FuncScript.Format(sb, this, null, false, true);
-            return sb.ToString();
-        }
+        // public override string ToString()
+        // {
+        //     var sb = new StringBuilder();
+        //     FuncScript.Format(sb, this, null, false, true);
+        //     return sb.ToString();
+        // }
         /// <summary>
         /// Merges to key value pairs. The merged KVC will have keys from both collections
         /// If a key exists in both KVCs the value in the merged KVC is determined as follows

@@ -37,7 +37,8 @@ public class CreateTextLogFunction : IFsFunction
         var n = new TextLogNode();
         if (pars.Count > 0)
         {
-            n.Text(pars.GetParameter(parent, 0));
+            var source = pars.GetParameter(parent, 0);
+            n.Text(source);
         }
         return new ObjectKvc(n);
     }

@@ -9,8 +9,9 @@ public class SigSequenceNode
     {
         public FsList Items;
 
-     
-
+        private SignalSinkInfo _sink = new SignalSinkInfo();
+        public SignalSourceDelegate Done => (x, y) => 
+            _sink.SetSink(x, y);
         public SignalListenerDelegate Listener => ()=>
         {
             if(Items==null || Items.Length==0)
@@ -66,6 +67,8 @@ public class SigSequenceNode
                     }
                 }
             }
+            _sink.Signal();
+            
         };
 }
 public class SigSequenceFunction : IFsFunction, IFsDref

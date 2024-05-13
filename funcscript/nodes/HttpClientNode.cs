@@ -11,8 +11,8 @@ public class HttpClientNode
     private object _headers = null;
 
     private readonly HttpClient _httpClient = new HttpClient();
-    private object _outData;
-    private string _errorData;
+    private VariableValue _outData = new VariableValue();
+    private VariableValue _errorData = new VariableValue();
 
     private SignalSinkInfo _doneSink = new SignalSinkInfo();
     private SignalSinkInfo _errorSink = new SignalSinkInfo();
@@ -20,8 +20,8 @@ public class HttpClientNode
     public ValueSinkDelegate Headers => val => { _headers = val; };
     public ValueSinkDelegate Url => val => { _url = val; };
     public ValueSinkDelegate InData => val => { _inData = val; };
-    public ValueReferenceDelegate OutData => () => _outData;
-    public ValueReferenceDelegate ErrorData => () => _errorData;
+    public ValueReferenceDelegate OutData =>_outData;
+    public ValueReferenceDelegate ErrorData =>_errorData;
     public SignalSourceDelegate Success => (n, e) => _doneSink.SetSink(n, e);
     public SignalSourceDelegate Fail => (n, e) => _errorSink.SetSink(n, e);
 
@@ -62,20 +62,20 @@ public class HttpClientNode
     {
         try
         {
-            _errorData = null;
-            _outData = null;
+            _errorData.Val = null;
+            _outData.Val = null;
             string url = FuncScript.Dref(_url).ToString();
 
             (var request, var response) = await SendGetRequest(url);
             string responseBody = await response.Content.ReadAsStringAsync();
-            _outData = FuncScript.Evaluate(null, responseBody);
+            _outData.Val = FuncScript.Evaluate(null, responseBody);
             response.Dispose();
             request.Dispose();
             _doneSink.Signal();
         }
         catch (HttpRequestException e)
         {
-            _errorData = $"Error: {e.Message}";
+            _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
     };
@@ -84,15 +84,15 @@ public class HttpClientNode
     {
         try
         {
-            _errorData = null;
-            _outData = null;
+            _errorData.Val = null;
+            _outData.Val = null;
             string url = FuncScript.Dref(_url).ToString();
 
             (var request, var response) = await SendGetRequest(url);
             string responseBody = await response.Content.ReadAsStringAsync();
             string contentType = response.Content.Headers.ContentType?.MediaType; // Safely get the Content-Type
 
-            _outData = new
+            _outData.Val = new
             {
                 ContentType = contentType,
                 Content = responseBody
@@ -103,7 +103,7 @@ public class HttpClientNode
         }
         catch (HttpRequestException e)
         {
-            _errorData = $"Error: {e.Message}";
+            _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
     };
@@ -112,22 +112,23 @@ public class HttpClientNode
     {
         try
         {
-            _errorData = null;
-            _outData = null;
+            _errorData.Val = null;
+            _outData.Val = null;
             string url = FuncScript.DeepDref(_url).ToString();
-            string jsonData = FuncScript.DeepDref(_inData)?.ToString() ?? "{}";
+            object data = FuncScript.DeepDref(_inData);
+            var jsonData =FuncScript.FormatToJson(data);
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
             HttpResponseMessage response = await SendPostRequest(url, content);
             string responseBody = await response.Content.ReadAsStringAsync();
             Console.WriteLine("Json\n"+jsonData);
-            _outData = FuncScript.Evaluate(null, responseBody);
+            _outData.Val = FuncScript.Evaluate(null, responseBody);
             response.Dispose();
             _doneSink.Signal();
         }
         catch (Exception e)
         {
-            _errorData = $"Error: {e.Message}";
+            _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
     };

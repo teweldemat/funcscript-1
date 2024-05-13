@@ -1,26 +1,37 @@
 using System.Security.Authentication.ExtendedProtection;
 using funcscript.core;
 using funcscript.model;
+using Newtonsoft.Json.Serialization;
 
 namespace funcscript.nodes;
 
-public class StoreNode
+public class StoreNode:ListenerCollection, ValueReferenceDelegate
 {
     private object _value = null;
     private object _source = null;
-        
+    private bool _hasChanges = false;
 
     public ValueSinkDelegate In => val =>
     {
         this._source = val;
     };
-    public ValueReferenceDelegate Out => ()=>this._value;
+
+    public ValueReferenceDelegate Out => this;
     public SignalListenerDelegate Store => ()=>
     {
+        _hasChanges = true;
         var dr = FuncScript.Dref(_source);
         this._value = dr;
+        base.Notify();
     };
-        
+
+    public object Dref()
+    {
+        _hasChanges = false;
+        return _value;
+    }
+
+    public bool HasChanges => _hasChanges;
 }
 
 public class CreateStoreFunction : IFsFunction
@@ -29,7 +40,10 @@ public class CreateStoreFunction : IFsFunction
     {
         var n = new StoreNode();
         if (pars.Count > 0)
-            n.In(pars.GetParameter(parent, 0));
+        {
+            var source = pars.GetParameter(parent, 0);
+            n.In(source);
+        }
         return new ObjectKvc(n);      
     }
 

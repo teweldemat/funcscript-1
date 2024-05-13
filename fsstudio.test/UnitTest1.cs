@@ -10,7 +10,7 @@ public class Tests
     }
 
     [Test]
-    public void TestRelativeRef()
+    public async Task TestRelativeRef()
     {
         var nodes = new[]
         {
@@ -46,7 +46,7 @@ public class Tests
             }
         };
         var session = new ExecutionSession(nodes);
-        var res=session.RunNode("x.y");
+        var res=await session.RunNode("x.y");
         Assert.That(res,Is.EqualTo(11));
     }
 }

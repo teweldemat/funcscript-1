@@ -9,10 +9,11 @@ namespace funcscript.block
     
     public class KvcExpression : ExpressionBlock
     {
-         class ExpressionKvc : KeyValueCollection
+         public class ExpressionKvc : KeyValueCollection
         {
             private IFsDataProvider _provider;
             private KvcExpression _parent;
+            private Dictionary<string, object> _valCache = new Dictionary<string, object>();
             public ExpressionKvc(IFsDataProvider provider, KvcExpression parent)
             {
                 this._provider = provider;
@@ -21,7 +22,18 @@ namespace funcscript.block
 
             public override object Get(string key)
             {
-                return _provider.GetData(key.ToLower());
+                lock (_valCache)
+                {
+                    var lower = key.ToLower();
+                    if (_valCache.TryGetValue(lower, out var ret))
+                        return ret;
+                    var val =_parent.index.TryGetValue(lower,out var ch)
+                        ?ch.ValueExpression.Evaluate(new KvcProvider(this,_provider))
+                        :_provider.GetData(lower);
+                    
+                    _valCache.Add(lower, val);
+                    return val;
+                }
 
             }
 
@@ -32,39 +44,10 @@ namespace funcscript.block
 
             public override IList<KeyValuePair<string, object>> GetAll()
             {
-                return _parent.KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, _provider.GetData(x.KeyLower))).ToArray();
-            }
+                return _parent.KeyValues.Where(x=>x.Key!=null).Select(x => new KeyValuePair<String, Object>(x.Key, this.Get(x.Key))).ToArray();
+                }
         }
        
-        class KvcProvider : IFsDataProvider
-        {
-            IFsDataProvider ParentProvider;
-            Dictionary<string, object> vals = new Dictionary<string, object>();
-            KvcExpression Parent;
-            public KvcProvider(KvcExpression Parent, IFsDataProvider ParentProvider)
-            {
-                this.Parent = Parent;
-                this.ParentProvider = ParentProvider;
-            }
-            String _evaluating = null;
-            public object GetData(string name)
-            {
-                if (vals.TryGetValue(name, out var val))
-                    return val;
-                if (_evaluating == null || name != _evaluating)
-                {
-                    if (Parent.index.TryGetValue(name, out var exp) && exp.ValueExpression != null)
-                    {
-                        _evaluating = name;
-                        var v = exp.ValueExpression.Evaluate(this);
-                        _evaluating = null;
-                        vals[name] = v;
-                        return v;
-                    }
-                }
-                return ParentProvider.GetData(name);
-            }
-        }
         public class KeyValueExpression
         {
             public String Key;
@@ -78,14 +61,156 @@ namespace funcscript.block
             public ExpressionBlock Sink;
             public ExpressionBlock Catch;
         }
-        IList<KeyValueExpression> _keyValues;
-        private IList<ConnectionExpression> _connections;
-        Dictionary<string, KeyValueExpression> index;
-        KeyValueExpression singleReturn = null;
-        public String SetKeyValues(IList<KeyValueExpression> kv,IList<ConnectionExpression> conns)
+        
+        
+        public IList<KeyValueExpression> _keyValues;
+        public  IList<ConnectionExpression> _dataConnections;
+        public  IList<ConnectionExpression> _signalConnections;
+        public Dictionary<string, KeyValueExpression> index;
+        public KeyValueExpression singleReturn = null;
+
+        public class ConnectionDelegate:ListenerCollection, ValueReferenceDelegate
+        {
+            public IFsDataProvider Provider;
+            public KvcExpression Parent;
+            public KvcExpression.ExpressionKvc kvc;         
+            public object Value;
+            private object lockObject = new Object();
+            private bool connected = false;
+
+            class ConnectionSourceListener
+            {
+                public object sink;
+                public object fault;
+                public object vref;
+                public ConnectionDelegate parent;
+                public void OnChange()
+                {
+                    var source = FuncScript.Dref(vref);
+                    this.TryConnect(source);
+                    parent.Notify();
+                }
+
+                public void TryConnect(object source)
+                {
+                    if (source is ValueReferenceDelegate r)
+                    {
+                        vref = r;
+                        r.AddListener(this.OnChange);
+                    }
+                    else
+                    {
+                        if (source is SignalSourceDelegate sigSource )
+                        {
+                            sigSource(sink, fault);
+                        }
+                        else
+                            throw new error.EvaluationTimeException("Invalid connection");
+                    }
+
+                }
+            }
+            class DataConnectionSourceListener
+            {
+                public object source;
+                public object vref;
+                public ConnectionDelegate parent;
+                public void OnChange()
+                {
+                    var sink = FuncScript.Dref(vref);
+                    TryConnect(sink);
+                    parent.Notify();
+                }
+
+                public void TryConnect(object sink)
+                {
+                    if (sink is ValueReferenceDelegate r)
+                    {
+                        vref = r;
+                        r.AddListener(this.OnChange);
+                    }
+                    else
+                    {
+                        if (sink is ValueSinkDelegate valSink )
+                        {
+                            valSink(source);
+                        }
+                        else
+                            throw new error.EvaluationTimeException("Invalid connection");
+                    }
+                }
+            }
+
+            public void Connect()
+            {
+                lock (lockObject)
+                {
+                    if (!connected)
+                    {
+
+                       
+                            foreach (var obj in this.kvc.GetAll())
+                            {
+                                if(obj.Value is ValueReferenceDelegate r)
+                                    r.Connect();
+                            }
+
+                            if (this.Parent.singleReturn != null)
+                            {
+                                if(this.Value is ValueReferenceDelegate r)
+                                    r.Connect();
+                            }
+                        
+
+                        var p = new KvcProvider(kvc, Provider);
+                        foreach (var connection in this.Parent._dataConnections)
+                        {
+                            var source = connection.Source.Evaluate(p);
+                            var sink = connection.Sink.Evaluate(p);
+                            var l = new DataConnectionSourceListener()
+                            {
+                                source=source,
+                                vref = sink,
+                                parent = this
+                            };
+                            l.TryConnect(sink);
+                        }
+                        
+
+
+                        foreach (var connection in this.Parent._signalConnections)
+                        {
+                            var source =   connection.Source.Evaluate(p);
+                            var sink = connection.Sink.Evaluate(p);
+                            var fault = connection.Catch?.Evaluate(Provider);
+                            var l = new ConnectionSourceListener
+                            {
+                                sink = sink,
+                                fault = fault,
+                                vref = source,
+                                parent = this
+                            };
+                            l.TryConnect(source);
+                        }
+                        connected = true;
+
+                    }
+                }
+            }
+
+            public object Dref()
+            {
+                
+                return Value;
+            }
+        }
+
+        public String SetKeyValues(IList<KeyValueExpression> kv, IList<ConnectionExpression> datConns,
+            IList<ConnectionExpression> sigConns)
         {
             _keyValues = kv;
-            _connections = conns;   
+            _dataConnections = datConns;
+            _signalConnections = sigConns;
             if (_keyValues == null)
                 index = null;
             {
@@ -114,47 +239,22 @@ namespace funcscript.block
         public IList<KeyValueExpression> KeyValues => _keyValues;
         public override object Evaluate(IFsDataProvider provider)
         {
-            var p = new KvcProvider(this, provider);
-            foreach (var connection in this._connections)
+            var kvcObject=new ExpressionKvc(provider, this);
+            
+            var p = new funcscript.KvcProvider(kvcObject, provider);
+            var retObject = this.singleReturn == null ? kvcObject : this.singleReturn.ValueExpression.Evaluate(p);
+            
+            if (this._dataConnections.Count > 0 || this._signalConnections.Count>0)
             {
-                var source = connection.Source.Evaluate(p);
-                var sink = connection.Sink.Evaluate(p);
-                if (sink is ValueSinkDelegate valSink)
+                return new ConnectionDelegate
                 {
-                    valSink(source);
-                }
-                else if (source is SignalSourceDelegate sigSource)
-                {
-                    SignalListenerDelegate sinkListner;
-                    if (sink is SignalListenerDelegate l)
-                        sinkListner = l;
-                    else
-                    {
-                        sinkListner = () =>
-                        {
-                            var x = FuncScript.Dref(sink);
-                            if (x is SignalListenerDelegate s)
-                                s();
-                        };
-                    }
-                    
-                    sigSource(sink,connection.Catch?.Evaluate(p));
-                }
-                else 
-                    throw new error.EvaluationTimeException("Invalid connection");
-                
+                    Provider = provider,
+                    Parent = this,
+                    Value = retObject,
+                    kvc = kvcObject
+                };
             }
-            if (this.singleReturn == null)
-            {
-                return new ExpressionKvc(p, this);
-                //var kvc = KeyValues.Select(x => new KeyValuePair<String, Object>(x.Key, p.GetData(x.KeyLower))).ToArray();
-                //return new SimpleKeyValueCollection(kvc);
-            }
-            else
-            {
-                return this.singleReturn.ValueExpression.Evaluate(p);
-            }
-
+            return retObject;
         }
         public override IList<ExpressionBlock> GetChilds()
         {

@@ -16,6 +16,8 @@ namespace funcscript
         {
             LoadFromAssembly(Assembly.GetExecutingAssembly()); //always load builtin functions. May be we don't need this
         }
+        public IFsDataProvider ParentProvider => null;
+
         public static void LoadFromAssembly(Assembly a)
         {
             foreach (var t in a.GetTypes())
@@ -90,6 +92,8 @@ namespace funcscript
                 return null;
             return _parent.GetData(name);
         }
+        public IFsDataProvider ParentProvider => _parent;
+
     }
 
 }

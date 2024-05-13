@@ -15,6 +15,7 @@ namespace funcscript.block
         {
             public IFsDataProvider Provider;
             public SelectorExpression Parent;
+            public IFsDataProvider ParentProvider => Provider;
             public object SourceVal
             {
                 set

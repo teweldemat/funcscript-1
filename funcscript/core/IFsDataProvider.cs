@@ -3,5 +3,6 @@
     public interface IFsDataProvider        
     {
         object GetData(String name);
+        public IFsDataProvider ParentProvider { get; }
     }
 }

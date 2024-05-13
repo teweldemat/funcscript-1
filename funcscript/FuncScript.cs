@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Xml.XPath;
+using funcscript.block;
 using Newtonsoft.Json.Serialization;
 
 namespace funcscript
@@ -257,6 +258,14 @@ namespace funcscript
 
 
             Format("", sb, val, format, asFuncScriptLiteral, asJsonLiteral, true);
+        }
+        
+        public static string  FormatToJson(object val)
+        {
+
+            var sb = new StringBuilder();
+            Format( sb, val,  asJsonLiteral:true);
+            return  sb.ToString();
         }
         static String TestFormat(object val, string format = null,
             bool asFuncScriptLiteral = false,
@@ -687,29 +696,16 @@ namespace funcscript
 
         public static object Dref(object obj)
         {
-             /*if(obj is ValueReferenceDelegate d)
-                return d();
-            if (obj is FsList lst)
-            {
-                return new ArrayFsList(lst.Data.Select(x => Dref(x)).ToArray());
-            }
-
-            if (obj is KeyValueCollection kvc)
-            {
-                return new SimpleKeyValueCollection(kvc.GetAll().Select(x=>KeyValuePair.Create<string,object>(x.Key,Dref(x.Value))).ToArray());
-            }
-            return obj;
-            */
+             
             if(obj is ValueReferenceDelegate d)
-                return Dref(d());
-            
+                return Dref(d.Dref());
             return obj;
         }
     
         public static object DeepDref(object obj)
         {
             if(obj is ValueReferenceDelegate d)
-               return d();
+               return DeepDref(d.Dref());
            if (obj is FsList lst)
            {
                return new ArrayFsList(lst.Select(x => DeepDref(x)).ToArray());
@@ -717,7 +713,9 @@ namespace funcscript
 
            if (obj is KeyValueCollection kvc)
            {
-               return new SimpleKeyValueCollection(kvc.GetAll().Select(x=>KeyValuePair.Create<string,object>(x.Key,DeepDref(x.Value))).ToArray());
+               return new SimpleKeyValueCollection(kvc.GetAll().Select(
+                        x=>KeyValuePair.Create<string,object>(x.Key,DeepDref(x.Value))
+                   ).ToArray());
            }
            return obj;
             
