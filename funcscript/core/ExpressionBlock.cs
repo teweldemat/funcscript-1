@@ -25,7 +25,10 @@ namespace funcscript.core
         /// </summary>
         /// <param name="provider">Source data for variables references in the expression block</param>
         /// <returns></returns>
-        public abstract object Evaluate(IFsDataProvider provider);
+        public abstract object Evaluate(IFsDataProvider provider,List<Action> connectActions);
+
+
+        
         
         /// <summary>
         /// Gets list of child expression blocks

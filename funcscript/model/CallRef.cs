@@ -21,16 +21,7 @@ public partial class CallRef :ListenerCollection, IFsDataProvider, IParameterLis
     private bool _derafed=false;
 
     
-    public override void Connect()
-    {
-        foreach (var val in _vals)
-        {
-            if (val is ValueReferenceDelegate r)
-            {
-                r.Connect();
-            }
-        }
-    }
+    
 
     public object Dref()
     {
@@ -126,7 +117,6 @@ public partial class CallRef :ListenerCollection, IFsDataProvider, IParameterLis
     {
         _derafed = false;
         base.Notify();
-        this.Connect();
     }
     public static ValueReferenceDelegate Create(IFsDataProvider provider, object f, object [] pars)
     {

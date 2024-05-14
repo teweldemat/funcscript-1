@@ -1,6 +1,7 @@
 ﻿using funcscript.block;
 using funcscript.funcs.math;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Net.Mime;
 using System.Text;
 using System.Xml.Serialization;
@@ -1154,12 +1155,12 @@ namespace funcscript.core
             var dataConnections = new List<KvcExpression.ConnectionExpression>();
             var signalConnections = new List<KvcExpression.ConnectionExpression>();
             var nodeItems = new List<ParseNode>();
-
+            ExpressionBlock retExp = null;
             int i2;
             do
             {
                 i = SkipSpace(exp, i);
-                if (kvs.Count > 0 || dataConnections.Count > 0 || signalConnections.Count > 0)
+                if (kvs.Count > 0 || retExp!=null||  dataConnections.Count > 0 || signalConnections.Count > 0)
                 {
                     i2 = GetLiteralMatch(exp, i, ",", ";");
                     if (i2 == i)
@@ -1192,7 +1193,17 @@ namespace funcscript.core
                 i2 = GetKvcItem(context, exp, i, out var otherItem, out var nodeOtherItem);
                 if (i2 == i)
                     break;
-                kvs.Add(otherItem);
+                if (otherItem.Key == null)
+                {
+                    if (retExp != null)
+                    {
+                        serrors.Add(new SyntaxErrorData(nodeOtherItem.Pos,nodeItems.Count,"Duplicate return statement"));
+                        return index;
+                    }
+                    retExp = otherItem.ValueExpression;
+                }
+                else
+                    kvs.Add(otherItem);
                 nodeItems.Add(nodeOtherItem);
                 i = i2;
             } while (true);
@@ -1205,7 +1216,7 @@ namespace funcscript.core
             }
 
             kvcExpr = new KvcExpression();
-            var error = kvcExpr.SetKeyValues(kvs.ToArray(), dataConnections.ToArray(),signalConnections.ToArray());
+            var error = kvcExpr.SetKeyValues(kvs.ToArray(),retExp, dataConnections.ToArray(),signalConnections.ToArray());
             if (error != null)
             {
                 serrors.Add(new SyntaxErrorData(index, i - index, error));

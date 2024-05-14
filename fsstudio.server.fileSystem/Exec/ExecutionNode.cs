@@ -77,7 +77,14 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
                 var exp = FuncScriptParser.ParseFsTemplate(provider, this.Expression, serrors);
                 if (exp == null)
                     throw new SyntaxError(serrors);
-                return exp.Evaluate(provider);
+                var connctionActions = new List<Action>();
+                var ret=exp.Evaluate(provider,connctionActions);
+                foreach (var con in connctionActions)
+                {
+                    con.Invoke();
+                }
+
+                return ret;
             default:
                 throw new InvalidOperationException("Unsupported expression type");
         }

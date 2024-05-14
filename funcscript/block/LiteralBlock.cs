@@ -18,7 +18,7 @@ namespace funcscript.block
             return sb.ToString();
         }
 
-        public override object Evaluate(IFsDataProvider provider)
+        public override object Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
             return Value;
         }

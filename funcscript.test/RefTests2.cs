@@ -49,7 +49,7 @@ public class RefTests2
         var logger = new RefsTest.StringTextLogger();
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
-        var _res = FuncScript.EvaluateWithVars(script,new
+        var res = FuncScript.EvaluateWithVars(script,new
         {
             app=new
             {
@@ -57,8 +57,7 @@ public class RefTests2
             }
         });
 
-        Assert.That(_res,Is.AssignableTo<ValueReferenceDelegate>());
-        ((ValueReferenceDelegate)_res).Connect();
+        Assert.That(res,Is.AssignableTo<KeyValueCollection>());
         sink.Signal();
 
         System.Threading.Thread.Sleep(delay*2*n);
@@ -91,8 +90,7 @@ public class RefTests2
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
-        Assert.That(res,Is.AssignableTo<ValueReferenceDelegate>());
-        ((ValueReferenceDelegate)res).Connect();
+        Assert.That(res,Is.AssignableTo<KeyValueCollection>());
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
         Assert.That(logger.LogText,Is.EqualTo("saved\n"));
@@ -120,7 +118,6 @@ public class RefTests2
         Fslogger.SetDefaultLogger(logger);
 
         SignalSinkInfo sink = new SignalSinkInfo();
-        // Evaluate the script to initialize the environment and store object
         var res = FuncScript.EvaluateWithVars(script,new
         {
             app=new
@@ -128,8 +125,7 @@ public class RefTests2
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
-        Assert.That(res is ValueReferenceDelegate);
-        ((ValueReferenceDelegate)res).Connect();
+        Assert.That(res is KeyValueCollection);
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
         
@@ -168,8 +164,7 @@ public class RefTests2
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
-        Assert.That(res is ValueReferenceDelegate);
-        ((ValueReferenceDelegate)res).Connect();
+        Assert.That(res is KeyValueCollection);
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
         Assert.That(logger.LogText,Is.EqualTo("here\n"));
@@ -213,7 +208,6 @@ public class RefTests2
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
-        ((ValueReferenceDelegate)res).Connect();
 
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
@@ -269,7 +263,6 @@ public class RefTests2
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
-        ((ValueReferenceDelegate)res).Connect();
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
         
@@ -303,8 +296,8 @@ public class RefTests2
                 start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
             }
         });
-        Assert.That(res,Is.AssignableTo<ValueReferenceDelegate>());
-        ((ValueReferenceDelegate)res).Connect();
+        Assert.That(res,Is.AssignableTo<KeyValueCollection>());
+        
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
         Assert.That(logger.LogText,Is.EqualTo("there\n"));

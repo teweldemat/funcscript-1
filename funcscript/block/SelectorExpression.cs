@@ -37,9 +37,9 @@ namespace funcscript.block
         }
         public ExpressionBlock Source;
         public ExpressionBlock Selector;
-        public override object Evaluate(IFsDataProvider provider)
+        public override object Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
-            var sourceVal = Source.Evaluate(provider);
+            var sourceVal = Source.Evaluate(provider,connectionActions);
             if (sourceVal is FsList)
             {
                 var lst = (FsList)sourceVal;
@@ -54,7 +54,7 @@ namespace funcscript.block
                         Provider = provider,
                         SourceVal = l
                     };
-                    ret[i] = Selector.Evaluate(sel);
+                    ret[i] = Selector.Evaluate(sel,connectionActions);
                     i++;
                 }
                 return new ArrayFsList(ret);
@@ -67,7 +67,7 @@ namespace funcscript.block
                     Parent = this,
                     Provider = provider,
                     SourceVal=sourceVal
-                });
+                },connectionActions);
             }
         }
 

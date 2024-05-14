@@ -7,7 +7,6 @@ public interface ValueReferenceDelegate
 {
     object Dref();
     void AddListener(Action listener);
-    void Connect();
 }
 public class ListenerCollection
 {

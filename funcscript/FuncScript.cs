@@ -681,7 +681,11 @@ namespace funcscript
         {
             try
             {
-                return exp.Evaluate(provider);
+                List<Action> connectionActions = new List<Action>();
+                var ret=exp.Evaluate(provider,connectionActions);
+                foreach(var con in connectionActions)
+                    con.Invoke();
+                return ret;
             }
             catch (EvaluationException ex)
             {

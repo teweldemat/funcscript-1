@@ -48,12 +48,19 @@ namespace funcscript.core
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            return Expression.Evaluate(new ParameterDataProvider
+            List<Action> connectionActions=new List<Action>();
+            var ret= Expression.Evaluate(new ParameterDataProvider
             {
                 expressionFunction = this,
                 parentSymbolProvider = parent,
                 pars = pars
-            });
+            },connectionActions);
+            foreach (var con in connectionActions)
+            {
+                con.Invoke();
+            }
+
+            return ret;
         }
 
         

@@ -312,6 +312,8 @@ return j;
 }", 4)]
         [TestCase(
 @"{return (x)=>3;}(3)", 3)]
+        [TestCase(@"1+{return 2;}",3)]
+        [TestCase(@"{return 2;}",2)]
         public void IntResultTest(string expStr, int expectedRes)
         {
             var res = AssertSingleResultType(expStr, typeof(int));

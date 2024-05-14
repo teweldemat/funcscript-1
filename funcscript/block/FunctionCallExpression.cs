@@ -15,10 +15,11 @@ namespace funcscript.block
         class FuncParameterList : IParameterList
         {
             public FunctionCallExpression parent;
+            public List<Action> connectionActions;
             public int Count => parent.Parameters.Length;
             public object GetParameter(IFsDataProvider provider, int index)
             {
-                var ret = index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider);
+                var ret = index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider,connectionActions);
                 return ret;
             }
         }
@@ -27,12 +28,13 @@ namespace funcscript.block
         public int Count => Parameters.Length;
 
         
-        public override object Evaluate(IFsDataProvider provider)
+        public override object Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
-            var func = Function.Evaluate(provider);
+            var func = Function.Evaluate(provider,connectionActions);
             var paramList=new FuncParameterList
             {
-                parent = this
+                parent = this,
+                connectionActions=connectionActions
             };
             if (func is IFsFunction)
             {
@@ -93,6 +95,9 @@ namespace funcscript.block
             throw new EvaluationException(this.Pos, this.Length,
                 new TypeMismatchError($"Function part didn't evaluate to a function or a list. {FuncScript.GetFsDataType(func)}"));
         }
+
+        
+
         public override IList<ExpressionBlock> GetChilds()
         {
             var ret = new List<ExpressionBlock>();
