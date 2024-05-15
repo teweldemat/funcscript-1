@@ -4,5 +4,6 @@
     {
         object GetData(String name);
         public IFsDataProvider ParentProvider { get; }
+        bool IsDefined(string key);
     }
 }

@@ -1,9 +1,11 @@
 ﻿using System.Text;
+using funcscript.core;
 
 namespace funcscript.model
 {
     public class SimpleKeyValueCollection: KeyValueCollection
     {
+        private IFsDataProvider _parent;
         KeyValuePair<String, object>[] _data;
         Dictionary<String, object> _index;
         public SimpleKeyValueCollection()
@@ -11,17 +13,14 @@ namespace funcscript.model
 
         }
         
-        public SimpleKeyValueCollection(KeyValuePair<string, object>[] kv)
+        public SimpleKeyValueCollection(IFsDataProvider parent, KeyValuePair<string, object>[] kv)
         {
             this.Data = kv;
+            this._parent = parent;
         }
 
         public KeyValuePair<String,object>[] Data 
         { 
-            get
-            {
-                return _data;
-            }
             set
             {
                 _data=value;
@@ -36,13 +35,14 @@ namespace funcscript.model
             }
         }
 
-        public override object Get(string value)
+        public override object GetData(string value)
         {
-            if(_index.TryGetValue(value,out var item))
-                return item;
-            return null;
+            return _index.GetValueOrDefault(value);
         }
-        public override bool ContainsKey(string value)
+
+        public override IFsDataProvider ParentProvider => _parent;
+
+        public override bool IsDefined(string value)
         {
             return _index.ContainsKey(value);
         }

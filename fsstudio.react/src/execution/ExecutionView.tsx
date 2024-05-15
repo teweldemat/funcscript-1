@@ -192,7 +192,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                         {selectedNode?.path}
                     </Typography>
                 </Toolbar>
-                <div ref={editorRef}  style={{ height: '400px',overflow: 'auto', border: '1px solid #ccc' }} />
+                <div ref={editorRef}  style={{ height: '600px',overflow: 'auto', border: '1px solid #ccc' }} />
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
                     <Tab label="Result" />
                     <Tab label="Log" />

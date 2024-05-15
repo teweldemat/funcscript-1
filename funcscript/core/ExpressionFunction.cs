@@ -2,6 +2,7 @@
 using System.Runtime.Serialization;
 using funcscript.core;
 using System.Text;
+using funcscript.error;
 using funcscript.model;
 
 namespace funcscript.core
@@ -14,6 +15,12 @@ namespace funcscript.core
             public IFsDataProvider parentSymbolProvider;
             public ExpressionFunction expressionFunction;
             public IFsDataProvider ParentProvider => parentSymbolProvider;
+            public bool IsDefined(string key)
+            {
+                return expressionFunction.ParamterNameIndex.ContainsKey(key)
+                       || parentSymbolProvider.IsDefined(key);
+            }
+
             public object GetData(string name)
             {
                 if (expressionFunction.ParamterNameIndex.TryGetValue(name, out var index))
@@ -24,11 +31,18 @@ namespace funcscript.core
 
         public ExpressionBlock Expression { get; set; }
 
-        public Dictionary<string, int> ParamterNameIndex;
-        public String[] _parameters;
+        private Dictionary<string, int> ParamterNameIndex;
+        private String[] _parameters;
         private ValueReferenceDelegate[] _parameterRefs = null;
         private object _expressionValue = null;
+        private IFsDataProvider _context = null;
 
+        public void SetContext(IFsDataProvider context)
+        {
+            if (_context != null)
+                throw new EvaluationTimeException("Context for expression function already set");
+            _context = context;
+        }
         public ExpressionFunction(String[] pars, ExpressionBlock exp)
         {
             this.Expression = exp;
@@ -48,11 +62,13 @@ namespace funcscript.core
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
+            if (_context == null)
+                throw new error.EvaluationTimeException("Context not set to expression function");
             List<Action> connectionActions=new List<Action>();
-            var ret= Expression.Evaluate(new ParameterDataProvider
+            var (ret,_)= Expression.Evaluate(new ParameterDataProvider
             {
                 expressionFunction = this,
-                parentSymbolProvider = parent,
+                parentSymbolProvider = new KvcProvider(_context,parent),
                 pars = pars
             },connectionActions);
             foreach (var con in connectionActions)

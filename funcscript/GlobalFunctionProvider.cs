@@ -17,6 +17,10 @@ namespace funcscript
             LoadFromAssembly(Assembly.GetExecutingAssembly()); //always load builtin functions. May be we don't need this
         }
         public IFsDataProvider ParentProvider => null;
+        public bool IsDefined(string key)
+        {
+            return s_funcByName.ContainsKey(key);
+        }
 
         public static void LoadFromAssembly(Assembly a)
         {
@@ -76,9 +80,9 @@ namespace funcscript
     /// </summary>
     public class KvcProvider : IFsDataProvider
     {
-        KeyValueCollection _kvc;
+        IFsDataProvider _kvc;
         IFsDataProvider _parent;
-        public KvcProvider(KeyValueCollection kvc, IFsDataProvider parent)
+        public KvcProvider(IFsDataProvider kvc, IFsDataProvider parent)
         {
             _kvc = kvc;
             _parent = parent;
@@ -86,14 +90,21 @@ namespace funcscript
 
         public object GetData(string name)
         {
-            if (_kvc.ContainsKey(name))
-                return _kvc.Get(name);
+            if (_kvc.IsDefined(name))
+                return _kvc.GetData(name);
             if (_parent == null)
                 return null;
             return _parent.GetData(name);
         }
         public IFsDataProvider ParentProvider => _parent;
-
+        public bool IsDefined(string key)
+        {
+            if (_kvc.IsDefined(key))
+                return true;
+            if (_parent != null)
+                return _parent.IsDefined(key);
+            return false;
+        }
     }
 
 }

@@ -26,14 +26,19 @@ public enum ExpressionType
     FsStudioParentNode
 }
 
-public class ExecutionNode : KeyValueCollection, IFsDataProvider
+public class ExecutionNode : KeyValueCollection
 {
     private string _nameLower;
     private string _name;
     private IFsDataProvider _prentNode = null;
-    public IFsDataProvider ParentProvider => _prentNode;
-
-
+    public override IFsDataProvider ParentProvider => _prentNode;
+    public override object GetData(string name)
+    {
+        var ch = Children.FirstOrDefault(c => c._nameLower.Equals(name));
+        if (ch == null)
+            return _prentNode.GetData(name);
+        return ch.Evaluate(this);
+    }
     public void SetParent(IFsDataProvider parent)
     {
         this._prentNode = parent;
@@ -90,15 +95,9 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
         }
     }
 
-    public override object Get(string key)
-    {
-        var ch = Children.FirstOrDefault(c => c._nameLower.Equals(key));
-        if (ch == null)
-            return null;
-        return ch.Evaluate(this);
-    }
-
-    public override bool ContainsKey(string key)
+    
+    
+    public override bool IsDefined(string key)
     {
         return Children.Any(c => c._nameLower == key);
     }
@@ -108,11 +107,5 @@ public class ExecutionNode : KeyValueCollection, IFsDataProvider
         return this.Children.Select(c => KeyValuePair.Create(c._name, c.Evaluate(this))).ToList();
     }
 
-    public object GetData(string name)
-    {
-        var ch = Children.FirstOrDefault(c => c._nameLower.Equals(name));
-        if (ch == null)
-            return _prentNode.GetData(name);
-        return ch.Evaluate(this);
-    }
+  
 }

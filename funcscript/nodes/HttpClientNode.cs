@@ -114,8 +114,8 @@ public class HttpClientNode
         {
             _errorData.Val = null;
             _outData.Val = null;
-            string url = FuncScript.DeepDref(_url).ToString();
-            object data = FuncScript.DeepDref(_inData);
+            string url = FuncScript.Dref(_url).ToString();
+            object data = FuncScript.Dref(_inData);
             var jsonData =FuncScript.FormatToJson(data);
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 

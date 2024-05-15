@@ -1051,7 +1051,8 @@ namespace funcscript.core
                 {
                     Source = sourceExp,
                     Sink = sinkExp,
-                    Catch = catchExp
+                    Catch = catchExp,
+                    
                 };
                 parseNode = new ParseNode
                 (

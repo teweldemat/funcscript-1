@@ -43,7 +43,7 @@ namespace funcscript.sql.core
                     var value = FuncScriptSql.NormalizeDataType(reader.GetValue(i));
                     row.Add(new KeyValuePair<string, object?>(reader.GetName(i), value));
                 }
-                results.Add(new SimpleKeyValueCollection(row.ToArray()));
+                results.Add(new SimpleKeyValueCollection(null,row.ToArray()));
             }
 
             var normalizedResults = FuncScript.NormalizeDataType(results);

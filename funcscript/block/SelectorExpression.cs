@@ -16,6 +16,7 @@ namespace funcscript.block
             public IFsDataProvider Provider;
             public SelectorExpression Parent;
             public IFsDataProvider ParentProvider => Provider;
+
             public object SourceVal
             {
                 set
@@ -28,18 +29,28 @@ namespace funcscript.block
             {
                 if (_sourceVal != null)
                 {
-                    if (_sourceVal.ContainsKey(name))
-                        return _sourceVal.Get(name);
+                    if (_sourceVal.IsDefined(name))
+                        return _sourceVal.GetData(name);
                 }
                 return Provider.GetData(name);
-
             }
+            public bool IsDefined(string key)
+            {
+                if (_sourceVal != null)
+                {
+                    if (_sourceVal.IsDefined(key))
+                        return true;
+                }
+
+                return Provider.IsDefined(key);
+            }
+
         }
         public ExpressionBlock Source;
         public ExpressionBlock Selector;
-        public override object Evaluate(IFsDataProvider provider,List<Action> connectionActions)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
-            var sourceVal = Source.Evaluate(provider,connectionActions);
+            var (sourceVal,_) = Source.Evaluate(provider,connectionActions);
             if (sourceVal is FsList)
             {
                 var lst = (FsList)sourceVal;
@@ -54,10 +65,10 @@ namespace funcscript.block
                         Provider = provider,
                         SourceVal = l
                     };
-                    ret[i] = Selector.Evaluate(sel,connectionActions);
+                    ret[i] = Selector.Evaluate(sel,connectionActions).Item1;
                     i++;
                 }
-                return new ArrayFsList(ret);
+                return (new ArrayFsList(ret),this.CodeLocation);
             
             }
             else

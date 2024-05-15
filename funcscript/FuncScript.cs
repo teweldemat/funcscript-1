@@ -84,14 +84,14 @@ namespace funcscript
                     return null;
             }
         }
-        static KeyValueCollection FromJObject(JObject jobj)
+        static KeyValueCollection FromJObject( JObject jobj)
         {
             var pairs = new List<KeyValuePair<string, object>>();
             foreach (var p in jobj)
             {
                 pairs.Add(new KeyValuePair<string, object>(p.Key, FromJToken(p.Value)));
             }
-            return new SimpleKeyValueCollection(pairs.ToArray());
+            return new SimpleKeyValueCollection(null,pairs.ToArray());
 
         }
         public static object FromJson(String json)
@@ -181,7 +181,7 @@ namespace funcscript
             {
                 JsonValueKind.Array => new ArrayFsList(el.EnumerateArray().Select(x => collect(x)).ToArray()),
                 JsonValueKind.String => el.GetString(),
-                JsonValueKind.Object => new SimpleKeyValueCollection(el.EnumerateObject().Select(x =>
+                JsonValueKind.Object => new SimpleKeyValueCollection(null,el.EnumerateObject().Select(x =>
                                     new KeyValuePair<string, object>(x.Name, collect(x.Value))
                                     ).ToArray()),
                 JsonValueKind.Number => el.GetDouble(),
@@ -220,7 +220,7 @@ namespace funcscript
                     }
                 }
                 if (kv)
-                    return new SimpleKeyValueCollection(arr.Select(x => (KeyValuePair<string, object>)x).ToArray());
+                    return new SimpleKeyValueCollection(null,arr.Select(x => (KeyValuePair<string, object>)x).ToArray());
                 return arr;
             }
             if (obj is JArray)
@@ -280,6 +280,11 @@ namespace funcscript
             bool asFuncScriptLiteral,
             bool asJsonLiteral, bool adaptiveLineBreak)
         {
+            if (val is ValueReferenceDelegate r)
+            {
+                Format(indent, sb, r.Dref(), format, asFuncScriptLiteral, asJsonLiteral,adaptiveLineBreak);
+                return;
+            }
             if (val == null)
             {
                 sb.Append("null");
@@ -682,7 +687,7 @@ namespace funcscript
             try
             {
                 List<Action> connectionActions = new List<Action>();
-                var ret=exp.Evaluate(provider,connectionActions);
+                var (ret,_)=exp.Evaluate(provider,connectionActions);
                 foreach(var con in connectionActions)
                     con.Invoke();
                 return ret;
@@ -706,24 +711,24 @@ namespace funcscript
             return obj;
         }
     
-        public static object DeepDref(object obj)
-        {
-            if(obj is ValueReferenceDelegate d)
-               return DeepDref(d.Dref());
-           if (obj is FsList lst)
-           {
-               return new ArrayFsList(lst.Select(x => DeepDref(x)).ToArray());
-           }
-
-           if (obj is KeyValueCollection kvc)
-           {
-               return new SimpleKeyValueCollection(kvc.GetAll().Select(
-                        x=>KeyValuePair.Create<string,object>(x.Key,DeepDref(x.Value))
-                   ).ToArray());
-           }
-           return obj;
-            
-            return obj;
-        }
+        // public static object DeepDref(object obj)
+        // {
+        //     if(obj is ValueReferenceDelegate d)
+        //        return DeepDref(d.Dref());
+        //    if (obj is FsList lst)
+        //    {
+        //        return new ArrayFsList(lst.Select(x => DeepDref(x)).ToArray());
+        //    }
+        //
+        //    if (obj is KeyValueCollection kvc)
+        //    {
+        //        return new SimpleKeyValueCollection(kvc.GetAll().Select(
+        //                 x=>KeyValuePair.Create<string,object>(x.Key,DeepDref(x.Value))
+        //            ).ToArray());
+        //    }
+        //    return obj;
+        //     
+        //     return obj;
+        // }
     }
 }

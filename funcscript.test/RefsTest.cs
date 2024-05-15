@@ -39,7 +39,7 @@ public class RefsTest
         var res = FuncScript.EvaluateWithVars("{a:x,b:3}", new { x = v });
         Assert.IsNotNull(res);
         Assert.That(res is KeyValueCollection);
-        var a = ((KeyValueCollection)res).Get("a");
+        var a = ((KeyValueCollection)res).GetData("a");
         Assert.That(a is ValueReferenceDelegate);
         var r = (ValueReferenceDelegate)a;
         var dr = r.Dref();
@@ -105,10 +105,10 @@ public class RefsTest
         var res = FuncScript.Evaluate(exp);
         Assert.That(res, Is.AssignableTo<KeyValueCollection>());
         var kvc = (KeyValueCollection)res;
-        Assert.That(kvc.Get("b") is ValueReferenceDelegate);
-        var dRef = (ValueReferenceDelegate)kvc.Get("b");
+        Assert.That(kvc.GetData("b") is ValueReferenceDelegate);
+        var dRef = (ValueReferenceDelegate)kvc.GetData("b");
         Assert.IsNull(dRef.Dref());
-        res = kvc.Get("sig");
+        res = kvc.GetData("sig");
         Assert.That(res is SignalListenerDelegate);
         var store = (SignalListenerDelegate)res;
         store();
@@ -134,7 +134,7 @@ public class RefsTest
         Assert.That(val is KeyValueCollection);
         var kvc = (KeyValueCollection)val;
 
-        val = kvc.Get("sig");
+        val = kvc.GetData("sig");
         Assert.That(val is SignalListenerDelegate);
         var store = (SignalListenerDelegate)val;
         store();
@@ -144,8 +144,8 @@ public class RefsTest
         Assert.That(eval is KeyValueCollection);
 
         kvc = (KeyValueCollection)eval;
-        Assert.That(kvc.Get("a"), Is.EqualTo(1));
-        Assert.That(kvc.Get("b"), Is.EqualTo("2"));
+        Assert.That(kvc.GetData("a"), Is.EqualTo(1));
+        Assert.That(kvc.GetData("b"), Is.EqualTo("2"));
     }
 
     [Test]
@@ -165,12 +165,12 @@ public class RefsTest
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
 
-        var _sig = kvc.Get("sig");
+        var _sig = kvc.GetData("sig");
         Assert.NotNull(_sig, "The signal should be correctly set up.");
         Assert.That(_sig is SignalListenerDelegate);
         var sig = (SignalListenerDelegate)_sig;
 
-        var _out = kvc.Get("count");
+        var _out = kvc.GetData("count");
         Assert.That(_out is ValueReferenceDelegate);
         var countOut = (ValueReferenceDelegate)_out;
 
@@ -265,7 +265,7 @@ public class RefsTest
         System.Threading.Thread.Sleep(delay*2*n);
         
         var kvc = (KeyValueCollection)res;
-        var _count = kvc.Get("count");
+        var _count = kvc.GetData("count");
         Assert.That(_count is ValueReferenceDelegate);
         var count = (ValueReferenceDelegate)_count;
         Assert.That( count.Dref(),Is.EqualTo(4));
@@ -314,7 +314,7 @@ public class RefsTest
         System.Threading.Thread.Sleep(delay*2*n);
         
         var kvc = (KeyValueCollection)res;
-        var _count = kvc.Get("count");
+        var _count = kvc.GetData("count");
         Assert.That(_count is ValueReferenceDelegate);
         var count = (ValueReferenceDelegate)_count;
         Assert.That( count.Dref(),Is.EqualTo(n));
@@ -669,7 +669,7 @@ public class RefsTest
         Assert.That(kvcExp._signalConnections.Count,Is.EqualTo(1));
         Assert.IsNotNull(kvcExp.singleReturn);
         List<Action> connectionActions = new List<Action>();
-        var res = exp.Evaluate(provider,connectionActions);
+        var (res,_) = exp.Evaluate(provider,connectionActions);
         foreach (var con in connectionActions)
         {   
             con.Invoke();
@@ -678,8 +678,8 @@ public class RefsTest
         Assert.That(res,Is.AssignableTo<KeyValueCollection>());
 
         var delVal = (KeyValueCollection)res;
-        Assert.That(delVal.ContainsKey("x"));
-        var _xdel = delVal.Get("x");
+        Assert.That(delVal.IsDefined("x"));
+        var _xdel = delVal.GetData("x");
         Assert.That(_xdel,Is.AssignableTo<KeyValueCollection>());
        
         
@@ -726,7 +726,7 @@ public class RefsTest
         Assert.IsNotNull(kvcExp.singleReturn);
 
         var connections = new List<Action>();
-        var res = exp.Evaluate(provider,connections);
+        var (res,_) = exp.Evaluate(provider,connections);
         foreach (var con in connections)
         {
             con.Invoke();
@@ -734,8 +734,8 @@ public class RefsTest
         Assert.That(res,Is.AssignableTo<KeyValueCollection>());
         
         var delVal = (KeyValueCollection)res;
-        Assert.That(delVal.ContainsKey("x"));
-        var _xdel = delVal.Get("x");
+        Assert.That(delVal.IsDefined("x"));
+        var _xdel = delVal.GetData("x");
         Assert.That(_xdel,Is.AssignableTo<KeyValueCollection>());
        
         sink.Signal();
@@ -854,7 +854,7 @@ public class RefsTest
         sink.Signal();
         
         var kvc = (KeyValueCollection)res;
-        var a = kvc!.Get("s");
+        var a = kvc!.GetData("s");
         Assert.That(a,Is.TypeOf<ObjectKvc>());
         var _s = (ObjectKvc)a;
         Assert.That(_s.GetUnderlyingValue(),Is.TypeOf<StoreNode>());
@@ -886,7 +886,7 @@ public class RefsTest
         Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
         sink.Signal();
-        Assert.That(logger.LogText, Is.EqualTo("[null,null,null]\n"));
+        Assert.That(logger.LogText.Replace(" ",""), Is.EqualTo("[null,null,null]\n"));
     }
     [Test]
     public void TestRefMap2()
@@ -935,7 +935,7 @@ public class RefsTest
         });
         Assert.That(res is KeyValueCollection);
         var kvc = res as KeyValueCollection;
-        var y = kvc.Get("y") as KeyValueCollection;
+        var y = kvc.GetData("y") as KeyValueCollection;
         Assert.NotNull(y);
         
     }
@@ -1236,7 +1236,7 @@ public class RefsTest
         sink.Signal();
         
         System.Threading.Thread.Sleep(2000);
-        Assert.That(logger.LogText, Is.EqualTo("[resp]\n"));
+        Assert.That(logger.LogText.Replace(" ",""), Is.EqualTo("[resp]\n"));
 
     }
 }

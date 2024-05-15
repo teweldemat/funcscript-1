@@ -17,15 +17,15 @@ namespace funcscript.funcs.list
             public object X;
             public object I;
 
-            public int Count => 2;
+            public override int Count => 2;
 
-            public object GetParameter(IFsDataProvider provider, int index)
+            public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
             {
                 return index switch
                 {
-                    0 => X,
-                    1 => I,
-                    _ => null,
+                    0 => (X,null),
+                    1 => (I,null),
+                    _ => (null,null),
                 };
             }
         }

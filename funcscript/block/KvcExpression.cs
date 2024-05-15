@@ -3,24 +3,28 @@ using funcscript.core;
 using funcscript.model;
 using System.Security.Cryptography;
 using System.Text;
+using funcscript.error;
 
 namespace funcscript.block
 {
     public class KvcExpression : ExpressionBlock
     {
-        public class KvcExpressionProvider : IFsDataProvider
+        private class KvcExpressionProvider : IFsDataProvider
         {
-            private IFsDataProvider _provider;
-            private KvcExpression _parent;
-            private Dictionary<string, object> _valCache = new Dictionary<string, object>();
-            private List<Action> connectionActions;
-            public IFsDataProvider ParentProvider => _provider;
+            private readonly KvcExpression _parent;
+            private readonly Dictionary<string, object> _valCache = new Dictionary<string, object>();
+            private readonly List<Action> _connectionActions;
+            public IFsDataProvider ParentProvider { get; }
+            public bool IsDefined(string key)
+            {
+                return _parent.index.ContainsKey(key);
+            }
 
             public KvcExpressionProvider(IFsDataProvider provider, KvcExpression parent, List<Action> connectionActions)
             {
-                this._provider = provider;
+                this.ParentProvider = provider;
                 _parent = parent;
-                this.connectionActions = connectionActions;
+                this._connectionActions = connectionActions;
             }
 
             public object GetData(string key)
@@ -31,8 +35,8 @@ namespace funcscript.block
                     if (_valCache.TryGetValue(lower, out var ret))
                         return ret;
                     var val = _parent.index.TryGetValue(lower, out var ch)
-                        ? ch.ValueExpression.Evaluate(this, connectionActions)
-                        : _provider.GetData(lower);
+                        ? ch.ValueExpression.Evaluate(this, _connectionActions).Item1
+                        : ParentProvider.GetData(lower);
 
                     _valCache.Add(lower, val);
                     return val;
@@ -56,16 +60,27 @@ namespace funcscript.block
 
 
         public IList<KeyValueExpression> _keyValues;
-        public IList<ConnectionExpression> _dataConnections;
-        public IList<ConnectionExpression> _signalConnections;
-        public Dictionary<string, KeyValueExpression> index;
         public ExpressionBlock singleReturn = null;
 
-        class ConnectionSourceListener
+        private IList<ConnectionExpression> _dataConnections;
+        public IList<ConnectionExpression> _signalConnections;
+        private Dictionary<string, KeyValueExpression> index;
+
+        class ConnectionInfo
         {
             public object sink;
-            public object fault;
             public object vref;
+
+            public CodeLocation location;
+
+            protected void ThrowInvalidConnectionError(string msg)
+            {
+                throw new error.EvaluationException(location, new TypeMismatchError(msg));
+            }
+        }
+        class ConnectionSourceListener:ConnectionInfo
+        {
+            public object fault;
 
             public void OnChange()
             {
@@ -84,18 +99,24 @@ namespace funcscript.block
                 {
                     if (source is SignalSourceDelegate sigSource)
                     {
-                        sigSource(sink, fault);
+                        try
+                        {
+                            sigSource(sink, fault);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new EvaluationException(location, ex);
+                        }
                     }
                     else
-                        throw new error.EvaluationTimeException("Invalid connection");
+                        ThrowInvalidConnectionError("Invalid connection, source should be a signal source");
                 }
             }
         }
 
-        class DataConnectionSourceListener
+        class DataConnectionSourceListener:ConnectionInfo
         {
             public object source;
-            public object vref;
 
             public void OnChange()
             {
@@ -114,10 +135,17 @@ namespace funcscript.block
                 {
                     if (sink is ValueSinkDelegate valSink)
                     {
-                        valSink(source);
+                        try
+                        {
+                            valSink(source);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new EvaluationException(location, ex);
+                        }
                     }
                     else
-                        throw new error.EvaluationTimeException("Invalid connection");
+                        ThrowInvalidConnectionError("Invalid connection, data should be a signal source");
                 }
             }
         }
@@ -151,15 +179,13 @@ namespace funcscript.block
         public IList<KeyValueExpression> KeyValues => _keyValues;
 
 
-        public override object Evaluate(IFsDataProvider provider, List<Action> connectionActions)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions)
         {
             var evalProvider = new KvcExpressionProvider(provider, this, connectionActions);
-            var kvc = new SimpleKeyValueCollection(this._keyValues
-                .Select(kv =>
-                {
-                    return KeyValuePair.Create<string, object>(kv.Key,
-                        evalProvider.GetData(kv.Key));
-                }).ToArray());
+            
+            var kvc = new SimpleKeyValueCollection(null,this._keyValues
+                .Select(kv =>KeyValuePair.Create<string, object>(kv.Key,
+                    evalProvider.GetData(kv.Key))).ToArray());
 
             var pr = new KvcProvider(kvc, provider);
             if (this._dataConnections.Count > 0 || this._signalConnections.Count > 0)
@@ -169,12 +195,13 @@ namespace funcscript.block
                     List<Action> conActions = new List<Action>();
                     foreach (var connection in this._dataConnections)
                     {
-                        var source = connection.Source.Evaluate(pr, conActions);
-                        var sink = connection.Sink.Evaluate(pr, conActions);
+                        var source = connection.Source.Evaluate(pr, conActions).Item1;
+                        var sink = connection.Sink.Evaluate(pr, conActions).Item1;
                         var l = new DataConnectionSourceListener()
                         {
                             source = source,
                             vref = sink,
+                            location = connection.Source.CodeLocation
                         };
                         l.TryConnect(sink);
                     }
@@ -182,14 +209,16 @@ namespace funcscript.block
 
                     foreach (var connection in this._signalConnections)
                     {
-                        var source = connection.Source.Evaluate(pr, conActions);
-                        var sink = connection.Sink.Evaluate(pr, conActions);
-                        var fault = connection.Catch?.Evaluate(pr, conActions);
+                        var source = connection.Source.Evaluate(pr, conActions).Item1;
+                        var sink = connection.Sink.Evaluate(pr, conActions).Item1;
+                        var fault = connection.Catch?.Evaluate(pr, conActions).Item1;
                         var l = new ConnectionSourceListener
                         {
                             sink = sink,
                             fault = fault,
                             vref = source,
+                            location = CodeLocation.Span(connection.Source.CodeLocation,connection.Sink.CodeLocation,connection.Catch?.CodeLocation)
+
                         };
                         l.TryConnect(source);
                     }
@@ -198,7 +227,7 @@ namespace funcscript.block
 
             if (singleReturn != null)
                 return singleReturn.Evaluate(pr, connectionActions);
-            return kvc;
+            return (kvc,this.CodeLocation);
         }
 
         public override IList<ExpressionBlock> GetChilds()

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using funcscript.core;
 using funcscript.funcs.misc;
 using funcscript.model;
@@ -20,8 +21,10 @@ class TextLogNode
 
     public SignalListenerDelegate Log => () =>
     {
-        var dr = FuncScript.DeepDref(_source);
-        Fslogger.DefaultLogger.WriteLine(dr.ToString());
+        var dr = FuncScript.Dref(_source);
+        var sb = new StringBuilder();
+        FuncScript.Format(sb,dr,null);
+        Fslogger.DefaultLogger.WriteLine(sb.ToString());
     };
     public SignalListenerDelegate Clear => () =>
     {

@@ -40,12 +40,12 @@ namespace funcscript.funcs.keyvalue
                 if (second[i].Value == null)
                 {
                     var key = second[i].Key.ToLower();
-                    var value = first.Get(key);
+                    var value = first.GetData(key);
                     second[i] = new KeyValuePair<string, object>(second[i].Key, value);
                 }
             }
 
-            return new SimpleKeyValueCollection(second.ToArray());
+            return new SimpleKeyValueCollection(parent,second.ToArray());
         }
 
         public string ParName(int index)

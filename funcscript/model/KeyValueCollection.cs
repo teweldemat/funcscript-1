@@ -1,14 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Json.Nodes;
-using System.Threading.Tasks;
+using funcscript.core;
 
 namespace funcscript.model
 {
@@ -16,20 +8,23 @@ namespace funcscript.model
     /// <summary>
     /// Abstract base class for KeyValueCollection FuncScript data type
     /// </summary>
-    public abstract class  KeyValueCollection
+    public abstract class  KeyValueCollection:IFsDataProvider
     {
         /// <summary>
         /// Gets value for a given key
         /// </summary>
         /// <param name="key">key in small letters</param>
         /// <returns></returns>
-        public abstract object Get(string key);
+        public abstract object GetData(string key);
+
+        public abstract IFsDataProvider ParentProvider { get; }
+
         /// <summary>
         /// Checks if key exists
         /// </summary>
         /// <param name="key">Key in small letters</param>
         /// <returns></returns>
-        public abstract bool ContainsKey(string key);
+        public abstract bool IsDefined(string key);
         /// <summary>
         /// Converts the KVC to a .net type
         /// </summary>
@@ -66,10 +61,10 @@ namespace funcscript.model
                 return false;
             foreach(var k in other.GetAll())
             {
-                if (!this.ContainsKey(k.Key))
+                if (!this.IsDefined(k.Key))
                     return false;
-                var thisVal= this.Get(k.Key);
-                var otherVal= other.Get(k.Key);
+                var thisVal= this.GetData(k.Key);
+                var otherVal= other.GetData(k.Key);
                 if (thisVal == null && otherVal == null)
                     return true;
                 if (thisVal == null || otherVal == null)
@@ -79,16 +74,7 @@ namespace funcscript.model
             }
             return true;
         }
-        /// <summary>
-        /// Returns the string representation of the KVC
-        /// </summary>
-        /// <returns></returns>
-        // public override string ToString()
-        // {
-        //     var sb = new StringBuilder();
-        //     FuncScript.Format(sb, this, null, false, true);
-        //     return sb.ToString();
-        // }
+        
         /// <summary>
         /// Merges to key value pairs. The merged KVC will have keys from both collections
         /// If a key exists in both KVCs the value in the merged KVC is determined as follows
@@ -132,7 +118,11 @@ namespace funcscript.model
                 kvs[k] = new KeyValuePair<string, object>((string)en.Key, en.Value);
                 k++;
             }
-            return new SimpleKeyValueCollection(kvs);
+
+            if (col1.ParentProvider != col2.ParentProvider)
+                throw new error.EvaluationTimeException(
+                    "Key value collections from different contexts can't be merged");
+            return new SimpleKeyValueCollection(col1.ParentProvider,kvs);
         }
         public override int GetHashCode()
         {

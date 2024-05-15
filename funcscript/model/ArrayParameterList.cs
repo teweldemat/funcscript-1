@@ -11,9 +11,9 @@ public class ArrayParameterList : IParameterList
         this.parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
     }
 
-    public int Count => this.parameters.Length;
+    public override int Count { get; }
 
-    public object GetParameter(IFsDataProvider provider, int index)
+    public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
     {
         // Check for out-of-bounds to prevent runtime exceptions.
         if (index < 0 || index >= this.parameters.Length)
@@ -22,6 +22,6 @@ public class ArrayParameterList : IParameterList
         }
 
         // Return the parameter from the internal array.
-        return this.parameters[index];
+        return (this.parameters[index],null);
     }
 }

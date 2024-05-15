@@ -18,6 +18,7 @@ public class ExecutionSession : IFsDataProvider
     private FssAppNode _appNode;
     public IFsDataProvider ParentProvider => _provider;
 
+
     void UpdateFile()
     {
         System.IO.File.WriteAllText(fileName, System.Text.Json.JsonSerializer.Serialize(_nodes));
@@ -215,6 +216,13 @@ public class ExecutionSession : IFsDataProvider
         if (n == null)
             return _provider.GetData(name);
         return n.Evaluate(_provider);
+    }
+    public bool IsDefined(string name)
+    {
+        var n = _nodes.FirstOrDefault(c => c.NameLower == name);
+        if (n != null)
+            return true;
+        return _provider.IsDefined(name);
     }
 
     

@@ -36,13 +36,22 @@ public class CreateTextFileNodeFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new ObjectKvc(new TextFileNode());
+        var ret = new TextFileNode();
+        if (pars.Count > 0)
+        {
+            ret.FileName.Invoke(pars.GetParameter(parent,0));
+        }
+        if (pars.Count > 1)
+        {
+            ret.TextIn.Invoke(pars.GetParameter(parent,1));
+        }
+        return new ObjectKvc(ret);
     }
 
     public string ParName(int index) => null;
 
     public int MaxParsCount => 0;
     public CallType CallType => CallType.Prefix;
-    public string Symbol => "TextFileStore";
+    public string Symbol => "TextFile";
     public int Precidence => 0;
 }
