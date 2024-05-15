@@ -33,11 +33,11 @@ namespace funcscript.funcs.logic
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var val = FuncScript.Dref(pars.GetParameter(null, 0));
+            var val = FuncScript.Dref(pars.GetParameter(null, 0),false);
             if (val != null)
                 return val;
 
-            var val2 = FuncScript.Dref(pars.GetParameter(null, 1));
+            var val2 = FuncScript.Dref(pars.GetParameter(null, 1),false);
             return val2;
         }
 

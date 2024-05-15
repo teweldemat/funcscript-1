@@ -54,8 +54,8 @@ namespace funcscript.funcs.text
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var list = FuncScript.Dref(pars.GetParameter(null, 0)) as FsList;
-            var separator = FuncScript.Dref(pars.GetParameter(null, 1)) as string;
+            var list = FuncScript.Dref(pars.GetParameter(null, 0),false) as FsList;
+            var separator = FuncScript.Dref(pars.GetParameter(null, 1),false) as string;
 
             if (list == null || separator == null)
                 throw new funcscript.error.TypeMismatchError($"{Symbol}: List and separator expected as parameters");
@@ -68,7 +68,7 @@ namespace funcscript.funcs.text
                 {
                     if (i > 0)
                         sb.Append(separator);
-                    sb.Append(FuncScript.Dref(item) ?? "");
+                    sb.Append(FuncScript.Dref(item,false) ?? "");
                 }
             }
             return sb.ToString();

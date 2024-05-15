@@ -29,7 +29,7 @@ public partial class CallRef : ListenerCollection, IFsDataProvider, ValueReferen
 
         public override (object, CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
         {
-            return (index < 0 || Parent._vals.Length - 1 <= index ? null : FuncScript.Dref(Parent._vals[index + 1]),
+            return (index < 0 || Parent._vals.Length - 1 <= index ? null : Parent._vals[index + 1],
                 null);
         }
     }

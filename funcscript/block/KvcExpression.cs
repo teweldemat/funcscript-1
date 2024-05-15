@@ -15,6 +15,7 @@ namespace funcscript.block
             private readonly Dictionary<string, object> _valCache = new Dictionary<string, object>();
             private readonly List<Action> _connectionActions;
             public IFsDataProvider ParentProvider { get; }
+
             public bool IsDefined(string key)
             {
                 return _parent.index.ContainsKey(key);
@@ -78,75 +79,70 @@ namespace funcscript.block
                 throw new error.EvaluationException(location, new TypeMismatchError(msg));
             }
         }
-        class ConnectionSourceListener:ConnectionInfo
+
+        class ConnectionSourceListener : ConnectionInfo
         {
             public object fault;
 
             public void OnChange()
             {
-                var source = FuncScript.Dref(vref);
+                var source = FuncScript.Dref(vref,false);
                 this.TryConnect(source);
             }
 
             public void TryConnect(object source)
             {
-                if (source is ValueReferenceDelegate r)
+                if (source is SignalSourceDelegate sigSource)
+                {
+                    try
+                    {
+                        sigSource.SetSource(sink, fault);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new EvaluationException(location, ex);
+                    }
+                }
+                else if (source is ValueReferenceDelegate r)
                 {
                     vref = r;
                     r.AddListener(this.OnChange);
                 }
                 else
-                {
-                    if (source is SignalSourceDelegate sigSource)
-                    {
-                        try
-                        {
-                            sigSource(sink, fault);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new EvaluationException(location, ex);
-                        }
-                    }
-                    else
-                        ThrowInvalidConnectionError("Invalid connection, source should be a signal source");
-                }
+                    ThrowInvalidConnectionError("Invalid connection, source should be a signal source");
             }
         }
 
-        class DataConnectionSourceListener:ConnectionInfo
+        class DataConnectionSourceListener : ConnectionInfo
         {
             public object source;
 
             public void OnChange()
             {
-                var sink = FuncScript.Dref(vref);
+                var sink = FuncScript.Dref(vref,true);
                 TryConnect(sink);
             }
 
             public void TryConnect(object sink)
             {
-                if (sink is ValueReferenceDelegate r)
+                if (sink is ValueSinkDelegate valSink)
+                {
+                    try
+                    {
+                        valSink.SetValueSource(source);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new EvaluationException(location, ex);
+                    }
+                }
+                else if (sink is ValueReferenceDelegate r)
                 {
                     vref = r;
                     r.AddListener(this.OnChange);
                 }
                 else
-                {
-                    if (sink is ValueSinkDelegate valSink)
-                    {
-                        try
-                        {
-                            valSink(source);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new EvaluationException(location, ex);
-                        }
-                    }
-                    else
-                        ThrowInvalidConnectionError("Invalid connection, data should be a signal source");
-                }
+                    ThrowInvalidConnectionError("Invalid connection, data should be a data source");
             }
         }
 
@@ -179,12 +175,12 @@ namespace funcscript.block
         public IList<KeyValueExpression> KeyValues => _keyValues;
 
 
-        public override (object,CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions)
+        public override (object, CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions)
         {
             var evalProvider = new KvcExpressionProvider(provider, this, connectionActions);
-            
-            var kvc = new SimpleKeyValueCollection(null,this._keyValues
-                .Select(kv =>KeyValuePair.Create<string, object>(kv.Key,
+
+            var kvc = new SimpleKeyValueCollection(null, this._keyValues
+                .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
                     evalProvider.GetData(kv.Key))).ToArray());
 
             var pr = new KvcProvider(kvc, provider);
@@ -217,8 +213,8 @@ namespace funcscript.block
                             sink = sink,
                             fault = fault,
                             vref = source,
-                            location = CodeLocation.Span(connection.Source.CodeLocation,connection.Sink.CodeLocation,connection.Catch?.CodeLocation)
-
+                            location = CodeLocation.Span(connection.Source.CodeLocation, connection.Sink.CodeLocation,
+                                connection.Catch?.CodeLocation)
                         };
                         l.TryConnect(source);
                     }
@@ -227,7 +223,7 @@ namespace funcscript.block
 
             if (singleReturn != null)
                 return singleReturn.Evaluate(pr, connectionActions);
-            return (kvc,this.CodeLocation);
+            return (kvc, this.CodeLocation);
         }
 
         public override IList<ExpressionBlock> GetChilds()

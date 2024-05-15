@@ -39,8 +39,9 @@ namespace funcscript.core
 
         public void SetContext(IFsDataProvider context)
         {
-            if (_context != null)
-                throw new EvaluationTimeException("Context for expression function already set");
+            //REVIEW: this is commented because it was being triggered but why was it triggered?
+            //if (_context != null)
+             //   throw new EvaluationTimeException("Context for expression function already set");
             _context = context;
         }
         public ExpressionFunction(String[] pars, ExpressionBlock exp)

@@ -40,11 +40,20 @@ namespace funcscript.model
             }
         }
         object _val;
+
+        protected ObjectKvc()
+        {
+            
+        }
         public ObjectKvc(object val)
         {
-            _val = val;
+            this.SetVal(val);
         }
 
+        protected void SetVal(object val)
+        {
+            this._val = val;
+        }
         public object GetUnderlyingValue() => _val;
         public override bool IsDefined(string key)
         {

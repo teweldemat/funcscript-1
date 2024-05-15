@@ -58,8 +58,8 @@ namespace funcscript.funcs.keyvalue
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var member = FuncScript.Dref(pars.GetParameter(null, 1));
-            var kvc = FuncScript.Dref(pars.GetParameter(null, 0));
+            var member = FuncScript.Dref(pars.GetParameter(null, 1),false);
+            var kvc = FuncScript.Dref(pars.GetParameter(null, 0),false);
             var result = EvaluateInternal(kvc, member);
             return result;
         }

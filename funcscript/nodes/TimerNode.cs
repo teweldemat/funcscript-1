@@ -3,12 +3,13 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-class TimerNode
+class TimerNode:ObjectKvc, SignalSourceDelegate,SignalListenerDelegate
 {
     private Timer _timer;
     private int _interval;
     private bool _repeating;
     private SignalSinkInfo _sinks = new SignalSinkInfo();
+    public TimerNode() => base.SetVal(this);
     public TimerNode(int interval, bool repeating = false)
     {
         _interval = interval;
@@ -16,24 +17,29 @@ class TimerNode
 
     }
 
-    public SignalSourceDelegate Tick => _sinks.SetSink;
     // Signal to start the timer
-    public SignalListenerDelegate Start => () => 
+    public void Activate()
     {
         _timer?.Dispose(); // Dispose previous timer if any
         var ts = new TimeSpan(0, 0, 0, 0, _interval);
         _timer = new Timer(state => 
             _sinks.Signal()
             , null,ts,  _repeating ? ts: Timeout.InfiniteTimeSpan);
-    };
+    }
 
     // Signal to stop the timer
-    public SignalListenerDelegate Stop => () =>
+    public SignalListenerDelegate Stop =>new SigSink(() =>
     {
         _timer?.Dispose();
         _timer = null;
-    };
+    });
 
+    public void SetSource(object listener, object catcher)
+    {
+        _sinks.SetSink(listener,catcher);
+    }
+
+    
 }
 
 public class CreateTimerFunction : IFsFunction
@@ -47,7 +53,7 @@ public class CreateTimerFunction : IFsFunction
         if (pars.Count > 1 && pars.GetParameter(parent,1) is bool repeat)
             repeating = repeat;
 
-        return new ObjectKvc(new TimerNode(interval, repeating));
+        return new TimerNode(interval, repeating);
     }
 
     public string ParName(int index)

@@ -50,8 +50,8 @@ namespace funcscript.funcs.logic
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
+            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
+            var par1 = FuncScript.Dref(pars.GetParameter(null, 1),false);
             return EvaluateInternal(par0, par1); // Using EvaluateInternal to handle actual comparison
         }
 

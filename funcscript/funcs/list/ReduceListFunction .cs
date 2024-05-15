@@ -111,8 +111,8 @@ namespace funcscript.funcs.list
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
+            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
+            var par1 = FuncScript.Dref(pars.GetParameter(null, 1),false);
             var par2 = FuncScript.Dref(pars.GetParameter(null, 2));
             return EvaluateInternal(null, par0, par1,par2,true);
 

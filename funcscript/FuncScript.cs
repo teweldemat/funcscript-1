@@ -703,13 +703,20 @@ namespace funcscript
             }
         }
 
-        public static object Dref(object obj)
+        public static object Dref(object obj) => Dref(obj, true);
+        public static object Dref(object obj,bool allowSignals)
         {
-             
-            if(obj is ValueReferenceDelegate d)
-                return Dref(d.Dref());
+            if(allowSignals)
+            {
+                if (obj is SignalListenerDelegate || obj is SignalSourceDelegate)
+                    return obj;
+            }
+
+            if (obj is ValueReferenceDelegate d)
+                return d.Dref();
             return obj;
         }
+        
     
         // public static object DeepDref(object obj)
         // {

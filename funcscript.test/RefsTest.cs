@@ -66,11 +66,10 @@ public class RefsTest
     public void TestConnectionBasic()
     {
         var exp =
-            @"
+@"
 {
-    app.start->logger('here').log;    
-}
-";
+    app.start->logger('here');    
+}";
         var logger = new StringTextLogger();
         Fslogger.SetDefaultLogger(logger);
 
@@ -79,7 +78,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.NotNull(res);
@@ -97,9 +96,9 @@ public class RefsTest
 {
     s:Store();
     a:10;
-    b:s.Out;
-    sig:s.Store;    
-    a:->s.In;
+    b:s;
+    sig:s;    
+    a:->s;
 }
 ";
         var res = FuncScript.Evaluate(exp);
@@ -111,7 +110,7 @@ public class RefsTest
         res = kvc.GetData("sig");
         Assert.That(res is SignalListenerDelegate);
         var store = (SignalListenerDelegate)res;
-        store();
+        store.Activate();
 
         Assert.That(dRef.Dref(), Is.EqualTo(10));
     }
@@ -125,7 +124,7 @@ public class RefsTest
     s:JsonFileStore();
     x:{a:1,b:'2'};
     sig:s.Save;    
-    x:->s.In;
+    x:->s.Data;
     'test.json':->s.FileName;
 }
 ";
@@ -137,7 +136,7 @@ public class RefsTest
         val = kvc.GetData("sig");
         Assert.That(val is SignalListenerDelegate);
         var store = (SignalListenerDelegate)val;
-        store();
+        store.Activate();
 
         Assert.That(System.IO.File.Exists("test.json"));
         var eval = FuncScript.Evaluate(System.IO.File.ReadAllText("test.json"));
@@ -155,9 +154,9 @@ public class RefsTest
         var script = @"
 {
    x:store();
-   (x.Out??0)+1:->x.In;
-   sig:x.Store;
-   count:x.Out;
+   (x??0)+1:->x;
+   sig:x;
+   count:x;
 }";
 
         // Evaluate the script to initialize the environment and store object
@@ -176,7 +175,7 @@ public class RefsTest
 
         for (int i = 0; i < 10; i++)
         {
-            sig.Invoke();
+            sig.Activate();
             Assert.That(countOut.Dref(), Is.EqualTo(i + 1));
         }
     }
@@ -187,14 +186,14 @@ public class RefsTest
         var script = @"
         {
             t:timer(1009,true);
-            s:t.start>>t.stop;
+            s:t>>t.stop;
             return s;            
         }";
         var res = FuncScript.Evaluate(script);
-        Assert.That(res, Is.TypeOf<SignalListenerDelegate>());
+        Assert.That(res, Is.AssignableTo<SignalListenerDelegate>());
         var d = (SignalListenerDelegate)res;
-        Assert.That(d.Target, Is.TypeOf<SigSequenceNode>());
-        var n = (SigSequenceNode)d.Target;
+        Assert.That(d, Is.TypeOf<SigSequenceNode>());
+        var n = (SigSequenceNode)d;
         Assert.That(n.Items.Length, Is.EqualTo(2));
     }
 
@@ -219,7 +218,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -239,13 +238,11 @@ public class RefsTest
 //nodes
    x:store();
    t:timer({delay},true);
-
 //connections
-   
-   (x.Out??0)+1:->x.In;
-   t.tick->if((x.Out??0)={n},t.stop,x.store);
-   app.start->t.start;
-   count:x.Out;
+   (x??0)+1:->x;
+   t->if((x??0)={n},t.stop,x);
+   app.start->t;
+   count:x;
 }}";
 
         SignalSinkInfo sink = new SignalSinkInfo();
@@ -254,13 +251,10 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.That(res is KeyValueCollection);
-        
-        Assert.That(sink.Sink!=null);
-        Assert.That(sink.Catch==null);
         sink.Signal();
         System.Threading.Thread.Sleep(delay*2*n);
         
@@ -280,22 +274,22 @@ public class RefsTest
         var script = @"
 {
     count_st:store();
-    count_st.out??0+1:->count_st.In;
+    count_st??0+1:->count_st;
     t:series(0,"+n+@") map (i)=>
     {
         x:timer(100,false);
         sp:signalpass();
-        start:x.start;
-        done:sp.onfire;
-        x.tick->count_st.store>>logger('count:'+ count_st.out).log>>sp.fire;
+        start:x;
+        done:sp;
+        x->count_st>>logger('count:'+ count_st)>>sp;
     };
     seq:reverse(t) reduce (x,s,i)=>
     {
-        x.done->logger('index:'+i).log>>s;
+        x.done->logger('index:'+i)>>s;
         return x.start;
     };
     app.start->seq;
-    count:count_st.out;
+    count:count_st;
 }";
 
         var logger = new StringTextLogger();
@@ -306,7 +300,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -337,7 +331,7 @@ public class RefsTest
         // Setup - Create an initial script and environment
         var script = @"{
      t:timer(1000,true);
-    t.tick->t.stop;
+    t->t.stop;
 }";
 
         var res = FuncScript.Evaluate(script);
@@ -367,7 +361,7 @@ public class RefsTest
         var script = @"
 {
    x:1;
-   app.start->logger('all good').log|logger('error').log;
+   app.start->logger('all good')|logger('error');
 }";
 
         var logger = new StringTextLogger();
@@ -377,7 +371,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -391,8 +385,8 @@ public class RefsTest
         var script = @"
 {
     s:store();
-    (s.out/0):->s.in;
-    app.start->logger('all good').log>>s.store|logger('error').log;
+    (s/0):->s;
+    app.start->logger('all good')>>s|logger('error');
 }";
 
         var logger = new StringTextLogger();
@@ -402,7 +396,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -418,8 +412,8 @@ public class RefsTest
         var script = @"
 {
     s:store();
-    (s.out/1):->s.in;
-    app.start->logger('all good').log>>s.store|logger('error').log>>logger('final').log;
+    (s/1):->s;
+    app.start->logger('all good')>>s|logger('error')>>logger('final');
 }";
 
         var logger = new StringTextLogger();
@@ -429,7 +423,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -445,8 +439,8 @@ public class RefsTest
         var script = @"
 {
     s:store();
-    (s.out/0):->s.in;
-    app.start->logger('all good').log>>s.store|logger('error').log>>logger('final').log;
+    (s/0):->s;
+    app.start->logger('all good')>>s|logger('error')>>logger('final');
 }";
 
         var logger = new StringTextLogger();
@@ -456,7 +450,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -469,7 +463,7 @@ public class RefsTest
     {
         var script = @"
 {
-   app.start->logger('all good').log;
+   app.start->logger('all good');
 }";
 
         var logger = new StringTextLogger();
@@ -480,7 +474,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res,Is.AssignableTo<KeyValueCollection>());
@@ -500,8 +494,8 @@ public class RefsTest
         var script = @"
 {
    x:store();
-   x.Out/0:->x.In;
-   app.start->x.store|logger('error').log;
+   x/0:->x;
+   app.start->x|logger('error');
 }";
 
         var logger = new StringTextLogger();
@@ -511,7 +505,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
 
@@ -527,8 +521,8 @@ public class RefsTest
         var script = @"
 {
    x:store();
-   [1,2,3]:->x.In;
-   app.start->x.store>>logger(x.Out map (y)=>y+1).log;
+   [1,2,3]:->x;
+   app.start->x>>logger(x map (y)=>y+1);
 }";
 
         var logger = new StringTextLogger();
@@ -538,25 +532,25 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
         sink.Signal();
-        Assert.That(logger.LogText,Is.EqualTo("[2,3,4]\n"));
+        Assert.That(logger.LogText.Replace(" ",""),Is.EqualTo("[2,3,4]\n"));
     }
     
     [Test]
     public void RefBugMay11()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"{
         y:{
             c:store({a:5});
             t:timer(200,false);
-            t.tick->c.store>>logger(y.c.out.a).log;
+            t->c>>logger(y.c.a);
         };
-        app.start->y.t.start;
+        app.start->y.t;
     }";
 
         var logger = new StringTextLogger();
@@ -566,7 +560,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
 
@@ -578,11 +572,11 @@ public class RefsTest
     [Test]
     public void RefBugMay11Case6()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"{
         y:{
             c:5;
-            app.start->logger(y.c).log;
+            app.start->logger(y.c);
         };
     }";
 
@@ -593,7 +587,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
 
@@ -605,14 +599,14 @@ public class RefsTest
     [Test]
     public void RefBugMay11Case2()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"{
         y:{
             c:store({a:5});
             t:timer(200,false);
-            t.tick->sigsequence([c.store,logger(y.c.out.a).log]);
+            t->sigsequence([c,logger(y.c.a)]);
         };
-        app.start->y.t.start;
+        app.start->y.t;
     }";
 
         var logger = new StringTextLogger();
@@ -622,7 +616,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
 
@@ -634,16 +628,16 @@ public class RefsTest
     [Test]
     public void RefBugMay11Case4()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"{
   x:{
       t:timer(100,false);
       s:store({a:5});
-      b:s.out.a;
-      t.tick->(s.store>>logger(x.s.out.a).log);
+      b:s.a;
+      t->(s>>logger(x.s.a));
       return {t,s};
   };
-  app.start->x.t.start;
+  app.start->x.t;
 }";
 
         var logger = new StringTextLogger();
@@ -653,7 +647,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         };
         var provider = new KvcProvider(new ObjectKvc(vars), new DefaultFsDataProvider());
@@ -690,13 +684,13 @@ public class RefsTest
     [Test]
     public void RefBugMay11Case5()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"{
   x:{
       t:timer(100,false);
       s:store({a:5});
-      b:s.out.a;
-      t.tick->s.store;
+      b:s.a;
+      t->s;
       return {t,s};
   };
   app.start->x.t.start;
@@ -709,7 +703,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         };
         var provider = new KvcProvider(new ObjectKvc(vars), new DefaultFsDataProvider());
@@ -744,14 +738,14 @@ public class RefsTest
     [Test]
     public void RefBugMay11Case3()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"{
         y:{
             c:store({a:5});
             t:timer(200,false);
-            t.tick->sigsequence([c.store]+[logger(y.c.out.a).log]);
+            t->sigsequence([c]+[logger(y.c.a)]);
         };
-        app.start->y.t.start;
+        app.start->y.t;
     }";
 
         var logger = new StringTextLogger();
@@ -761,7 +755,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
 
@@ -773,18 +767,18 @@ public class RefsTest
     [Test]
     public void RefBugMay10()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"
 {
   a:store(5);
-  b:if(a.Out>0,
+  b:if(a>0,
       {
         c:store(0);
-        d:c.Out.x;
+        d:c.x;
       },null);
   
-   app.start->a.store>>(logger(a.Out).log
-   >>b.c.store|logger('fail').log>>logger('term').log);
+   app.start->a>>(logger(a)
+   >>b.c|logger('fail')>>logger('term'));
 }";
 
         var logger = new StringTextLogger();
@@ -795,7 +789,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
 
@@ -810,9 +804,9 @@ public class RefsTest
 {
   x:5;
   list_st:store(['42','Dont panic']);
-  list:list_st.out;
-  app.start->list_st.store
-   >>logger(list map (s)=>x).log | logger('fail').log
+  list:list_st;
+  app.start->list_st
+   >>logger(list map (s)=>x) | logger('fail')
 }";
 
         var logger = new StringTextLogger();
@@ -822,12 +816,12 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
         sink.Signal();
-        Assert.That(logger.LogText,Is.EqualTo("[5,5]\n"));
+        Assert.That(logger.LogText.Replace(" ",""),Is.EqualTo("[5,5]\n"));
     }
     [Test]
     public void TestSignalDref()
@@ -835,8 +829,8 @@ public class RefsTest
         var script = @"
         {
             s:store();
-            10:->s.In;
-            a:s.store>>if(s.Out=10,logger('good').log,logger('bad').log);
+            10:->s;
+            a:s>>if(s=10,logger('good'),logger('bad'));
             app.start->a;
         }";
 
@@ -847,7 +841,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -855,11 +849,9 @@ public class RefsTest
         
         var kvc = (KeyValueCollection)res;
         var a = kvc!.GetData("s");
-        Assert.That(a,Is.TypeOf<ObjectKvc>());
-        var _s = (ObjectKvc)a;
-        Assert.That(_s.GetUnderlyingValue(),Is.TypeOf<StoreNode>());
-        var s = (StoreNode)_s.GetUnderlyingValue();
-        Assert.That(s.Out.Dref(),Is.EqualTo(10));
+        Assert.That(a,Is.TypeOf<StoreNode>());
+        var s = (StoreNode)a;
+        Assert.That(s.Dref(),Is.EqualTo(10));
         
         Assert.That(logger.LogText, Is.EqualTo("good\n"));
     }
@@ -870,7 +862,7 @@ public class RefsTest
         var script = @"
         {
             s:series(0,3) map (x)=>store(x);
-            app.start->logger((s map (x)=>x.Out)).log;
+            app.start->logger((s map (x)=>x));
         }";
 
         var logger = new StringTextLogger();
@@ -880,7 +872,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.NotNull(res, "The environment should be correctly initialized.");
@@ -894,7 +886,7 @@ public class RefsTest
         var script = @"
         {
             s:series(0,3) map (x)=>store(x);
-            app.start->SigSequence(s map (x)=>x.store)>>logger((s map (x)=>x.Out) join '\n').log;
+            app.start->SigSequence(s map (x)=>x)>>logger((s map (x)=>x) join '\n');
         }";
 
         var logger = new StringTextLogger();
@@ -904,7 +896,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -914,15 +906,15 @@ public class RefsTest
     [Test]
     public void RefBugMay12Case2()
     {
-        //the bug is c.Out.x unnecessarily dereferenced 
+        //the bug is c.x unnecessarily dereferenced 
         var script = @"
 {
   y:{
       h:store();
       t:timer(100,false);
-      'chat/completions':->h.In;
+      'chat/completions':->h;
   };
-  y.t.tick->logger('test').log;
+  y.t->logger('test');
 }";
 
         SignalSinkInfo sink = new SignalSinkInfo();
@@ -930,7 +922,7 @@ public class RefsTest
         {
             app = new
             {
-                start = new SignalSourceDelegate((x, y) => sink.SetSink(x, y))
+                start = new SigSource((x, y) => sink.SetSink(x, y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -946,8 +938,8 @@ public class RefsTest
         var script = 
 @"{
     sp:SignalPass();
-    sp.OnFire->logger('passed').log;
-    app.start->sp.Fire;
+    sp->logger('passed');
+    app.start->sp;
 }";
         var logger = new StringTextLogger();
         Fslogger.SetDefaultLogger(logger);
@@ -957,7 +949,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -970,26 +962,26 @@ public class RefsTest
     {
         var script = @"{
     list_store:store(5);  
-    list:list_store.Out;
+    list:list_store;
     sections_gpt:if(list>0,
           { 
               c:{
                   t:timer(100,false);
                   s:store({a:'resp'});
                   sp:SignalPass();
-                  success:sp.OnFire;  
-                  start:t.start;
-                  response:s.out.a;
-                  t.tick->s.store>>sp.fire;
+                  success:sp;  
+                  start:t;
+                  response:s.a;
+                  t->s>>sp;
               };
-              c.success->logger('done').log
-                  >>logger(sections_gpt.response).log
-                    |logger(fault.message).log;
+              c.success->logger('done')
+                  >>logger(sections_gpt.response)
+                    |logger(fault.message);
              return c;
           },null);
-    section_gpt_start:sigsequence([sections_gpt] map (x)=>x.start);
+    section_gpt_start:sigsequence([sections_gpt] map (x)=>x);
 
-    app.start->logger().clear>>list_store.store
+    app.start->logger().clear>>list_store
      >>sections_gpt.start;
 
 }";
@@ -1000,7 +992,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.That(res is KeyValueCollection);
@@ -1015,15 +1007,15 @@ public class RefsTest
     {
         var script = @"{
     list_store:store(5);  
-    list:list_store.Out;
+    list:list_store;
     sections_gpt:if(list>0,
           { 
               c:timer(100,false);
               return c;
           },null);
     
-    app.start->list_store.store
-     >>sections_gpt.start;
+    app.start->list_store
+     >>sections_gpt;
 
 }";
         var logger = new StringTextLogger();
@@ -1033,7 +1025,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
 
@@ -1048,7 +1040,7 @@ public class RefsTest
         var script = 
 @"{
   list_store:store(['item1']);  
-  list:list_store.Out;
+  list:list_store;
 
   sections_gpt:list map (s)=>
           { 
@@ -1056,16 +1048,16 @@ public class RefsTest
                   r_st:store({a:'resp'});
                   t:timer(100,false);
                   sp:signalpass();
-                  response:r_st.out.a;
-                  success:sp.onfire;
-                  t.tick->r_st.store>>sp.fire;
-                  start:t.start;
+                  response:r_st.a;
+                  success:sp;
+                  t->r_st>>sp;
+                  start:t;
               };
-              c.success->logger(sections_gpt[0].response).log;
+              c.success->logger(sections_gpt[0].response);
              return c;
           };
 
-  app.start->list_store.store>>sections_gpt[0].start;
+  app.start->list_store>>sections_gpt[0].start;
 
 }";
         var logger = new StringTextLogger();
@@ -1075,7 +1067,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
         Assert.That(res,Is.AssignableTo<KeyValueCollection>());
@@ -1092,7 +1084,7 @@ public class RefsTest
         var script = 
 @"{
   list_store:store(5);  
-  list:list_store.Out;
+  list:list_store;
 
   sections_gpt:if(list>0,
           { 
@@ -1100,16 +1092,16 @@ public class RefsTest
                   r_st:store({a:'resp'});
                   t:timer(100,false);
                   sp:signalpass();
-                  response:r_st.out.a;
-                  success:sp.onfire;
-                  t.tick->r_st.store>>sp.fire;
-                  start:t.start;
+                  response:r_st.a;
+                  success:sp;
+                  t->r_st>>sp;
+                  start:t;
               };
-              c.success->logger(sections_gpt.response).log;
+              c.success->logger(sections_gpt.response);
              return c;
           },null);
 
-  app.start->list_store.store>>sections_gpt.start;
+  app.start->list_store>>sections_gpt.start;
 
 }";
         var logger = new StringTextLogger();
@@ -1119,7 +1111,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
 
@@ -1136,19 +1128,19 @@ public class RefsTest
         var script = 
 @"{
   list_store:store(['item1']);  
-  list:list_store.Out;
+  list:list_store;
   seq:list map (s)=>
           { 
               c:{
                   t:timer(100,false);
-                  start:t.start;
-                  t.tick->logger('tick').log;
+                  start:t;
+                  t->logger('tick');
               };
              return c;
           };
   
   app.start->logger().clear
-     >>list_store.store>>seq[0].start;
+     >>list_store>>seq[0].start;
 
 }";
         var logger = new StringTextLogger();
@@ -1158,7 +1150,7 @@ public class RefsTest
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
 
@@ -1179,9 +1171,9 @@ public class RefsTest
         var script = 
             @"{
   list_st:store([1]);
-  list:list_st.out;
+  list:list_st;
   m:list map (s,j)=>1;
-  m[len(m)-1].success->logger('final').log;  
+  m[len(m)-1].success->logger('final');  
 }";
         var _res = FuncScript.Evaluate(script);
         var res = FuncScript.Dref(_res);
@@ -1195,48 +1187,66 @@ public class RefsTest
         var script = 
             @"{
   list_st:store([1]);
-  list:list_st.out;
+  list:list_st;
   sections_gpt:list map (s,j)=>
           { 
             c:{
                 t:timer(100,false);
                 s:store({a:'resp'});
-                response:s.out.a;
+                response:s.a;
                 sp:signalpass();
-                success:sp.onfire;
-                start:t.start;
-                t.tick->s.store>>sp.fire;
+                success:sp;
+                start:t;
+                t->s>>sp;
               };
-             c.success->logger(sections_gpt map (s,j)=>s.response).log;
+             c.success->logger(sections_gpt map (s,j)=>s.response);
              return c;
           };
 
-  app.start->logger().clear>>list_st.store>>sections_gpt[0].start;
+  app.start->list_st>>sections_gpt[0].start;
   
 }";
         var logger = new StringTextLogger();
         Fslogger.SetDefaultLogger(logger);
         SignalSinkInfo sink = new SignalSinkInfo();
-        // Evaluate the script to initialize the environment and store object
-        var _res = FuncScript.EvaluateWithVars(script,new
+        var res = FuncScript.EvaluateWithVars(script,new
         {
             app=new
             {
-                start=new SignalSourceDelegate((x,y)=>sink.SetSink(x,y))
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
             }
         });
-
-        var res = FuncScript.Dref(_res);
-
-        Assert.NotNull(res, "The environment should be correctly initialized.");
         Assert.That(res is KeyValueCollection);
-        
-        Assert.That(sink.Sink!=null);
-        Assert.That(sink.Catch==null);
         sink.Signal();
-        
         System.Threading.Thread.Sleep(2000);
         Assert.That(logger.LogText.Replace(" ",""), Is.EqualTo("[resp]\n"));
-
+    }
+    
+    [Test]
+    public void DefaultTimerTickIndirect()
+    {
+        var script = 
+@"{
+    c:{
+        t:timer(100,false);
+        start:t;
+      };
+    c.t->logger('here');
+    app.start->c.start;
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+        SignalSinkInfo sink = new SignalSinkInfo();
+        var res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.That(res is KeyValueCollection);
+        sink.Signal();
+        System.Threading.Thread.Sleep(2000);
+        Assert.That(logger.LogText.Replace(" ",""), Is.EqualTo("here\n"));
     }
 }

@@ -37,7 +37,7 @@ namespace funcscript.funcs.logic
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var condition = FuncScript.Dref(pars.GetParameter(null, 0));
+            var condition = FuncScript.Dref(pars.GetParameter(null, 0),false);
             if (!(condition is bool))
                 throw new error.TypeMismatchError("The first parameter must be a boolean value when dereferenced.");
 

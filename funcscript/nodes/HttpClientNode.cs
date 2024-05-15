@@ -4,7 +4,7 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-public class HttpClientNode
+public class HttpClientNode:ObjectKvc
 {
     private object _url = null;
     private object _inData = null;
@@ -17,13 +17,14 @@ public class HttpClientNode
     private SignalSinkInfo _doneSink = new SignalSinkInfo();
     private SignalSinkInfo _errorSink = new SignalSinkInfo();
 
-    public ValueSinkDelegate Headers => val => { _headers = val; };
-    public ValueSinkDelegate Url => val => { _url = val; };
-    public ValueSinkDelegate InData => val => { _inData = val; };
-    public ValueReferenceDelegate OutData =>_outData;
-    public ValueReferenceDelegate ErrorData =>_errorData;
-    public SignalSourceDelegate Success => (n, e) => _doneSink.SetSink(n, e);
-    public SignalSourceDelegate Fail => (n, e) => _errorSink.SetSink(n, e);
+    public HttpClientNode() => base.SetVal(this);
+    public ValueSinkDelegate Headers => new ValDel(val => { _headers = val; });
+    public ValueSinkDelegate Url =>new ValDel( val => { _url = val; });
+    public ValueSinkDelegate InData =>new ValDel( val => { _inData = val; });
+    public ValueReferenceDelegate OutData => _outData;
+    public ValueReferenceDelegate ErrorData => _errorData;
+    public SignalSourceDelegate Success =>new SigSource( (n, e) => _doneSink.SetSink(n, e));
+    public SignalSourceDelegate Fail =>new SigSource( (n, e) => _errorSink.SetSink(n, e));
 
     async Task<(HttpRequestMessage, HttpResponseMessage)> SendGetRequest(string url)
     {
@@ -58,7 +59,7 @@ public class HttpClientNode
         }
     }
 
-    public SignalListenerDelegate GetJson => async () =>
+    public SignalListenerDelegate GetJson =>new SigSink( async () =>
     {
         try
         {
@@ -78,9 +79,9 @@ public class HttpClientNode
             _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
-    };
+    });
 
-    public SignalListenerDelegate GetText => async () =>
+    public SignalListenerDelegate GetText => new SigSink(async () =>
     {
         try
         {
@@ -106,9 +107,9 @@ public class HttpClientNode
             _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
-    };
+    });
 
-    public SignalListenerDelegate PostJson => async () =>
+    public SignalListenerDelegate PostJson => new SigSink(async () =>
     {
         try
         {
@@ -116,12 +117,12 @@ public class HttpClientNode
             _outData.Val = null;
             string url = FuncScript.Dref(_url).ToString();
             object data = FuncScript.Dref(_inData);
-            var jsonData =FuncScript.FormatToJson(data);
+            var jsonData = FuncScript.FormatToJson(data);
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
             HttpResponseMessage response = await SendPostRequest(url, content);
             string responseBody = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Json\n"+jsonData);
+            Console.WriteLine("Json\n" + jsonData);
             _outData.Val = FuncScript.Evaluate(null, responseBody);
             response.Dispose();
             _doneSink.Signal();
@@ -131,14 +132,14 @@ public class HttpClientNode
             _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
-    };
+    });
 }
 
 public class CreateHttpClientNodeFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new ObjectKvc(new HttpClientNode());
+        return new HttpClientNode();
     }
 
     public string ParName(int index)

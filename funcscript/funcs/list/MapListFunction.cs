@@ -68,7 +68,7 @@ namespace funcscript.funcs.list
 
         public object DrefEvaluate(IParameterList pars)
         {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
+            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
             var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
             return EvaluateInternal(null, par0, par1,true); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
         }

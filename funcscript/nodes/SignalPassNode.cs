@@ -3,26 +3,18 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-class SignalPassNode
+class SignalPassNode:SignalListenerDelegate,SignalSourceDelegate
 {
     private SignalSinkInfo _sinks = new SignalSinkInfo();
-
-    public SignalPassNode()
-    {
-    }
-
-    // Signal to fire the event
-    public SignalListenerDelegate Fire => () => _sinks.Signal();
-
-    // Signal source delegate that can be connected to other nodes
-    public SignalSourceDelegate OnFire => _sinks.SetSink;
+    public void Activate() => _sinks.Signal();
+    public void SetSource(object listener, object catcher)=>_sinks.SetSink(listener,catcher);
 }
 
 public class CreateSignalPassFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new ObjectKvc(new SignalPassNode());
+        return new SignalPassNode();
     }
 
     public string ParName(int index) => null;  // No parameters needed

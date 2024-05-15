@@ -6,44 +6,31 @@ using funcscript.model;
 
 namespace funcscript.nodes
 {
-    public class AnySignalNode
+    public class AnySignalNode :ObjectKvc, SignalSourceDelegate
     {
-
-        void Fire()
-        {
-            _sink.Signal();
-        }
-
-        void Catcher()
-        {
-            _fail.Signal();
-        }
-    
-
-    public AnySignalNode(IEnumerable<SignalSourceDelegate> sources)
+        private readonly SignalSinkInfo _sink = new SignalSinkInfo();
+        private readonly SignalSinkInfo _fail = new SignalSinkInfo();
+        void Fire() => _sink.Signal();
+        void Catcher() => _fail.Signal();
+        public AnySignalNode() => base.SetVal(this);
+        public AnySignalNode(IEnumerable<SignalSourceDelegate> sources)
         {
             foreach (var source in sources)
             {
-                source.Invoke(Fire,Catcher);
+                source.SetSource(Fire, Catcher);
             }
         }
-
-        private SignalSinkInfo _sink = new SignalSinkInfo();
-        private SignalSinkInfo _fail= new SignalSinkInfo();
-
-        public SignalSourceDelegate Done => (x, y) => 
-            _sink.SetSink(x, y);
-        public SignalSourceDelegate Fail => (x, y) => 
-            _fail.SetSink(x, y);
-
-        
+        public void SetSource(object listener, object catcher)
+        {
+            _sink.SetSink(listener, catcher);
+        }
     }
 
     public class AnySignalFunction : IFsFunction, IFsDref
     {
-        public const string SYMBOL = "AnySignal";
+        const string SYMBOL = "AnySignal";
         public string Symbol => SYMBOL;
-        public int MaxParsCount => -1;  // Variable number of parameters
+        public int MaxParsCount => 1;
         public CallType CallType => CallType.Prefix;
         public int Precidence => 0;
 
@@ -51,13 +38,12 @@ namespace funcscript.nodes
         {
             var parBuilder = new CallRefBuilder(this, parent, pars);
             var par0 = parBuilder.GetParameter(0);
-
             if (par0 is ValueReferenceDelegate)
                 return parBuilder.CreateRef();
 
             if (!(par0 is FsList list))
-                throw new TypeMismatchError($"List of signal sinks expected, found {(par0 == null ? "null" : par0.GetType().ToString())}.");
-
+                throw new TypeMismatchError(
+                    $"List of signal sinks expected, found {(par0 == null ? "null" : par0.GetType().ToString())}.");
             return CreateAnySignalNode(list);
         }
 
@@ -69,7 +55,7 @@ namespace funcscript.nodes
 
         private object CreateAnySignalNode(FsList list)
         {
-            return new AnySignalNode( list.Select(l =>
+            return new AnySignalNode(list.Select(l =>
             {
                 if (l is SignalSourceDelegate src)
                 {
@@ -79,7 +65,7 @@ namespace funcscript.nodes
                 {
                     throw new TypeMismatchError("All sources should be signal sources");
                 }
-            }) ).Done;
+            }));
         }
 
         public string ParName(int index)

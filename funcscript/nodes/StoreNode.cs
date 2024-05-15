@@ -1,37 +1,24 @@
-using System.Security.Authentication.ExtendedProtection;
 using funcscript.core;
 using funcscript.model;
-using Newtonsoft.Json.Serialization;
 
 namespace funcscript.nodes;
 
-public class StoreNode:ListenerCollection, ValueReferenceDelegate
+public class StoreNode :ListenerCollection, ValueReferenceDelegate, ValueSinkDelegate,SignalListenerDelegate
 {
     private object _value = null;
     private object _source = null;
-    private bool _hasChanges = false;
-
-    public ValueSinkDelegate In => val =>
+    
+    public object Dref()
     {
-        this._source = val;
-    };
-
-    public ValueReferenceDelegate Out => this;
-    public SignalListenerDelegate Store => ()=>
+        return _value;
+    }
+    public void SetValueSource(object valSource)=>_source = valSource;
+    public void Activate()
     {
-        _hasChanges = true;
         var dr = FuncScript.Dref(_source);
         this._value = dr;
         base.Notify();
-    };
-
-    public object Dref()
-    {
-        _hasChanges = false;
-        return _value;
     }
-
-    public bool HasChanges => _hasChanges;
 }
 
 public class CreateStoreFunction : IFsFunction
@@ -42,9 +29,9 @@ public class CreateStoreFunction : IFsFunction
         if (pars.Count > 0)
         {
             var source = pars.GetParameter(parent, 0);
-            n.In(source);
+            n.SetValueSource(source);
         }
-        return new ObjectKvc(n);      
+        return n;      
     }
 
     public string ParName(int index)

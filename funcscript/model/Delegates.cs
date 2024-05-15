@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data;
+using System.Reflection.Metadata;
+using System.Security.AccessControl;
 
 namespace funcscript.model;
 
@@ -20,10 +22,24 @@ public class ListenerCollection
         }
     }
 
-    public virtual void Connect()
+    public void AddListener(Action listener)
     {
-        
+        this.listeners.Add(listener);
     }
+
+}
+public class ListenerCollectionKvc:ObjectKvc
+{
+    private readonly List<Action> listeners = new List<Action>();
+    public ListenerCollectionKvc() => base.SetVal(this);
+    public void Notify()
+    {
+        foreach (var l in listeners)
+        {
+            l.Invoke();
+        }
+    }
+
     public void AddListener(Action listener)
     {
         this.listeners.Add(listener);
@@ -31,11 +47,71 @@ public class ListenerCollection
 
 }
 
-public delegate void ValueSinkDelegate(object val);
+public interface ValueSinkDelegate
+{
+    void SetValueSource(object valSource);
+};
 
-public delegate void SignalListenerDelegate();
+public class ValSink : ValueSinkDelegate
+{
+    private readonly Action<object> _action;
+    public ValSink(Action<object> action) => _action = action;
+    public void SetValueSource(object valSource) => _action(valSource);
+}
 
-public delegate void SignalSourceDelegate(object listener, object catcher);
+public class ValDel:ValueSinkDelegate
+{
+    private readonly Action<object> _setSink;
+
+    public ValDel(Action<object> setSink)
+    {
+        this._setSink = setSink;
+    }
+
+    public void SetValueSource(object valSource)
+    {
+        _setSink(valSource);
+    }
+}
+
+public interface SignalListenerDelegate
+{
+    void Activate();
+}
+
+public class SigSink:SignalListenerDelegate
+{
+    private readonly Action _setSink;
+
+    public SigSink(Action setSink)
+    {
+        this._setSink = setSink;
+    }
+
+    public void Activate()
+    {
+        _setSink();
+    }
+}
+
+public interface SignalSourceDelegate
+{
+    void SetSource(object listener, object catcher);
+}
+public class SigSource:SignalSourceDelegate
+{
+    Action<object, object> _action;
+
+    public SigSource(Action<object, object> action)
+    {
+        this._action = action;
+    }
+
+    public void SetSource(object listener, object catcher)
+    {
+        _action(listener, catcher);
+    }
+}
 
 
 public class ConstantValue : ValueReferenceDelegate
@@ -129,7 +205,7 @@ public class SignalSinkInfo
         try
         {
             if (FuncScript.Dref(_sink) is SignalListenerDelegate s)
-                s();
+                s.Activate();
         }
         catch (Exception ex)
         {
@@ -141,7 +217,7 @@ public class SignalSinkInfo
                         Message = ex.Message,
                         ErrorType = ex.GetType().ToString(),
                     });
-                s();
+                s.Activate();
                 ThreadErrorObjects.TryRemove(System.Threading.Thread.CurrentThread.ManagedThreadId, out _);
             }
             else

@@ -21,7 +21,20 @@ interface ErrorItem {
   interface ErrorData {
     errors: ErrorItem[];
   }
-  
+
+  const CodeEditor:React.FC<{expression:string|null,setExpression:(exp:string)=>void}> = ({ expression, setExpression }) => {
+    const editorRef = useRef(null);
+    useCodeMirror({
+        container: editorRef.current,
+        value: expression??"",
+        extensions: [javascript()],
+        onChange: value => {
+            setExpression(value);
+        },
+    });
+
+    return <div ref={editorRef} style={{ height: '100%', overflow: 'scroll', border: '1px solid #ccc' }} />;
+};
 const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
     const [expression, setExpression] = useState<string | null>(null);
@@ -127,7 +140,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
             switch(msg.cmd)
             {
                 case "log":
-                    setTabIndex(1);
+                    setTabIndex(2);
                     setMessages(prev => [...prev, msg.data]);
                     break;
                 case "clear":
@@ -146,16 +159,11 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const renderTabContent = () => {
         switch (tabIndex) {
             case 0:
-                return <pre style={{
-                    whiteSpace: 'pre-wrap',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    border: '1px solid #ccc',
-                    padding: '10px',
-                    fontFamily: '"Lucida Console", monospace',
-                  }}>{resultText}</pre>
+                return <CodeEditor expression={expression} setExpression={setExpression} />;
             case 1:
-                return <TextLogger messages={messages}/>;
+                return <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word', border: '1px solid #ccc', padding: '10px', fontFamily: '"Lucida Console", monospace' }}>{resultText}</pre>;
+            case 2:
+                return <TextLogger messages={messages} />;
             default:
                 return null;
         }
@@ -163,21 +171,10 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
 
     const editorRef = useRef<HTMLDivElement | null>(null);
     
-    const { state, view }= useCodeMirror({
-        container: editorRef.current!,
-        value: expression || '',
-        extensions: selectedNode?.expressionType===ExpressionType.FuncScript?[javascript()]:[],
-        onChange:  value => {
-            setExpression(value);
-            setSaveStatus('Unsaved changes');
-        },
-    });
-    
-
 
     return (
-        <Grid container spacing={2}>
-            <Grid item xs={8}>
+        <Grid container spacing={2} style={{ height: '100vh' }}> {/* Adjust the height as needed */}
+            <Grid item xs={8} style={{ display: 'flex', flexDirection: 'column' }}>
                 <Toolbar>
                     <IconButton onClick={executeExpression} color="primary">
                         <PlayArrowIcon />
@@ -192,28 +189,30 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                         {selectedNode?.path}
                     </Typography>
                 </Toolbar>
-                <div ref={editorRef}  style={{ height: '600px',overflow: 'auto', border: '1px solid #ccc' }} />
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
+                    <Tab label="Code Editor" />
                     <Tab label="Result" />
                     <Tab label="Log" />
                 </Tabs>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Box sx={{ flexGrow: 1, borderBottom: 1, borderColor: 'divider', overflow: 'auto' }}>
                     {renderTabContent()}
                 </Box>
             </Grid>
-            <Grid item xs={4}>
-                {activeSessionId && (<EvalNodeComponent
-                    node={{
-                        name: "Root Node",
-                        expressionType: ExpressionType.FuncScript,
-                        childrenCount: 0,
-                        expression: null,
-                    }}
-                    sessionId={activeSessionId}
-                    onSelect={handleNodeSelect}
-                    onModify={() => {}}
-                    selectedNode={selectedNode?.path}
-                />)}
+            <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column' }}>
+                {sessionId && (
+                    <EvalNodeComponent
+                        node={{
+                            name: "Root Node",
+                            expressionType: ExpressionType.FuncScript,
+                            childrenCount: 0,
+                            expression: null,
+                        }}
+                        sessionId={sessionId}
+                        onSelect={handleNodeSelect}
+                        onModify={() => {}}
+                        selectedNode={selectedNode?.path}
+                    />
+                )}
             </Grid>
         </Grid>
     );

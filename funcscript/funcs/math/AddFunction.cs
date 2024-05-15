@@ -309,7 +309,7 @@ namespace funcscript.funcs.math
         {
             var ret = EvaluateInteral( pars, (i) =>
             {
-                var ret = FuncScript.Dref(pars.GetParameter(null, i));
+                var ret = FuncScript.Dref(pars.GetParameter(null, i),false);
                 return (true, ret);
             });
             return ret;

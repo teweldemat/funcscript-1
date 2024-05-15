@@ -5,25 +5,24 @@ using funcscript.error;
 using funcscript.model;
 
 namespace funcscript.nodes;
-public class SigSequenceNode
+public class SigSequenceNode:SignalSourceDelegate,SignalListenerDelegate
     {
         public FsList Items;
-
         private SignalSinkInfo _sink = new SignalSinkInfo();
-        public SignalSourceDelegate Done => (x, y) => 
-            _sink.SetSink(x, y);
-        public SignalListenerDelegate Listener => ()=>
+        public void SetSource(object listener, object catcher)=>
+            _sink.SetSink(listener,catcher);
+
+        public void Activate()
         {
             if(Items==null || Items.Length==0)
                 return;
             foreach (var item in Items)
             {
-                object sink=null;
+                object sink;
                 object fault=null;
                 try
                 {
-                    var litem = FuncScript.Dref(item);
-                    if (litem is FsList pair)
+                    if (item is FsList pair)
                     {
                         if (pair.Length != 2)
                             throw new EvaluationTimeException(
@@ -33,14 +32,15 @@ public class SigSequenceNode
                     }
                     else
                     {
-                        sink = litem;
+                        sink = item;
                     }
-                    if (FuncScript.Dref(sink) is SignalListenerDelegate s)
-                        s();
+                    if (FuncScript.Dref(sink,true) is SignalListenerDelegate s)
+                            s.Activate();
+                    
                 }
                 catch (Exception ex)
                 {
-                    if (FuncScript.Dref(fault) is SignalListenerDelegate s)
+                    if (FuncScript.Dref(fault,true) is SignalListenerDelegate s)
                     {
                         var x = ex;
                         var sb = new StringBuilder();
@@ -57,7 +57,7 @@ public class SigSequenceNode
                                 Message = sb.ToString(),
                                 ErrorType = ex.GetType().ToString(),
                             });
-                        s();
+                        s.Activate();
                         SignalSinkInfo.ThreadErrorObjects.TryRemove(System.Threading.Thread.CurrentThread.ManagedThreadId, out _);
                     }
                     else
@@ -68,9 +68,8 @@ public class SigSequenceNode
                 }
             }
             _sink.Signal();
-            
-        };
-}
+        }
+    }
 public class SigSequenceFunction : IFsFunction, IFsDref
 {
     public const string SYMBOL = "SigSequence";
@@ -112,9 +111,8 @@ public class SigSequenceFunction : IFsFunction, IFsDref
 
     private object CreateSigSequenceNode(FsList list)
     {
-        return new SigSequenceNode {Items = list}.Listener;
+        return new SigSequenceNode {Items = list};
     }
-
 
     public string ParName(int index)
     {
