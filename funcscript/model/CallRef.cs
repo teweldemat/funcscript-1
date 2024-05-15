@@ -43,7 +43,7 @@ public partial class CallRef : ListenerCollection, IFsDataProvider, ValueReferen
                 return _drefValue;
             var pars = new ParList { Parent = this };
 
-            var f = FuncScript.Dref(_vals[0]);
+            var f = FuncScript.Dref(_vals[0],false);
             if (f is IFsFunction func)
             {
                 if (func is IFsDref fdref)
@@ -62,14 +62,14 @@ public partial class CallRef : ListenerCollection, IFsDataProvider, ValueReferen
 
             else if (f is FsList lst)
             {
-                var index = pars.GetParameter(null, 0);
+                var index = FuncScript.Dref(pars.GetParameter(null, 0),false);
                 object ret;
                 if (index is int i)
                 {
                     if (i < 0 || i >= lst.Length)
                         ret = null;
                     else
-                        ret = FuncScript.Dref(lst[i]);
+                        ret = FuncScript.Dref(lst[i],false);
                 }
                 else
                     ret = null;
@@ -79,7 +79,7 @@ public partial class CallRef : ListenerCollection, IFsDataProvider, ValueReferen
 
             else if (f is KeyValueCollection collection)
             {
-                var index = pars.GetParameter(null, 0);
+                var index = FuncScript.Dref(pars.GetParameter(null, 0),false);
 
                 object ret;
                 if (index is string key)

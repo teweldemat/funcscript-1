@@ -46,7 +46,8 @@ namespace funcscript.funcs.text
         {
             if (string.IsNullOrEmpty(format))
                 return str;
-
+            if (str == null)
+                return null;
             switch (format.ToLower())
             {
                 case "hex":

@@ -11,6 +11,7 @@ import { json } from 'stream/consumers';
 import { useCodeMirror } from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { isDisabled } from '@testing-library/user-event/dist/utils';
+import ReactMarkdown from 'react-markdown';
 
 interface ErrorItem {
     type: string;
@@ -45,6 +46,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const [messages,setMessages]=useState<string[]>([])
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [activeSessionId,setActiveSessionId]=useState<string|null>(null);
+    const [markdown,setMarkdown]=useState<string>('');
 
     useEffect(() => {
         if(activeSessionId!=null)
@@ -146,6 +148,10 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                 case "clear":
                     setMessages(prev=>[]);
                     break;
+                case "markdown":
+                    setTabIndex(3);
+                    setMarkdown(msg.data);
+                    break;
             }
             
         };
@@ -159,11 +165,16 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const renderTabContent = () => {
         switch (tabIndex) {
             case 0:
-                return <CodeEditor expression={expression} setExpression={setExpression} />;
+                return <CodeEditor expression={expression} setExpression={(e)=>{
+                    setExpression(e);
+                    setSaveStatus('Unsaved changes');  
+                }} />;
             case 1:
                 return <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word', border: '1px solid #ccc', padding: '10px', fontFamily: '"Lucida Console", monospace' }}>{resultText}</pre>;
             case 2:
                 return <TextLogger messages={messages} />;
+            case 3:
+                return <ReactMarkdown children={markdown} />
             default:
                 return null;
         }
@@ -190,9 +201,10 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                     </Typography>
                 </Toolbar>
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
-                    <Tab label="Code Editor" />
+                    <Tab label="Script" />
                     <Tab label="Result" />
                     <Tab label="Log" />
+                    <Tab label="Document" />
                 </Tabs>
                 <Box sx={{ flexGrow: 1, borderBottom: 1, borderColor: 'divider', overflow: 'auto' }}>
                     {renderTabContent()}

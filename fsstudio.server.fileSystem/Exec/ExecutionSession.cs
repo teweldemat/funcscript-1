@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using fsstudio.server.fileSystem.exec.funcs;
 using funcscript;
 using funcscript.core;
 using funcscript.funcs.misc;
@@ -19,16 +20,13 @@ public class ExecutionSession : IFsDataProvider
     public IFsDataProvider ParentProvider => _provider;
 
 
-    void UpdateFile()
-    {
-        System.IO.File.WriteAllText(fileName, System.Text.Json.JsonSerializer.Serialize(_nodes));
-    }
-
-
    
-    public ExecutionSession(string fileName)
+
+
+    private RemoteLogger logger;
+    public ExecutionSession(string fileName,RemoteLogger logger)
     {
-        
+        this.logger = logger;
         this.fileName = fileName;
         var json=System.IO.File.ReadAllText(fileName);
         InitFromNodes(System.Text.Json.JsonSerializer.Deserialize<List<ExecutionNode>>(json)??[]);
@@ -42,12 +40,18 @@ public class ExecutionSession : IFsDataProvider
         _sessionVars = new ObjectKvc(new
         {
             app=new ObjectKvc(_appNode=new FssAppNode()),
+            markdown=new CreateMarkdownNodeFunction(logger),
         });
         this._provider = new KvcProvider(_sessionVars, new DefaultFsDataProvider());
     }
-    public ExecutionSession(IEnumerable<ExecutionNode> nodes)
+    public ExecutionSession(IEnumerable<ExecutionNode> nodes,RemoteLogger logger)
     {
+        this.logger = logger;
         InitFromNodes(nodes);
+    }
+    void UpdateFile()
+    {
+        System.IO.File.WriteAllText(fileName, System.Text.Json.JsonSerializer.Serialize(_nodes));
     }
    
     private ExecutionNode? FindNodeByPath(string nodePath)

@@ -329,5 +329,54 @@ public class RefTests2
         Assert.That(logger.LogText,Is.EqualTo("here\nthere\n"));
 
     }
+    [Test]
+    public void LambdaCompleReferenceIssue()
+    {
+        var delay = 100;
+        var n = 3;
+        // Setup - Create an initial script and environment
+        var script = @"
+{
+  m:(y,l)=>{
+            sp:signalpass();
+            start:reduce(reverse(y),(a,s,i)=>{
+            pair:l(a,len(y)-1-i);
+              pair[1]->s; 
+              return pair[0];},sp);
+            done:sp;
+        };
+  
+  timers:list map (s,j)=>{
+      t:timer(100,false);
+      start:t;
+      success:t;
+  };
+  
+  casc:m(timers, (x,k)=>[x.start>>logger(f'going {k}-{list[k]}'),x.success]).start;
+  list_st:store(['a']);
+  list:list_st;
+
+  app.start->list_st
+    >>logger('one')
+    >>casc;
+  
+}";
+
+        var logger = new RefsTest.StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        sink.Signal();
+        System.Threading.Thread.Sleep(delay*2*n);
         
+        Assert.That(logger.LogText,Is.EqualTo("one\ngoing 0-a\n"));
+    }       
 }
