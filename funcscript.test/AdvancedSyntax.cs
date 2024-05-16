@@ -42,6 +42,7 @@ public class AdvancedSyntax
     [TestCase("[4,5,6] reduce (x,s)=>s+x ~ -2",13)]
     [TestCase("(series(0,4) reduce (x,s)=>s+x ~ 0)",6)]
     [TestCase("series(0,4) reduce (x,s)=>s+x ~ 0",6)]
+    [TestCase("(series(1,3) map (a)=>a*a) reduce (x,s)=>s+x ~ 5",19)]
     public void GeneralInfix(string exp,object expected)
     {
         var res = FuncScript.Evaluate(exp);
