@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace funcscript.funcs.logic
 {
+    
 
     public class InFunction : IFsFunction
     {

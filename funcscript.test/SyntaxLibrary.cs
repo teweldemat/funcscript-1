@@ -8,8 +8,9 @@ namespace funcscript.test
 {
     public class SyntaxLibrary
     {
-        void TestResult(string exp, object expected, Func<object, object> tran = null)
+        void TestResult(string exp, object expected,  Func<object, object> tran = null,string errorType=null)
         {
+           
             if (expected is Type)
             {
                 Assert.Throws((Type)expected, () =>
@@ -21,7 +22,13 @@ namespace funcscript.test
             else
             {
                 var res = Tests.AssertSingleResult(exp);
-                Assert.AreEqual(expected, res);
+                if (errorType != null)
+                {
+                    Assert.That(res,Is.TypeOf<FsError>());
+                    Assert.That(((FsError)res).ErrorType,Is.EqualTo(errorType));
+                }
+                else
+                    Assert.AreEqual(expected, res);
             }
 
         }
@@ -71,23 +78,23 @@ namespace funcscript.test
         [TestCase(@"null=null", true)]
 
         [TestCase(@"12=[1,2,3,4]", false)] //list data to the mix
-        [TestCase(@"12>[1,2,3,4]", typeof(error.EvaluationException))]
-        [TestCase(@"12>=[1,2,3,4]", typeof(error.EvaluationException))]
-        [TestCase(@"12<[1,2,3,4]", typeof(error.EvaluationException))]
-        [TestCase(@"12<=[1,2,3,4]", typeof(error.EvaluationException))]
+        [TestCase(@"12>[1,2,3,4]", null,FsError.ERROR_TYPE_MISMATCH)]
+        [TestCase(@"12>=[1,2,3,4]", null,FsError.ERROR_TYPE_MISMATCH)]
+        [TestCase(@"12<[1,2,3,4]", null,FsError.ERROR_TYPE_MISMATCH)]
+        [TestCase(@"12<=[1,2,3,4]", null,FsError.ERROR_TYPE_MISMATCH)]
 
 
-        [TestCase(@"1>2>3", typeof(error.EvaluationException))] //chained comparision
-        [TestCase(@"1<2<3", typeof(error.EvaluationException))]
-        [TestCase(@"1=2=3", typeof(error.EvaluationException))]
-        [TestCase(@"1!=2!=3", typeof(error.EvaluationException))]
+        [TestCase(@"1>2>3", null,FsError.ERROR_PARAMETER_COUNT_MISMATCH)] //chained comparision
+        [TestCase(@"1<2<3", null,FsError.ERROR_PARAMETER_COUNT_MISMATCH)]
+        [TestCase(@"1=2=3", null,FsError.ERROR_PARAMETER_COUNT_MISMATCH)]
+        [TestCase(@"1!=2!=3", null,FsError.ERROR_PARAMETER_COUNT_MISMATCH)]
 
         [TestCase(@"if(2=null,0,1)", 1)]  //how would if deal with null condition
 
         [TestCase(@"not(1=1)", false)] //not function
         [TestCase(@"not(3=1)", true)]
-        [TestCase(@"not(null)", null)]
-        [TestCase(@"not(""0"")", typeof(error.EvaluationException))]
+        [TestCase(@"not(null)", null,FsError.ERROR_TYPE_MISMATCH)]
+        [TestCase(@"not(""0"")",null, FsError.ERROR_TYPE_MISMATCH)]
 
 
 
@@ -139,9 +146,9 @@ namespace funcscript.test
         [TestCase(@"true or false and true", true)]
 
         [TestCase(@"false and ([34]>5)", false)] //don't evaluate uncessary
-        [TestCase(@"true and ([34]>5)", typeof(error.EvaluationException))]
+        [TestCase(@"true and ([34]>5)", null,FsError.ERROR_TYPE_MISMATCH)]
 
-        [TestCase(@"false or  ([34]>5)", typeof(error.EvaluationException))]
+        [TestCase(@"false or  ([34]>5)", null,FsError.ERROR_TYPE_MISMATCH)]
         [TestCase(@"true or ([34]>5)", true)]
 
 
@@ -166,10 +173,12 @@ namespace funcscript.test
         [TestCase(@"{x:[4,5,6];return x[1]}",5)]
         [TestCase("[2,3,4](0)", 2)]
         [TestCase("([[2,3,4],[3,4,5]])(0)(1)", 3)]
-            
-        public void SoManyTests_1(string expr, object res)
+        [TestCase("1!=2",true)]
+        [TestCase("1!=1",false)]
+        [TestCase("1*2*3*4",24)]
+        public void SoManyTests_1(string expr, object res,string errorType=null)
         {
-            TestResult(expr,res);
+            TestResult(expr,res,errorType:errorType);
         }
 
         [Test]

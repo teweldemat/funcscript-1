@@ -23,6 +23,7 @@ namespace funcscript
         ValRef,
         ValSink,
         SigSource,
-        SigSink
+        SigSink,
+        Error
     }
 }

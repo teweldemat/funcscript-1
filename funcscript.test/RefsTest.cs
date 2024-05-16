@@ -86,6 +86,82 @@ public class RefsTest
         sink.Signal();
         Assert.That(logger.LogText, Is.EqualTo("here\n"));
     }
+    [Test]
+    public void TestConnectionSequence()
+    {
+        var exp =
+            @"
+{
+    app.start->logger('here')>>logger('there');    
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        var sink = new SignalSinkInfo();
+        var res = FuncScript.EvaluateWithVars(exp,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.NotNull(res);
+        Assert.That(res,Is.AssignableTo<KeyValueCollection>() );
+        sink.Signal();
+        Assert.That(logger.LogText, Is.EqualTo("here\nthere\n"));
+    }
+    [Test]
+    public void TestConnectionSequence2()
+    {
+        var exp =
+            @"
+{
+    x:logger('here')>>logger('there');    
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        var sink = new SignalSinkInfo();
+        var res = FuncScript.EvaluateWithVars(exp,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.NotNull(res);
+        Assert.That(res,Is.AssignableTo<KeyValueCollection>() );
+        var kvc = res as KeyValueCollection;
+        var _x = kvc.GetData("x");
+        Assert.That(_x,Is.TypeOf<SigSequenceNode>());
+        var s = (SigSequenceNode)_x;
+        
+    }
+    
+    [Test]
+    public void TestConnectionSequence3()
+    {
+        var exp =
+            @"
+{
+    app.start->logger('here')|logger('there');    
+}";
+        var logger = new StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        var sink = new SignalSinkInfo();
+        var res = FuncScript.EvaluateWithVars(exp,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        Assert.NotNull(res);
+        Assert.That(res,Is.AssignableTo<KeyValueCollection>() );
+        var kvc = res as KeyValueCollection;
+        
+    }
 
 
     [Test]

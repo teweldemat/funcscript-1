@@ -26,15 +26,25 @@ namespace funcscript
         {
             foreach (var t in a.GetTypes())
             {
-                if (t.GetInterface(typeof(IFsFunction).Name) != null)
+                if (t.GetInterface(nameof(IFsFunction)) != null)
                 {
-                    if (t.GetConstructor(new Type[0]) != null) //load only functions with default constructor
+                    if (t.GetConstructor(Type.EmptyTypes) != null) //load only functions with default constructor
                     {
                         var f = Activator.CreateInstance(t) as IFsFunction;
                         var lower = f.Symbol.ToLower();
-                        if (s_funcByName.ContainsKey(lower))
-                            throw new Exception($"{f.Symbol} alraedy defined");
-                        s_funcByName.Add(lower, f);
+                        if (!s_funcByName.TryAdd(lower, f))
+                            throw new Exception($"{f.Symbol} already defined");
+                        var aliace=t.GetCustomAttribute<FunctionAliasAttribute>();
+                        if (aliace != null)
+                        {
+                            foreach (var al in aliace.Aliaces)
+                            {
+                                lower = al.ToLowerInvariant();
+                                if (!s_funcByName.TryAdd(lower, f))
+                                    throw new Exception($"{f.Symbol} already defined");
+                            }
+
+                        }
                     }
                 }
             }

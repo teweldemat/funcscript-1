@@ -1,4 +1,5 @@
 ﻿using funcscript.core;
+using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
@@ -30,14 +31,12 @@ namespace funcscript.funcs.logic
             }
 
             if (par0.GetType() != par1.GetType())
-                throw new error.TypeMismatchError(
-                    $"Function {this.Symbol} can't compare incompatible types.");
+                return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol}: Can't compare incompatible types");
 
             if (par0 is IComparable)
                 return ((IComparable)par0).CompareTo(par1) <= 0;
 
-            throw new error.TypeMismatchError(
-                $"Function {this.Symbol} can't compare these data types: {par0.GetType()}");
+            return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol} function can't compare these data types: {par0.GetType()}");
         }
 
         public string ParName(int index)

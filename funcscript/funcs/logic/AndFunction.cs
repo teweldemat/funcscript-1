@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
@@ -26,10 +27,11 @@ namespace funcscript.funcs.logic
             {
                 var par = pars.GetParameter(parent, i);
 
-                if (par == null)
-                    return null;
+                if (!(par is bool b))
+                    return new FsError(FsError.ERROR_TYPE_MISMATCH,
+                        $"{this.Symbol} doesn't apply to this type:{(par == null ? "null" : par.GetType())} ");
 
-                if (par is bool && !(bool)par)
+                if(!b)
                     return false;
             }
 

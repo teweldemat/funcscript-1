@@ -1,10 +1,8 @@
 ﻿using funcscript.block;
 using funcscript.funcs.math;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Net.Mime;
 using System.Text;
-using System.Xml.Serialization;
+using System.Text.RegularExpressions;
+using funcscript.funcs.logic;
 using funcscript.model;
 using funcscript.nodes;
 
@@ -40,7 +38,9 @@ namespace funcscript.core
             NormalErrorSink,
             SigSequence,
             ErrorKeyWord,
-            SignalConnection
+            SignalConnection,
+            GeneralInfixExpression,
+            PrefixOperatorExpression
         }
 
         public class SyntaxErrorData
@@ -65,7 +65,7 @@ namespace funcscript.core
             public IList<ParseNode> Childs;
 
             public ParseNode(ParseNodeType type, int pos, int length)
-                : this(type, pos, length, null)
+                : this(type, pos, length, Array.Empty<ParseNode>())
             {
             }
 
@@ -78,9 +78,20 @@ namespace funcscript.core
             }
         }
 
-        static String[] s_SingleLetterOps = new String[] { "+", "*", "-", "/", "^", ">", "<", "%", "=" };
-        static String[] s_DoubleLetterOps = new String[] { ">=", "<=", "!=", "??", "?!", "?." };
-
+        
+        static string[][] s_operatorSymols =
+        {
+            new [] {"^"}, 
+            new [] {"*",  "/","%"}, 
+            new []{ "+","-"}, 
+            new [] {">=", "<=", "!=",">", "<","in"},
+            new [] {"=","??", "?!", "?."},
+            new []{"or","and"},
+            new [] {"|"},
+            new [] {">>"}, 
+        };
+        
+        private static string[][] s_prefixOp = { new string[]{"!",NotFunction.SYMBOL},new string[]{"-",NegateFunction.SYMBOL} };
 
         const string KW_RETURN = "return";
         const string KW_CASE = "case";
@@ -380,81 +391,27 @@ namespace funcscript.core
             return i;
         }
 
-        static int GetDoubleLetterOps(IFsDataProvider context, string exp, int index, out IFsFunction oper,
+        static int GetOperator(IFsDataProvider parseContext,string[] candidates, string exp, int index,out string matechedOp, out IFsFunction oper,
             out ParseNode parseNode)
         {
-            parseNode = null;
-            oper = null;
-            if (index >= exp.Length - 1)
-                return index;
-            var ch1 = exp[index];
-            var ch2 = exp[index + 1];
-
-            foreach (var op in s_DoubleLetterOps)
-                if (op[0] == ch1 && op[1] == ch2)
-                {
-                    var func = context.GetData(op);
-                    if (func == null)
-                        return index;
-                    oper = (IFsFunction)func;
-                    parseNode = new ParseNode(ParseNodeType.Operator, index, 2);
-                    return index + 2;
-                }
-
-            return index;
-        }
-
-        static int GetSingleLetterOperator(IFsDataProvider context, string exp, int index, out IFsFunction oper,
-            out ParseNode parseNode)
-        {
-            parseNode = null;
-            oper = null;
-            if (index >= exp.Length)
-                return index;
-            var ch = exp[index];
-
-            foreach (var op in s_SingleLetterOps)
-                if (op[0] == ch)
-                {
-                    var func = context.GetData(op);
-                    if (func == null)
-                        return index;
-                    oper = (IFsFunction)func;
-                    parseNode = new ParseNode(ParseNodeType.Operator, index, 1);
-                    return index + 1;
-                }
-
-            return index;
-        }
-
-        static int GetOperator(IFsDataProvider infixFuncProvider, string exp, int index, out IFsFunction oper,
-            out ParseNode parseNode)
-        {
-            parseNode = null;
-            var i = GetIdentifier(exp, index, out var iden, out var idenLower, out var nodeIden);
-            if (i > index)
+            foreach (var op in candidates)
             {
-                oper = infixFuncProvider.GetData(iden) as IFsFunction;
-                if (oper == null) /*|| oper.CallType != CallType.Infix)*/
-                    return index;
-                parseNode = nodeIden;
+                var i = GetLiteralMatch(exp, index, op);
+                if (i <= index) continue;
+                
+                var func = parseContext.GetData(op);
+//                if (func is not IFsFunction f) 
+//                    continue;
+                
+                oper = func as IFsFunction;
+                parseNode = new ParseNode(ParseNodeType.Operator, index, i-index);
+                matechedOp = op;
                 return i;
             }
 
-            i = GetDoubleLetterOps(infixFuncProvider, exp, index, out oper, out var nodeOper);
-            if (i > index)
-            {
-                parseNode = nodeOper;
-                return i;
-            }
-
-            i = GetSingleLetterOperator(infixFuncProvider, exp, index, out oper, out nodeOper);
-            if (i > index)
-            {
-                parseNode = nodeOper;
-                return i;
-            }
-
+            oper = null;            
+            parseNode = null;
+            matechedOp = null;
             return index;
         }
 
@@ -562,6 +519,11 @@ namespace funcscript.core
         /// </remarks>
         static public int GetLiteralMatch(string exp, int index, params string[] keyWord)
         {
+            return GetLiteralMatch(exp, index, keyWord, out var matched); 
+        }
+        
+        static public int GetLiteralMatch(string exp, int index, string[] keyWord,out string matched)
+        {
             if (exp == null)
             {
                 throw new ArgumentNullException(nameof(exp), "The input expression cannot be null.");
@@ -583,11 +545,13 @@ namespace funcscript.core
 
                     if (matchFound)
                     {
+                        matched = k.ToLowerInvariant();
                         return index + k.Length;
                     }
                 }
             }
 
+            matched = null;
             return index;
         }
 
@@ -900,108 +864,6 @@ namespace funcscript.core
             return i;
         }
 
-        static int GetSignalSequence(IFsDataProvider context, string exp, int index,
-            out ExpressionBlock expressionBlock, out ParseNode parseNode, List<SyntaxErrorData> errors)
-        {
-            parseNode = null;
-
-            var sigSequenceExpression = new FunctionCallExpression();
-            var pars = new List<ExpressionBlock>();
-            var parNodes = new List<ParseNode>();
-            int i = index;
-            int i2;
-            while (true)
-            {
-                i = SkipSpace(exp, i);
-                if (pars.Count > 0)
-                {
-                    i2 = GetLiteralMatch(exp, i, ">>");
-                    if (i2 == i)
-                    {
-                        break;
-                    }
-
-                    i = SkipSpace(exp, i2);
-                }
-
-                i2 = GetInfixExpression(context, exp, i, out var normalPathExp, out var normalNode, errors);
-                if (i2 == i)
-                {
-                    if(pars.Count>0)
-                        errors.Add(new SyntaxErrorData(i, 0, "Next signal sink expression expected"));
-                    break;
-                }
-
-                i = SkipSpace(exp, i2);
-                if (pars.Count > 0)
-                {
-                    i2 = GetLiteralMatch(exp, i, "|");
-                    if (i2 > i)
-                    {
-                        i = SkipSpace(exp, i2);
-                        
-                        i2 = GetInfixExpression(context, exp, i, out var errorPathExp, out var errorNode, errors);
-                        if (i2 == i)
-                        {
-                            errors.Add(new SyntaxErrorData(i, 0, "Error path expected"));
-                            break;
-                        }
-                        i = SkipSpace(exp, i2);
-                        
-                        var listExp = new ListExpression();
-                        listExp.ValueExpressions = new[] { normalPathExp, errorPathExp };
-                        listExp.Pos = normalPathExp.Pos;
-                        listExp.Length = errorPathExp.Length + errorPathExp.Pos - normalPathExp.Pos;
-                        pars.Add(listExp);
-                        parNodes.Add(new ParseNode
-                        (
-                            ParseNodeType.NormalErrorSink,
-                            normalNode.Pos,
-                            errorNode.Pos + errorNode.Length - normalNode.Pos,
-                            new[] { normalNode, errorNode }
-                        ));
-                    }
-                    else
-                    {
-                        pars.Add(normalPathExp);
-                        parNodes.Add(normalNode);
-                    }
-                }
-                else
-                {
-                    pars.Add(normalPathExp);
-                    parNodes.Add(normalNode);
-                }
-            }
-
-            if (pars.Count == 0)
-            {
-                expressionBlock = null;
-                return index;
-            }
-
-            if (pars.Count == 1)
-            {
-                expressionBlock = pars[0];
-                parseNode = parNodes[0];
-                return i;
-            }
-
-            sigSequenceExpression.Function = new ReferenceBlock(SigSequenceFunction.SYMBOL);
-            sigSequenceExpression.Parameters =new []
-            {
-                new ListExpression
-                {
-                    ValueExpressions = pars.ToArray()
-                }
-            };
-            sigSequenceExpression.Pos = index;
-            sigSequenceExpression.Length = i - index;
-            parseNode = new ParseNode(ParseNodeType.SigSequence, sigSequenceExpression.Pos,
-                sigSequenceExpression.Length, parNodes);
-            expressionBlock = sigSequenceExpression;
-            return i;
-        }
 
         static int GetConnectionItem(IFsDataProvider context, string exp, int index,
             out KvcExpression.ConnectionExpression connectionExpression, out ParseNode parseNode,ParseNodeType nodeType)
@@ -1035,23 +897,18 @@ namespace funcscript.core
             }
 
             i = SkipSpace(exp, i2);
-            i2 = GetLiteralMatch(exp, i, "|");
-            if (i2 > i)
+            if (sinkExp is ListExpression lst)
             {
-                i = SkipSpace(exp, i2);
-                i2 = GetExpression(context, exp, i, out var catchExp, out var nodeCatchExp, errors);
-                if (i2 <= i)
+                if (lst.ValueExpressions.Length != 2)
                 {
-                    errors.Add(new SyntaxErrorData(i, 0, "Error sink expression expected"));
+                    errors.Add(new SyntaxErrorData(i, 0, "Exactly two items, sink and fault are expected"));
                     return index; // Failed to parse the sink expression.
                 }
-
-                i = i2;
                 connectionExpression = new KvcExpression.ConnectionExpression
                 {
                     Source = sourceExp,
-                    Sink = sinkExp,
-                    Catch = catchExp,
+                    Sink = lst.ValueExpressions[0],
+                    Catch =lst.ValueExpressions[1],
                     
                 };
                 parseNode = new ParseNode
@@ -1059,7 +916,7 @@ namespace funcscript.core
                     nodeType,
                     index,
                     i - index,
-                    new ParseNode[] { nodeSourceExp, nodeSinkExp, nodeCatchExp }
+                    new ParseNode[] { nodeSourceExp, nodeSinkExp }
                 );
             }
             else
@@ -1077,12 +934,11 @@ namespace funcscript.core
                     new ParseNode[] { nodeSourceExp, nodeSinkExp }
                 );
             }
-
-
+            
             return i; 
         }
 
-        static int GetKvcItem(IFsDataProvider context, String exp, int index, out KvcExpression.KeyValueExpression item,
+        static int GetKvcItem(IFsDataProvider context,bool nakedKvc,  String exp, int index, out KvcExpression.KeyValueExpression item,
             out ParseNode parseNode)
         {
             item = null;
@@ -1104,79 +960,85 @@ namespace funcscript.core
                 return i;
             }
 
-            i = GetIdentifier(exp, index, out var iden, out var idenLower, out var nodeIden);
-            if (i > index)
+            if (!nakedKvc)
             {
-                item = new KvcExpression.KeyValueExpression
-                {
-                    Key = iden,
-                    KeyLower = idenLower,
-                    ValueExpression = new ReferenceBlock(iden, idenLower,true)
-                    {
-                        Pos = index,
-                        Length = i - index
-                    }
-                };
-                parseNode = nodeIden;
-                return i;
-            }
+                i = GetIdentifier(exp, index, out var iden, out var idenLower, out var nodeIden);
 
-            var e3 = new List<SyntaxErrorData>();
-            i = GetSimpleString(exp, index, out iden, out nodeIden, e3);
-            if (i > index)
-            {
-                item = new KvcExpression.KeyValueExpression
+                if (i > index)
                 {
-                    Key = iden,
-                    KeyLower = idenLower,
-                    ValueExpression = new ReferenceBlock(iden, iden.ToLower(),true)
+                    item = new KvcExpression.KeyValueExpression
                     {
-                        
-                        Pos = index,
-                        Length = i - index
-                    }
-                };
-                parseNode = nodeIden;
-                return i;
+                        Key = iden,
+                        KeyLower = idenLower,
+                        ValueExpression = new ReferenceBlock(iden, idenLower, true)
+                        {
+                            Pos = index,
+                            Length = i - index
+                        }
+                    };
+                    parseNode = nodeIden;
+                    return i;
+                }
+
+                var e3 = new List<SyntaxErrorData>();
+                i = GetSimpleString(exp, index, out iden, out nodeIden, e3);
+                if (i > index)
+                {
+                    item = new KvcExpression.KeyValueExpression
+                    {
+                        Key = iden,
+                        KeyLower = idenLower,
+                        ValueExpression = new ReferenceBlock(iden, iden.ToLower(), true)
+                        {
+
+                            Pos = index,
+                            Length = i - index
+                        }
+                    };
+                    parseNode = nodeIden;
+                    return i;
+                }
             }
 
             return index;
         }
 
-        static int GetKvcExpression(IFsDataProvider context, String exp, int index, out KvcExpression kvcExpr,
+        static int GetKvcExpression(IFsDataProvider context,bool nakdeMode, String exp, int index, out KvcExpression kvcExpr,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
             parseNode = null;
             kvcExpr = null;
             var i = SkipSpace(exp, index);
-            if (i >= exp.Length || exp[i++] != '{')
-                return index; //we didn't find '{'
+            int i2;
+            if (!nakdeMode)
+            {
+                i2 = GetLiteralMatch(exp, i, "{");
+                if (i2 == i)
+                    return index;
+                i = SkipSpace(exp,i2);
+            }
 
             var kvs = new List<KvcExpression.KeyValueExpression>();
             var dataConnections = new List<KvcExpression.ConnectionExpression>();
             var signalConnections = new List<KvcExpression.ConnectionExpression>();
             var nodeItems = new List<ParseNode>();
             ExpressionBlock retExp = null;
-            int i2;
             do
             {
-                i = SkipSpace(exp, i);
                 if (kvs.Count > 0 || retExp!=null||  dataConnections.Count > 0 || signalConnections.Count > 0)
                 {
                     i2 = GetLiteralMatch(exp, i, ",", ";");
                     if (i2 == i)
                         break;
-                    i = i2;
+                    i = SkipSpace(exp,i2);
                 }
-
-                i = SkipSpace(exp, i);
                 
                 i2 = GetConnectionItem(context, exp, i, out var dataConItem, out var datanCodeConItem, ParseNodeType.DataConnection);
                 if (i2 > i)
                 {
                     dataConnections.Add(dataConItem);
                     nodeItems.Add(datanCodeConItem);
-                    i = i2;
+                    i = SkipSpace(exp,i2);
                     continue;
                 }
 
@@ -1186,12 +1048,12 @@ namespace funcscript.core
                 {
                     signalConnections.Add(sigConItem);
                     nodeItems.Add(signNodeConItem);
-                    i = i2;
+                    i = SkipSpace(exp,i2);
                     continue;
                 }
 
 
-                i2 = GetKvcItem(context, exp, i, out var otherItem, out var nodeOtherItem);
+                i2 = GetKvcItem(context,nakdeMode, exp, i, out var otherItem, out var nodeOtherItem);
                 if (i2 == i)
                     break;
                 if (otherItem.Key == null)
@@ -1206,16 +1068,25 @@ namespace funcscript.core
                 else
                     kvs.Add(otherItem);
                 nodeItems.Add(nodeOtherItem);
-                i = i2;
+                i = SkipSpace(exp,i2);
             } while (true);
 
-            i = SkipSpace(exp, i);
-            if (i >= exp.Length || exp[i++] != '}')
+            if (!nakdeMode)
             {
-                serrors.Add(new SyntaxErrorData(i, 0, "'}' expected"));
-                return index;
+                i2 = GetLiteralMatch(exp, i, "}");
+                if (i2 == i)
+                {
+                    serrors.Add(new SyntaxErrorData(i, 0, "'}' expected"));
+                    return index;
+                }
+                i = SkipSpace(exp,i2);
             }
 
+            if (nakdeMode)
+            {
+                if (kvs.Count == 0 && retExp == null && dataConnections.Count == 0 && signalConnections.Count==0)
+                    return index;
+            }
             kvcExpr = new KvcExpression();
             var error = kvcExpr.SetKeyValues(kvs.ToArray(),retExp, dataConnections.ToArray(),signalConnections.ToArray());
             if (error != null)
@@ -1223,7 +1094,7 @@ namespace funcscript.core
                 serrors.Add(new SyntaxErrorData(index, i - index, error));
                 return index;
             }
-
+            
             parseNode = new ParseNode(ParseNodeType.KeyValueCollection, index, i - index, nodeItems);
             return i;
         }
@@ -1633,7 +1504,140 @@ namespace funcscript.core
             return i;
         }
 
-        static int GetOperand(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
+        static int GetInfixFunctionCall(IFsDataProvider parseContext, string exp, int index, out ExpressionBlock prog,
+            out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            var childNodes = new List<ParseNode>();
+            var allOperands = new List<ExpressionBlock>();
+
+            var i = GetInfixExpression(parseContext, exp, index, out var firstParam, out var firstPramNode, serrors);
+            if (i == index)
+            {
+                prog = null;
+                parseNode = null;
+                return index;
+            }
+
+            allOperands.Add(firstParam);
+            childNodes.Add(firstPramNode);
+            i = SkipSpace(exp, i);
+
+            var i2 = GetIdentifier(exp, i, out var iden, out var idenLower, out var idenNode);
+            if (i2 == i)
+            {
+                prog = allOperands[0];
+                parseNode = childNodes[0];
+                return i;
+            }
+
+            childNodes.Add(idenNode);
+            i = SkipSpace(exp, i2);
+
+            i2 = GetInfixExpression(parseContext, exp, i, out var secondParam, out var secondParamNode, serrors);
+            if (i2 == i)
+            {
+                serrors.Add(new SyntaxErrorData(i, 0, $"Right side operand expected for {iden}"));
+                prog = null;
+                parseNode = null;
+                return index;
+            }
+
+            allOperands.Add(secondParam);
+            childNodes.Add(secondParamNode);
+            i = SkipSpace(exp, i2);
+
+
+            while (true)
+            {
+                i2 = GetLiteralMatch(exp, i, ",");
+                if (i2 == i)
+                    break;
+                i = SkipSpace(exp, i2);
+                i2 = GetInfixExpression(parseContext, exp, i, out var moreOperand, out var morePrseNode, serrors);
+                if (i2 == i)
+                    break;
+                i = SkipSpace(exp, i2);
+
+                allOperands.Add(moreOperand);
+                childNodes.Add(morePrseNode);
+            }
+
+            
+            if (allOperands.Count < 2)
+            {
+                prog = null;
+                parseNode = null;
+                return index;
+            }
+
+            var func = parseContext.GetData(idenLower);
+            prog = new FunctionCallExpression
+            {
+                Function = func == null ? new ReferenceBlock(iden, idenLower) : new LiteralBlock(func),
+                Parameters = allOperands.ToArray()
+            };
+            parseNode = new ParseNode(ParseNodeType.GeneralInfixExpression, childNodes[0].Pos,
+                childNodes[^1].Pos + childNodes[^1].Length + childNodes[0].Pos);
+            
+            return i;
+        }
+
+        static int GetPrefixOperator(IFsDataProvider parseContext, string exp, int index, out ExpressionBlock prog,
+            out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            int i=0;
+            string oper = null;
+            foreach (var op in s_prefixOp)
+            {
+                i = GetLiteralMatch(exp, index, op[0]);
+                if (i > index)
+                {
+                    oper = op[1];
+                    break;
+                }    
+            }
+
+            if (i == index)
+            {
+                prog = null;
+                parseNode = null;
+                return index;
+
+            }
+            
+            i = SkipSpace(exp, i);
+            var func = parseContext.GetData(oper);
+            if (func == null)
+            {
+                serrors.Add(new SyntaxErrorData(index,i-index,$"Prefix operator {oper} not defined"));
+                prog = null;
+                parseNode = null;
+                return index;
+            }
+
+            var i2 = GetCallAndMemberAccess(parseContext, exp, i, out var operand, out var operandNode,serrors);
+            if (i2 == i)
+            {
+                serrors.Add(new SyntaxErrorData(i,0,$"Operant for {oper} expected"));
+                prog = null;
+                parseNode = null;
+                return index;
+            }
+
+            i = SkipSpace(exp, i2);
+
+            prog = new FunctionCallExpression
+            {
+                Function = new LiteralBlock(func),
+                Parameters = new[] { operand },
+                Pos = index,
+                Length = i - index,
+            };
+            parseNode = new ParseNode(ParseNodeType.PrefixOperatorExpression, index, i - index);
+            return i;
+        }
+
+        static int GetCallAndMemberAccess(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
             parseNode = null;
@@ -1667,7 +1671,7 @@ namespace funcscript.core
                     continue;
                 }
 
-                i2 = GetKvcExpression(parseContext, exp, i, out var kvc, out var nodeKvc, serrors);
+                i2 = GetKvcExpression(parseContext,false, exp, i, out var kvc, out var nodeKvc, serrors);
                 if (i2 > i)
                 {
                     i = i2;
@@ -1695,7 +1699,7 @@ namespace funcscript.core
             prog = null;
             int i;
 
-
+            
             //get string
             i = GetStringTemplate(provider, exp, index, out var template, out nodeUnit, serrors);
             if (i > index)
@@ -1742,7 +1746,7 @@ namespace funcscript.core
 
 
             //kvc expression
-            i = GetKvcExpression(provider, exp, index, out var json, out nodeUnit, serrors);
+            i = GetKvcExpression(provider,false, exp, index, out var json, out nodeUnit, serrors);
             if (i > index)
             {
                 parseNode = nodeUnit;
@@ -1827,6 +1831,18 @@ namespace funcscript.core
                 prog.Length = i - index;
                 return i;
             }
+            
+            //get prefix operator
+            i = GetPrefixOperator(provider, exp, index, out var prefixOp, out var prefixOpNode, serrors);
+            if (i > index)
+            {
+                prog = prefixOp;
+                parseNode = prefixOpNode;
+                prog.Pos = index;
+                prog.Length = i - index;
+                return i;
+            }
+
 
             return index;
         }
@@ -1846,121 +1862,242 @@ namespace funcscript.core
         static int GetExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
-            return GetSignalSequence(parseContext, exp, index, out prog, out parseNode, serrors);
-        }
+            var i = GetInfixExpression(parseContext, exp, index, out var prog1, out var parseNode1, serrors);
+            var i2 = GetInfixFunctionCall(parseContext, exp, index, out var prog2, out var parseNode2, serrors);
 
-        static int GetInfixExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
-            out ParseNode parseNode, List<SyntaxErrorData> serrors)
-        {
+            if (i2 > i)
+            {
+                prog = prog2;
+                parseNode = parseNode2;
+                return i2;
+            }
+           
+            if (i < i2)
+            {
+                prog = prog2;
+                parseNode = parseNode2;
+                return i;
+            }
+            if(i>index)
+            {
+                prog = prog1;
+                parseNode = parseNode1;
+                return i;
+            }
+
             prog = null;
             parseNode = null;
-            Stack<ExpressionBlock> nodeStack = new Stack<ExpressionBlock>();
-            Stack<InfixFuncElement> funcStack = new Stack<InfixFuncElement>();
-            var parseNodes = new List<ParseNode>();
-            var i = SkipSpace(exp, index);
-            var i2 = GetOperand(parseContext, exp, i, out var op1, out var nodeOp1, serrors);
-            if (i2 == i)
-                return index;
-            i = i2;
-            parseNodes.Add(nodeOp1);
-            nodeStack.Push(op1);
-            do
+            return index;
+        }
+        static int GetRootExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
+            out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            var i = GetKvcExpression(parseContext, true, exp, index, out var kvc, out parseNode, serrors);
+            if (i > index)
             {
-                i = SkipSpace(exp, i);
-                var i_tmp = i;
-                i2 = GetOperator(parseContext, exp, i, out var oper, out var nodeOper);
-                if (i2 > i)
+                prog = kvc;
+                return i;
+            }
+            i = GetExpression(parseContext, exp, index, out prog, out parseNode, serrors);
+            if (i > index)
+                return i;
+            return index;
+        }
+
+        static int GetInfixExpressionSingleOp(IFsDataProvider parseContext,string op, String exp, int index, 
+            List<ExpressionBlock> operands,
+            List<ParseNode> childNodes, 
+            List<SyntaxErrorData> serrors)
+        {
+            var i = index;
+            bool first = true;
+            while (true)
+            {
+                int i2;
+                if (operands.Count > 1)
                 {
-                    parseNodes.Add(nodeOper);
-                    //if there is anything in the function stack
-                    var merged = false;
-                    if (funcStack.Count > 0)
+                    i2 = GetLiteralMatch(exp, i, op);
+                    if (i2 == i)
                     {
-                        var top = funcStack.Peek();
-                        if (top.F ==
-                            oper) //if the new function at the top of the stack is the same, just increment the parameter count
+                        break;
+                    }
+                    childNodes.Add(new ParseNode(ParseNodeType.Operator,i,i2-i));
+                    i = SkipSpace(exp, i2); 
+                }
+
+                ParseNode operanddNode;
+                i2 = GetCallAndMemberAccess(parseContext, exp, i, out var callExp, out operanddNode, serrors);
+                if(i2==i)
+                    break;
+                i = SkipSpace(exp, i2);
+                operands.Add(callExp);
+                childNodes.Add(operanddNode);
+            }
+
+            if (operands.Count <2)
+            {
+                return index;
+            }
+
+            return i;
+        }
+        static int GetInfixExpressionSingleLevel(IFsDataProvider parseContext,int level,string [] candidates, String exp, int index, 
+            out ExpressionBlock prog,
+            out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+
+            prog = null;
+            parseNode = null;
+            var i = index;
+            while (true)
+            {
+                int i2;
+                IFsFunction oper = null;
+                ParseNode operatorNode = null;
+                string symbol = null;
+                if (prog != null)
+                {
+                    var indexBeforeOperator = i;
+                    i2 = GetOperator(parseContext, candidates, exp, i, out symbol, out oper,
+                        out operatorNode);
+                    if (i2 == i)
+                        break;
+
+                    i = SkipSpace(exp, i2);
+
+                    var operands = new List<ExpressionBlock>();
+                    var operandNodes = new List<ParseNode>();
+                    operands.Add(prog);
+                    operandNodes.Add(parseNode);
+                    while (true)
+                    {
+                        ExpressionBlock nextOperand;
+                        ParseNode nextOperandNode;
+                        if(level==0)
+                            i2 = GetCallAndMemberAccess(parseContext,  exp, i, out nextOperand, out  nextOperandNode, serrors);
+                        else                        
+                            i2 = GetInfixExpressionSingleLevel(parseContext,level-1, s_operatorSymols[level-1], exp, i, out  nextOperand, out  nextOperandNode, serrors);
+                        if (i2 == i) 
+                            return indexBeforeOperator;
+                        operands.Add(nextOperand);
+                        operandNodes.Add(nextOperandNode);
+                        i = SkipSpace(exp, i2);
+
+                        i2 = GetLiteralMatch(exp, i, symbol);
+                        if (i2 == i)
+                            break;
+                        i = SkipSpace(exp, i2);
+                    }
+
+                    if (operands.Count > 1)
+                    {
+                        var func = parseContext.GetData(symbol);   
+                        if (symbol == "|")
                         {
-                            top.ParCount++;
-                            merged = true;
+                            if (operands.Count > 2)
+                            {
+                                serrors.Add(new SyntaxErrorData(i,0,"Only two parameters expected for | "));
+                                return i;
+                            }
+
+                            prog = new ListExpression
+                            {
+                                ValueExpressions = operands.ToArray(),
+                                Pos = prog.Pos,
+                                Length = operands[^1].Pos + operands[^1].Length - prog.Length
+                            };
+                            
+                            parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
+                                operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
+                        }
+                        else if (func is SigSequenceFunction)
+                        {
+                            prog = new FunctionCallExpression
+                            {
+                                Function = new LiteralBlock(func),
+                                Parameters =new ExpressionBlock[]
+                                {
+                                    new ListExpression
+                                    {
+                                        ValueExpressions = operands.ToArray()
+                                    }
+                                },
+                                Pos = prog.Pos,
+                                Length = operands[^1].Pos + operands[^1].Length - prog.Length
+                            };
+                            parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
+                                operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
+
                         }
                         else
                         {
-                            while (top.F.Precidence <=
-                                   oper.Precidence) //pop all fuctions that have lower or the same precidence as the new function
+                            prog = new FunctionCallExpression
                             {
-                                top.ParCount++; //increment the parameter count before poping the functions
-                                //we will build an ealuation node using the poped out function and its parameters in the stack
-                                var pars = new ExpressionBlock[top.ParCount];
-                                for (int k = pars.Length - 1; k >= 0; k--)
-                                {
-                                    pars[k] = nodeStack.Pop();
-                                }
-
-                                var node = new FunctionCallExpression
-                                {
-                                    Function = new LiteralBlock(top.F),
-                                    Parameters = pars,
-                                };
-                                nodeStack.Push(node); //
-                                funcStack.Pop();
-                                if (funcStack.Count == 0) //finish when funcstack is empty
-                                    break;
-                                top = funcStack.Peek(); //peek the next function
-                            }
+                                Function = new LiteralBlock(func),
+                                Parameters = operands.ToArray(),
+                                Pos = prog.Pos,
+                                Length = operands[^1].Pos + operands[^1].Length - prog.Length
+                            };
+                            parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
+                                operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
+                            
                         }
-                    }
 
-                    i = i2;
-                    i = SkipSpace(exp, i);
-                    i2 = GetOperand(parseContext, exp, i, out var op2, out var nodeOp2, serrors);
-                    if (i2 == i)
-                    {
-                        i = i_tmp;
-                        break;
-                        //serrors.Add(new SyntaxErrorData(i, 0, "right side operand expected"));
-                        //return index;
                     }
+                    continue;
+                    
+                }
 
-                    if (!merged)
-                        funcStack.Push(new InfixFuncElement(oper)); //push the new operator to the function list
-                    parseNodes.Add(nodeOp2);
-                    nodeStack.Push(op2);
-                    i = i2;
+                ExpressionBlock operand;
+                ParseNode operandNode;
+                if (level==0)
+                {
+                    i2 = GetCallAndMemberAccess(parseContext,  exp, i, out operand, out  operandNode, serrors);
                 }
                 else
-                    break;
-            } while (true);
-
-            while (funcStack.Count > 0) //flush all remaining functions in the function stack
-            {
-                var top = funcStack.Peek();
-                top.ParCount++;
-                var pars = new ExpressionBlock[top.ParCount];
-                for (int k = pars.Length - 1; k >= 0; k--)
                 {
-                    pars[k] = nodeStack.Pop();
+                    i2 = GetInfixExpressionSingleLevel(parseContext, level - 1,s_operatorSymols[level-1],  exp, i, out operand, out operandNode,
+                        serrors);
                 }
-
-                var node = new FunctionCallExpression
+            
+                if (i2 == i)
+                    return i; //if we didn't parse anything i will be index
+                
+                i=SkipSpace(exp,i2);
+                if (prog == null)
                 {
-                    Function = new LiteralBlock(top.F),
-                    Parameters = pars,
-                };
-                nodeStack.Push(node);
-                funcStack.Pop();
+                    prog = operand;
+                    parseNode = operandNode;
+                }
+                else
+                {
+                    parseNode = new ParseNode(ParseNodeType.InfixExpression, prog.Pos,
+                        operand.Pos + operand.Length - prog.Pos, new[]
+                        {
+                            parseNode,
+                            operatorNode,
+                            operandNode
+                        });
+                    prog = new FunctionCallExpression
+                    {
+                        Function = new LiteralBlock(oper),
+                        Parameters = new[] { prog, operand },
+                        Pos = prog.Pos,
+                        Length = operandNode.Pos + operand.Length - prog.Pos
+                    };
+                }
             }
 
-            if (nodeStack.Count == 0)
-                throw new Exception("BUG: node stack cleared unexpectedly");
-            if (nodeStack.Count > 1)
-                throw new Exception("BUG: more than one element still remaining in node stack");
-            prog = nodeStack.Peek();
-            prog.Pos = index;
-            prog.Length = i - index;
-            parseNode = new ParseNode(ParseNodeType.InfixExpression, index, i - index, parseNodes);
             return i;
         }
-
+        static int GetInfixExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
+            out ParseNode parseNode, List<SyntaxErrorData> serrors)
+        {
+            var i = GetInfixExpressionSingleLevel(parseContext, s_operatorSymols.Length - 1,s_operatorSymols[^1],  exp, index, out prog,
+                out parseNode, serrors);
+            return i;
+        }
+       
         public static int GetFSTemplate(IFsDataProvider provider, string exp, int index, out ExpressionBlock prog,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
@@ -2071,21 +2208,20 @@ namespace funcscript.core
             return prog;
         }
 
+
+        public static ExpressionBlock Parse(IFsDataProvider context, String exp, out ParseNode parseNode,
+            List<SyntaxErrorData> serrors)
+        {
+            var i = GetRootExpression(context, exp, 0, out var prog, out parseNode, serrors);
+            return prog;
+        }
+
         public static ExpressionBlock ParseFsTemplate(IFsDataProvider context, String exp, out ParseNode parseNode,
             List<SyntaxErrorData> serrors)
         {
             var i = GetFSTemplate(context, exp, 0, out var block, out parseNode, serrors);
             return block;
         }
-
-        public static ExpressionBlock Parse(IFsDataProvider context, String exp, out ParseNode parseNode,
-            List<SyntaxErrorData> serrors)
-        {
-            //get signal sequence
-            var i = GetExpression(context, exp, 0, out var prog, out parseNode, serrors);
-            return prog;
-        }
-
         public static ExpressionBlock ParseFsTemplate(IFsDataProvider context, String exp,
             List<SyntaxErrorData> serrors)
         {

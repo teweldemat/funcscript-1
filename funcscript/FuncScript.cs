@@ -127,6 +127,7 @@ namespace funcscript
                 || value is ValueSinkDelegate
                 || value is SignalSourceDelegate
                 || value is SignalListenerDelegate
+                || value is FsError
                 )
             {
                 return value; ;
@@ -284,6 +285,14 @@ namespace funcscript
             {
                 Format(indent, sb, r.Dref(), format, asFuncScriptLiteral, asJsonLiteral,adaptiveLineBreak);
                 return;
+            }
+
+            if (val is FsError error)
+            {
+                sb.Append($"Error: {error.ErrorMessage}");
+                sb.Append($"  type: {error.ErrorType}");
+                if(error.ErrorData!=null)
+                    sb.Append($"\nData:\n{error.ErrorData}");
             }
             if (val == null)
             {
@@ -537,6 +546,8 @@ namespace funcscript
                 return FSDataType.SigSource;
             if (value is SignalListenerDelegate)
                 return FSDataType.SigSink;
+            if (value is FsError)
+                return FSDataType.Error;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
         public static bool IsNumeric(object val)

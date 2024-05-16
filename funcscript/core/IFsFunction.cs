@@ -12,6 +12,15 @@ namespace funcscript.core
         int Precidence { get; }
     }
 
+    public class FunctionAliasAttribute : Attribute
+    {
+        public string[] Aliaces;
+        public FunctionAliasAttribute(params string[] aliaces)
+        {
+            this.Aliaces = aliaces;
+        }
+    }
+
     public interface IFsDref
     {
         public object DrefEvaluate(IParameterList pars);

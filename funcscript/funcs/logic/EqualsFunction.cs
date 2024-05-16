@@ -17,7 +17,8 @@ namespace funcscript.funcs.logic
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
+                return new FsError(FsError.ERROR_PARAMETER_COUNT_MISMATCH,
+                    $"{this.Symbol}: expected {this.MaxParsCount} got {pars.Count}");
 
             var parBuilder = new CallRefBuilder(this, parent, pars);
             var par0 = parBuilder.GetParameter(0);

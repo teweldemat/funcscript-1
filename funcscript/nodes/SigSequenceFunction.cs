@@ -5,6 +5,7 @@ using funcscript.error;
 using funcscript.model;
 
 namespace funcscript.nodes;
+
 public class SigSequenceNode:SignalSourceDelegate,SignalListenerDelegate
     {
         public FsList Items;
@@ -70,6 +71,7 @@ public class SigSequenceNode:SignalSourceDelegate,SignalListenerDelegate
             _sink.Signal();
         }
     }
+[FunctionAlias(">>")]
 public class SigSequenceFunction : IFsFunction, IFsDref
 {
     public const string SYMBOL = "SigSequence";
