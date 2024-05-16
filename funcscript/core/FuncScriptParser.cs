@@ -1510,7 +1510,7 @@ namespace funcscript.core
             var childNodes = new List<ParseNode>();
             var allOperands = new List<ExpressionBlock>();
 
-            var i = GetInfixExpression(parseContext, exp, index, out var firstParam, out var firstPramNode, serrors);
+            var i = GetCallAndMemberAccess(parseContext, exp, index, out var firstParam, out var firstPramNode, serrors);
             if (i == index)
             {
                 prog = null;
@@ -1525,9 +1525,9 @@ namespace funcscript.core
             var i2 = GetIdentifier(exp, i, out var iden, out var idenLower, out var idenNode);
             if (i2 == i)
             {
-                prog = allOperands[0];
-                parseNode = childNodes[0];
-                return i;
+                prog = null;
+                parseNode = null;
+                return index;
             }
 
             childNodes.Add(idenNode);
@@ -1549,7 +1549,7 @@ namespace funcscript.core
 
             while (true)
             {
-                i2 = GetLiteralMatch(exp, i, ",");
+                i2 = GetLiteralMatch(exp, i, "~");
                 if (i2 == i)
                     break;
                 i = SkipSpace(exp, i2);
@@ -1862,31 +1862,14 @@ namespace funcscript.core
         static int GetExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
-            var i = GetInfixExpression(parseContext, exp, index, out var prog1, out var parseNode1, serrors);
-            var i2 = GetInfixFunctionCall(parseContext, exp, index, out var prog2, out var parseNode2, serrors);
-
-            if (i2 > i)
-            {
-                prog = prog2;
-                parseNode = parseNode2;
-                return i2;
-            }
-           
-            if (i < i2)
-            {
-                prog = prog2;
-                parseNode = parseNode2;
+            var i = GetInfixFunctionCall(parseContext, exp, index, out prog, out  parseNode,serrors);
+            if (i > index)
                 return i;
-            }
-            if(i>index)
-            {
-                prog = prog1;
-                parseNode = parseNode1;
-                return i;
-            }
 
-            prog = null;
-            parseNode = null;
+            i = GetInfixExpression(parseContext, exp, index, out prog, out  parseNode,serrors);
+            if (i > index)
+                return i;
+
             return index;
         }
         static int GetRootExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,

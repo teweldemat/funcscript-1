@@ -39,7 +39,9 @@ public class AdvancedSyntax
     [Test]
     [TestCase("reduce([4,5,6],(x,s)=>s+x)",15)]
     [TestCase("reduce([4,5,6],(x,s)=>s+x,-2)",13)]
-    [TestCase("[4,5,6] reduce (x,s)=>s+x,-2",13)]
+    [TestCase("[4,5,6] reduce (x,s)=>s+x ~ -2",13)]
+    [TestCase("(series(0,4) reduce (x,s)=>s+x ~ 0)",6)]
+    [TestCase("series(0,4) reduce (x,s)=>s+x ~ 0",6)]
     public void GeneralInfix(string exp,object expected)
     {
         var res = FuncScript.Evaluate(exp);
