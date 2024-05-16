@@ -47,6 +47,6 @@ public class Tests
         };
         var session = new ExecutionSession(nodes);
         var res=session.RunNode("x.y");
-        Assert.That(res,Is.EqualTo(11));
+        Assert.That((int)res!,Is.EqualTo(11));
     }
 }
