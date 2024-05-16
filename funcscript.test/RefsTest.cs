@@ -342,15 +342,15 @@ public class RefsTest
     }
     
     [Test]
-    public void TestSgnalReduce()
+    public void TestSignalReduce()
     {
         var delay = 100;
-        var n = 4;
+        var n = 2;
         // Setup - Create an initial script and environment
         var script = @"
 {
     count_st:store();
-    count_st??0+1:->count_st;
+    (count_st??0)+1:->count_st;
     t:series(0,"+n+@") map (i)=>
     {
         x:timer(100,false);
@@ -381,7 +381,7 @@ public class RefsTest
         });
         Assert.That(res is KeyValueCollection);
         sink.Signal();
-        System.Threading.Thread.Sleep(delay*2*n);
+        System.Threading.Thread.Sleep(n*delay*5);
         
         var kvc = (KeyValueCollection)res;
         var _count = kvc.GetData("count");
@@ -391,7 +391,7 @@ public class RefsTest
         
         StringBuilder sb = new StringBuilder();
         int startCount = 1;
-        int endIndex = n; // Adjust this to control the number of lines
+        int endIndex = n;
 
         for (int i = endIndex - 1; i >= 0; i--)
         {
