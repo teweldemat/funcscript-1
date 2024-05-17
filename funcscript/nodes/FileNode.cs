@@ -6,7 +6,16 @@ public class CreateJsonFileStoreNodeFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new JsonFileStoreNode();      
+        var ret =  new JsonFileStoreNode();
+        if (pars.Count > 0)
+        {
+            ret.FileName.SetValueSource(pars.GetParameter(parent,0));
+        }
+        if (pars.Count > 1)
+        {
+            ret.Data.SetValueSource(pars.GetParameter(parent,1));
+        }
+        return ret;
     }
 
     public string ParName(int index)

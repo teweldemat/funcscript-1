@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-public class JsonFileStoreNode:ObjectKvc
+public class JsonFileStoreNode:ObjectKvc, SignalListenerDelegate
 {
     private object _source = null;
     private object _fileName = null;
@@ -17,7 +17,8 @@ public class JsonFileStoreNode:ObjectKvc
         this._fileName = val;
     });
 
-    public SignalListenerDelegate Save => new SigSink(()=>
+    
+    public void Activate()
     {
         string fileName=FuncScript.Dref(this._fileName) as string;
         if (fileName == null)
@@ -36,8 +37,6 @@ public class JsonFileStoreNode:ObjectKvc
             json = sb.ToString();
         }
 
-        System.IO.File.WriteAllText(strFileName,json);
-    });
-    
-    
+        System.IO.File.WriteAllText(strFileName,json);    
+    }
 }

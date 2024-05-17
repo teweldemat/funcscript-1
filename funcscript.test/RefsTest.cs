@@ -199,7 +199,7 @@ public class RefsTest
 {
     s:JsonFileStore();
     x:{a:1,b:'2'};
-    sig:s.Save;    
+    sig:s;    
     x:->s.Data;
     'test.json':->s.FileName;
 }
