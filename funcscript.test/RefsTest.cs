@@ -39,7 +39,7 @@ public class RefsTest
         var res = FuncScript.EvaluateWithVars("{a:x,b:3}", new { x = v });
         Assert.IsNotNull(res);
         Assert.That(res is KeyValueCollection);
-        var a = ((KeyValueCollection)res).GetData("a");
+        var a = ((KeyValueCollection)res).Get("a");
         Assert.That(a is ValueReferenceDelegate);
         var r = (ValueReferenceDelegate)a;
         var dr = r.Dref();
@@ -132,7 +132,7 @@ public class RefsTest
         Assert.NotNull(res);
         Assert.That(res,Is.AssignableTo<KeyValueCollection>() );
         var kvc = res as KeyValueCollection;
-        var _x = kvc.GetData("x");
+        var _x = kvc.Get("x");
         Assert.That(_x,Is.TypeOf<SigSequenceNode>());
         var s = (SigSequenceNode)_x;
         
@@ -180,10 +180,10 @@ public class RefsTest
         var res = FuncScript.Evaluate(exp);
         Assert.That(res, Is.AssignableTo<KeyValueCollection>());
         var kvc = (KeyValueCollection)res;
-        Assert.That(kvc.GetData("b") is ValueReferenceDelegate);
-        var dRef = (ValueReferenceDelegate)kvc.GetData("b");
+        Assert.That(kvc.Get("b") is ValueReferenceDelegate);
+        var dRef = (ValueReferenceDelegate)kvc.Get("b");
         Assert.IsNull(dRef.Dref());
-        res = kvc.GetData("sig");
+        res = kvc.Get("sig");
         Assert.That(res is SignalListenerDelegate);
         var store = (SignalListenerDelegate)res;
         store.Activate();
@@ -209,7 +209,7 @@ public class RefsTest
         Assert.That(val is KeyValueCollection);
         var kvc = (KeyValueCollection)val;
 
-        val = kvc.GetData("sig");
+        val = kvc.Get("sig");
         Assert.That(val is SignalListenerDelegate);
         var store = (SignalListenerDelegate)val;
         store.Activate();
@@ -219,8 +219,8 @@ public class RefsTest
         Assert.That(eval is KeyValueCollection);
 
         kvc = (KeyValueCollection)eval;
-        Assert.That(kvc.GetData("a"), Is.EqualTo(1));
-        Assert.That(kvc.GetData("b"), Is.EqualTo("2"));
+        Assert.That(kvc.Get("a"), Is.EqualTo(1));
+        Assert.That(kvc.Get("b"), Is.EqualTo("2"));
     }
 
     [Test]
@@ -240,12 +240,12 @@ public class RefsTest
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
 
-        var _sig = kvc.GetData("sig");
+        var _sig = kvc.Get("sig");
         Assert.NotNull(_sig, "The signal should be correctly set up.");
         Assert.That(_sig is SignalListenerDelegate);
         var sig = (SignalListenerDelegate)_sig;
 
-        var _out = kvc.GetData("count");
+        var _out = kvc.Get("count");
         Assert.That(_out is ValueReferenceDelegate);
         var countOut = (ValueReferenceDelegate)_out;
 
@@ -335,7 +335,7 @@ public class RefsTest
         System.Threading.Thread.Sleep(delay*2*n);
         
         var kvc = (KeyValueCollection)res;
-        var _count = kvc.GetData("count");
+        var _count = kvc.Get("count");
         Assert.That(_count is ValueReferenceDelegate);
         var count = (ValueReferenceDelegate)_count;
         Assert.That( count.Dref(),Is.EqualTo(4));
@@ -384,7 +384,7 @@ public class RefsTest
         System.Threading.Thread.Sleep(n*delay*5);
         
         var kvc = (KeyValueCollection)res;
-        var _count = kvc.GetData("count");
+        var _count = kvc.Get("count");
         Assert.That(_count is ValueReferenceDelegate);
         var count = (ValueReferenceDelegate)_count;
         Assert.That( count.Dref(),Is.EqualTo(n));
@@ -749,7 +749,7 @@ public class RefsTest
 
         var delVal = (KeyValueCollection)res;
         Assert.That(delVal.IsDefined("x"));
-        var _xdel = delVal.GetData("x");
+        var _xdel = delVal.Get("x");
         Assert.That(_xdel,Is.AssignableTo<KeyValueCollection>());
        
         
@@ -805,7 +805,7 @@ public class RefsTest
         
         var delVal = (KeyValueCollection)res;
         Assert.That(delVal.IsDefined("x"));
-        var _xdel = delVal.GetData("x");
+        var _xdel = delVal.Get("x");
         Assert.That(_xdel,Is.AssignableTo<KeyValueCollection>());
        
         sink.Signal();
@@ -924,7 +924,7 @@ public class RefsTest
         sink.Signal();
         
         var kvc = (KeyValueCollection)res;
-        var a = kvc!.GetData("s");
+        var a = kvc!.Get("s");
         Assert.That(a,Is.TypeOf<StoreNode>());
         var s = (StoreNode)a;
         Assert.That(s.Dref(),Is.EqualTo(10));
@@ -1003,7 +1003,7 @@ public class RefsTest
         });
         Assert.That(res is KeyValueCollection);
         var kvc = res as KeyValueCollection;
-        var y = kvc.GetData("y") as KeyValueCollection;
+        var y = kvc.Get("y") as KeyValueCollection;
         Assert.NotNull(y);
         
     }

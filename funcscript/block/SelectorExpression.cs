@@ -25,14 +25,14 @@ namespace funcscript.block
                 }
             }
             KeyValueCollection _sourceVal;
-            public object GetData(string name)
+            public object Get(string name)
             {
                 if (_sourceVal != null)
                 {
                     if (_sourceVal.IsDefined(name))
-                        return _sourceVal.GetData(name);
+                        return _sourceVal.Get(name);
                 }
-                return Provider.GetData(name);
+                return Provider.Get(name);
             }
             public bool IsDefined(string key)
             {

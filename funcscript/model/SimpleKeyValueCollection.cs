@@ -35,7 +35,7 @@ namespace funcscript.model
             }
         }
 
-        public override object GetData(string value)
+        public override object Get(string value)
         {
             return _index.GetValueOrDefault(value);
         }

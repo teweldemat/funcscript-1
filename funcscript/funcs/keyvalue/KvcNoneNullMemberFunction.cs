@@ -25,7 +25,7 @@ namespace funcscript.funcs.keyvalue
             if (!(target is KeyValueCollection))
                 throw new error.TypeMismatchError($"{Symbol} function: Cannot access member '{key}' on non-KeyValueCollection type '{FuncScript.GetFsDataType(target)}'.");
 
-            return ((KeyValueCollection)target).GetData(((string)key).ToLower());
+            return ((KeyValueCollection)target).Get(((string)key).ToLower());
         }
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)

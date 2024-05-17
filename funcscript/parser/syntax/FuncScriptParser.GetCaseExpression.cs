@@ -69,7 +69,7 @@ namespace funcscript.core
 
             prog = new FunctionCallExpression
             {
-                Function = new LiteralBlock(context.GetData(KW_CASE)),
+                Function = new LiteralBlock(context.Get(KW_CASE)),
                 Pos = index,
                 Length = i - index,
                 Parameters = pars.ToArray(),

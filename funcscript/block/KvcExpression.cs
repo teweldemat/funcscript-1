@@ -28,7 +28,7 @@ namespace funcscript.block
                 this._connectionActions = connectionActions;
             }
 
-            public object GetData(string key)
+            public object Get(string key)
             {
                 lock (_valCache)
                 {
@@ -37,7 +37,7 @@ namespace funcscript.block
                         return ret;
                     var val = _parent.index.TryGetValue(lower, out var ch)
                         ? ch.ValueExpression.Evaluate(this, _connectionActions).Item1
-                        : ParentProvider.GetData(lower);
+                        : ParentProvider.Get(lower);
 
                     _valCache.Add(lower, val);
                     return val;
@@ -181,7 +181,7 @@ namespace funcscript.block
 
             var kvc = new SimpleKeyValueCollection(null, this._keyValues
                 .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
-                    evalProvider.GetData(kv.Key))).ToArray());
+                    evalProvider.Get(kv.Key))).ToArray());
 
             var pr = new KvcProvider(kvc, provider);
             if (this._dataConnections.Count > 0 || this._signalConnections.Count > 0)

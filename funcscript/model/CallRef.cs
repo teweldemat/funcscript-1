@@ -85,7 +85,7 @@ public partial class CallRef : ListenerCollection, IFsDataProvider, ValueReferen
                 if (index is string key)
                 {
                     var kvc = collection;
-                    var value = kvc.GetData(key.ToLower());
+                    var value = kvc.Get(key.ToLower());
                     ret = FuncScript.Dref(value);
                 }
                 else
@@ -101,7 +101,7 @@ public partial class CallRef : ListenerCollection, IFsDataProvider, ValueReferen
         }
     }
 
-    public object GetData(string name)
+    public object Get(string name)
     {
         throw new NotImplementedException();
     }

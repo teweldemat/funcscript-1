@@ -82,7 +82,7 @@ namespace funcscript.block
                 if (index is string key)
                 {
                     var kvc = collection;
-                    var value = kvc.GetData(key.ToLower());
+                    var value = kvc.Get(key.ToLower());
                     return (value,this.CodeLocation);
                 }
                 else
@@ -115,7 +115,7 @@ namespace funcscript.block
             string infix = null;
             if (this.Function is ReferenceBlock)
             {
-                var f = provider.GetData(((ExpressionBlock)this.Function).ToString().ToLower()) as IFsFunction;
+                var f = provider.Get(((ExpressionBlock)this.Function).ToString().ToLower()) as IFsFunction;
                 if (f != null && f.CallType == CallType.Infix)
                 {
                     infix = f.Symbol;

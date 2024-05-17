@@ -65,7 +65,7 @@ namespace funcscript
                     _data.Add(k.Key, FuncScript.NormalizeDataType(k.Value));
             }
         }
-        public object GetData(string name)
+        public object Get(string name)
         {
             if (_data != null)
             {
@@ -98,13 +98,13 @@ namespace funcscript
             _parent = parent;
         }
 
-        public object GetData(string name)
+        public object Get(string name)
         {
             if (_kvc.IsDefined(name))
-                return _kvc.GetData(name);
+                return _kvc.Get(name);
             if (_parent == null)
                 return null;
-            return _parent.GetData(name);
+            return _parent.Get(name);
         }
         public IFsDataProvider ParentProvider => _parent;
         public bool IsDefined(string key)

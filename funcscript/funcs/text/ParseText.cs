@@ -82,7 +82,7 @@ namespace funcscript.funcs.text
             };
         }
 
-        public object GetData(string name)
+        public object Get(string name)
         {
             return new FsError(FsError.ERROR_TYPE_INVALID_PARAMETER, $"The parsed function script should have no variables");
         }

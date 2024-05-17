@@ -213,11 +213,11 @@ public class ExecutionSession : IFsDataProvider
             Expression = node.Expression
         };
     }
-    public object GetData(string name)
+    public object Get(string name)
     {
         var n = _nodes.FirstOrDefault(c => c.NameLower == name);
         if (n == null)
-            return _provider.GetData(name);
+            return _provider.Get(name);
         return n.Evaluate(_provider);
     }
     public bool IsDefined(string name)

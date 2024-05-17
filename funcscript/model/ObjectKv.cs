@@ -63,7 +63,7 @@ namespace funcscript.model
             return GetTypeInfo(t).Properties.ContainsKey(key);
         }
 
-        public override object GetData(string key)
+        public override object Get(string key)
         {
             if (_val == null)
                 return null;

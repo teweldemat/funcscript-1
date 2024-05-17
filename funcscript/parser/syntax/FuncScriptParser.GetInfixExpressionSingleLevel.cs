@@ -78,7 +78,7 @@ namespace funcscript.core
 
                 if (operands.Count > 1)
                 {
-                    var func = parseContext.GetData(symbol);
+                    var func = parseContext.Get(symbol);
                     if (symbol == "|")
                     {
                         if (operands.Count > 2)

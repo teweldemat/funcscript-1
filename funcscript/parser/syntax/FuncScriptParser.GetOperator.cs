@@ -16,7 +16,7 @@ namespace funcscript.core
                 var i = GetLiteralMatch(exp, index, op);
                 if (i <= index) continue;
 
-                var func = parseContext.GetData(op);
+                var func = parseContext.Get(op);
 //                if (func is not IFsFunction f) 
 //                    continue;
 

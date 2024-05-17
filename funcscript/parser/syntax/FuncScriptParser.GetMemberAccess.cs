@@ -34,7 +34,7 @@ namespace funcscript.core
             i = i2;
             prog = new FunctionCallExpression
             {
-                Function = new LiteralBlock(context.GetData(oper)),
+                Function = new LiteralBlock(context.Get(oper)),
                 Parameters = new ExpressionBlock[] { source, new LiteralBlock(member) },
                 Pos = source.Pos,
                 Length = i - source.Pos

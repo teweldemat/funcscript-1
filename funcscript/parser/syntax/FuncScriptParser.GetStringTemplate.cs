@@ -148,7 +148,7 @@ namespace funcscript.core
             {
                 prog = new FunctionCallExpression
                 {
-                    Function = new LiteralBlock(provider.GetData("+")),
+                    Function = new LiteralBlock(provider.Get("+")),
                     Parameters = parts.ToArray()
                 };
                 parseNode = new ParseNode(ParseNodeType.StringTemplate, index, i - index, nodeParts);

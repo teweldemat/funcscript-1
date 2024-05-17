@@ -21,11 +21,11 @@ namespace funcscript.core
                        || parentSymbolProvider.IsDefined(key);
             }
 
-            public object GetData(string name)
+            public object Get(string name)
             {
                 if (expressionFunction.ParamterNameIndex.TryGetValue(name, out var index))
                     return pars.GetParameter(parentSymbolProvider, index);
-                return parentSymbolProvider.GetData(name);
+                return parentSymbolProvider.Get(name);
             }
         }
 

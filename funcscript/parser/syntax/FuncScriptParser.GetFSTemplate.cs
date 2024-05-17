@@ -98,7 +98,7 @@ namespace funcscript.core
             {
                 prog = new FunctionCallExpression
                 {
-                    Function = new LiteralBlock(provider.GetData(TemplateMergeMergeFunction.SYMBOL)),
+                    Function = new LiteralBlock(provider.Get(TemplateMergeMergeFunction.SYMBOL)),
                     Parameters = parts.ToArray()
                 };
                 parseNode = new ParseNode(ParseNodeType.StringTemplate, index, i - index, nodeParts);

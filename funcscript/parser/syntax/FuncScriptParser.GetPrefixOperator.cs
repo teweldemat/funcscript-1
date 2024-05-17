@@ -28,7 +28,7 @@ namespace funcscript.core
             }
 
             i = SkipSpace(exp, i);
-            var func = parseContext.GetData(oper);
+            var func = parseContext.Get(oper);
             if (func == null)
             {
                 serrors.Add(new SyntaxErrorData(index, i - index, $"Prefix operator {oper} not defined"));

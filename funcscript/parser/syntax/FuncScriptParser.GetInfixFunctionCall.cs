@@ -78,7 +78,7 @@ namespace funcscript.core
                 return index;
             }
 
-            var func = parseContext.GetData(idenLower);
+            var func = parseContext.Get(idenLower);
             prog = new FunctionCallExpression
             {
                 Function = func == null ? new ReferenceBlock(iden, idenLower) : new LiteralBlock(func),

@@ -203,12 +203,12 @@ namespace funcscript.test
             Assert.That(res.Length,Is.EqualTo(2));
             var item1 = res[0] as KeyValueCollection;
             Assert.IsNotNull(item1);
-            Assert.That(item1.GetData("a"),Is.EqualTo(4));
-            Assert.That(item1.GetData("c"),Is.EqualTo(6));
+            Assert.That(item1.Get("a"),Is.EqualTo(4));
+            Assert.That(item1.Get("c"),Is.EqualTo(6));
             var item2 = res[1] as KeyValueCollection;
             Assert.IsNotNull(item2);
-            Assert.That(item2.GetData("a"),Is.EqualTo(7));
-            Assert.That(item2.GetData("c"),Is.EqualTo(9));
+            Assert.That(item2.Get("a"),Is.EqualTo(7));
+            Assert.That(item2.Get("c"),Is.EqualTo(9));
 
             var expected = new ArrayFsList(new object[]{new ObjectKvc(new { a = 4, c=6})
             ,new ObjectKvc(new { a = 7, c = 9})

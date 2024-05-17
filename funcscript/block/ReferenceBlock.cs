@@ -45,8 +45,8 @@ namespace funcscript.block
         public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
             if (_fromParent)
-                return (provider.ParentProvider?.GetData(_nameLower),this.CodeLocation);
-            return (provider.GetData(_nameLower), this.CodeLocation);
+                return (provider.ParentProvider?.Get(_nameLower),this.CodeLocation);
+            return (provider.Get(_nameLower), this.CodeLocation);
         }
 
         public override IList<ExpressionBlock> GetChilds()

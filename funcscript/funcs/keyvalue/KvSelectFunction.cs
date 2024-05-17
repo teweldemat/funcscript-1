@@ -40,7 +40,7 @@ namespace funcscript.funcs.keyvalue
                 if (second[i].Value == null)
                 {
                     var key = second[i].Key.ToLower();
-                    var value = first.GetData(key);
+                    var value = first.Get(key);
                     second[i] = new KeyValuePair<string, object>(second[i].Key, value);
                 }
             }

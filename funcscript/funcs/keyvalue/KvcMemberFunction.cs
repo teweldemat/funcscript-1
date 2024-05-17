@@ -31,7 +31,7 @@ namespace funcscript.funcs.keyvalue
             if (!(par0 is KeyValueCollection))
                 throw new error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {FuncScript.GetFsDataType(par0)}");
 
-            return ((KeyValueCollection)par0).GetData(((string)par1).ToLower());
+            return ((KeyValueCollection)par0).Get(((string)par1).ToLower());
 
         }
         public object Evaluate(IFsDataProvider parent, IParameterList pars)

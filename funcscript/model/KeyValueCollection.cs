@@ -15,7 +15,7 @@ namespace funcscript.model
         /// </summary>
         /// <param name="key">key in small letters</param>
         /// <returns></returns>
-        public abstract object GetData(string key);
+        public abstract object Get(string key);
 
         public abstract IFsDataProvider ParentProvider { get; }
 
@@ -63,8 +63,8 @@ namespace funcscript.model
             {
                 if (!this.IsDefined(k.Key.ToLowerInvariant()))
                     return false;
-                var thisVal= this.GetData(k.Key);
-                var otherVal= other.GetData(k.Key);
+                var thisVal= this.Get(k.Key);
+                var otherVal= other.Get(k.Key);
                 if (thisVal == null && otherVal == null)
                     return true;
                 if (thisVal == null || otherVal == null)
