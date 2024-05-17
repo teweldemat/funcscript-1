@@ -684,13 +684,13 @@ namespace funcscript
                 case ParseMode.FsTemplate:
                     exp = core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
                     break;
-                default:
+                default:    
                     exp = null;
                     break;
             }
 
             if (exp == null)
-                throw new error.SyntaxError(serrors);
+                throw new error.SyntaxError(expression,serrors);
             return Evaluate(exp, expression, provider, vars);
         }
         public static object Evaluate(ExpressionBlock exp, string expression, IFsDataProvider provider, object vars)

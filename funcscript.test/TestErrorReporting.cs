@@ -29,9 +29,30 @@ namespace funcscript.test
             Console.WriteLine(sError.Message);
             if (sError.InnerException != null)
                 Console.WriteLine(sError.InnerException.Message);
-            foreach(var d in sError.data)
+        }
+        void AnalyzeMainSyntaxErrorLine(Exception ex,string line)
+        {
+            Assert.AreEqual(typeof(error.SyntaxError), ex.GetType());
+            var sError = (SyntaxError)ex;
+            Assert.That(sError.Line,Is.EqualTo(line));
+        }
+
+        [Test]
+        public void ErrorMissingSemicolon()
+        {
+            var exp = @"
+{a:5;
+b:4
+c:4
+}
+";
+            try
             {
-                Console.WriteLine($"Error: {d.Message}  Location:{d.Loc}");
+                FuncScript.Evaluate(exp);
+            }
+            catch (Exception ex)
+            {
+                AnalyzeMainSyntaxErrorLine(ex, "b:4");
             }
         }
         [Test]

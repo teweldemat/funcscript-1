@@ -26,7 +26,7 @@ namespace funcscript.funcs.logic
                 return parBuilder.CreateRef();
 
             if (!(condition is bool))
-                throw new error.TypeMismatchError("The first parameter must be a boolean value.");
+                return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol}: The first parameter must be a boolean value.");
 
             bool evalCondition = (bool)condition;
             int resultIndex = evalCondition ? 1 : 2;
@@ -39,7 +39,7 @@ namespace funcscript.funcs.logic
         {
             var condition = FuncScript.Dref(pars.GetParameter(null, 0),false);
             if (!(condition is bool))
-                throw new error.TypeMismatchError("The first parameter must be a boolean value when dereferenced.");
+                return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol}: The first parameter must be a boolean value.");
 
             bool evalCondition = (bool)condition;
             int resultIndex = evalCondition ? 1 : 2;

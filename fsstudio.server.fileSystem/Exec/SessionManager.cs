@@ -22,7 +22,7 @@ namespace fsstudio.server.fileSystem.exec
         private readonly ConcurrentDictionary<Guid, ExecutionSession> _sessions = new();
 
         private readonly string _rootPath;
-
+        public String RootPath => _rootPath;
         private readonly RemoteLogger remoteLogger;
         public SessionManager(IConfiguration configuration,RemoteLogger remoteLogger)
         {

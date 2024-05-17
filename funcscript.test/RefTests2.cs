@@ -379,4 +379,75 @@ public class RefTests2
         
         Assert.That(logger.LogText,Is.EqualTo("one\ngoing 0-a\n"));
     }       
+    
+    [Test]
+    public void Text_Example_ExtractCodeFunction()
+    {
+        var delay = 100;
+        var n = 3;
+        // Setup - Create an initial script and environment
+        var script = @"
+{
+  f:(code,lang)=>
+  {
+    start_marker:f'```{lang}\n';
+    markup_start:find(code,start_marker);
+    markup_end:if(markup_start!=-1,find(code,'\n```',markup_start+len(start_marker)),-1);
+    return 
+      if(markup_end=-1 or marksup_start=-1
+        ,''
+        ,substring(code,markup_start+len(start_marker),markup_end-markup_start-len(start_marker))
+    );
+  };
+  x:store('```csharp\nthe code\n```');
+  app.start->x>>logger(f(x,'csharp'));
+}";
+
+        var logger = new RefsTest.StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        sink.Signal();
+        System.Threading.Thread.Sleep(delay*2*n);
+        
+        Assert.That(logger.LogText,Is.EqualTo("the code\n"));
+    }    
+    [Test]
+    public void Text_Example_ExtractCodeFunction_2()
+    {
+        var delay = 100;
+        var n = 3;
+        // Setup - Create an initial script and environment
+        var script = @"
+{
+  f:(code)=>substring(code,1,3);
+  x:store('1234');
+  app.start->x>>logger(f(x));
+}";
+
+        var logger = new RefsTest.StringTextLogger();
+        Fslogger.SetDefaultLogger(logger);
+
+        SignalSinkInfo sink = new SignalSinkInfo();
+        // Evaluate the script to initialize the environment and store object
+        var res = FuncScript.EvaluateWithVars(script,new
+        {
+            app=new
+            {
+                start=new SigSource((x,y)=>sink.SetSink(x,y))
+            }
+        });
+        sink.Signal();
+        System.Threading.Thread.Sleep(delay*2*n);
+        
+        Assert.That(logger.LogText,Is.EqualTo("234\n"));
+    }    
 }

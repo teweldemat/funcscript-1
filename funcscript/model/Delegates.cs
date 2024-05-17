@@ -62,7 +62,7 @@ public class ValSink : ValueSinkDelegate
 public class ValDel:ValueSinkDelegate
 {
     private readonly Action<object> _setSink;
-
+    private bool _sourceSet = false;
     public ValDel(Action<object> setSink)
     {
         this._setSink = setSink;
@@ -70,7 +70,10 @@ public class ValDel:ValueSinkDelegate
 
     public void SetValueSource(object valSource)
     {
+        if (_sourceSet)
+            throw new InvalidOperationException("Data source can't be set twice");
         _setSink(valSource);
+        _sourceSet = true;
     }
 }
 
@@ -204,8 +207,12 @@ public class SignalSinkInfo
     {
         try
         {
+            if(_sink==null)
+                return;
             if (FuncScript.Dref(_sink) is SignalListenerDelegate s)
                 s.Activate();
+            else
+                throw new error.EvaluationTimeException("The event sink is not a signal listener");
         }
         catch (Exception ex)
         {

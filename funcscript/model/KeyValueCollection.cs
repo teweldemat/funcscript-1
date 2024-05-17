@@ -61,7 +61,7 @@ namespace funcscript.model
                 return false;
             foreach(var k in other.GetAll())
             {
-                if (!this.IsDefined(k.Key))
+                if (!this.IsDefined(k.Key.ToLowerInvariant()))
                     return false;
                 var thisVal= this.GetData(k.Key);
                 var otherVal= other.GetData(k.Key);

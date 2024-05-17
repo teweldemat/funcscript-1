@@ -5,7 +5,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.text
 {
-    public class ParseText : IFsFunction, IFsDref
+    public class ParseText : IFsFunction, IFsDref,IFsDataProvider
     {
         public int MaxParsCount => 2;
 
@@ -57,7 +57,7 @@ namespace funcscript.funcs.text
                 case "l":
                     return Convert.ToInt64(str);
                 case "fs":
-                    return FuncScript.Evaluate(null, str); // Assuming parent context is not needed or it is correctly handled within FuncScript.Evaluate
+                    return FuncScript.Evaluate(this, str); // Assuming parent context is not needed or it is correctly handled within FuncScript.Evaluate
                 default:
                     return str;
             }
@@ -80,6 +80,17 @@ namespace funcscript.funcs.text
                 1 => "format",
                 _ => null
             };
+        }
+
+        public object GetData(string name)
+        {
+            return new FsError(FsError.ERROR_TYPE_INVALID_PARAMETER, $"The parsed function script should have no variables");
+        }
+
+        public IFsDataProvider ParentProvider { get; }
+        public bool IsDefined(string key)
+        {
+            throw new NotImplementedException();
         }
     }
 }

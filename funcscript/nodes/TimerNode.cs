@@ -9,9 +9,9 @@ class TimerNode:ObjectKvc, SignalSourceDelegate,SignalListenerDelegate
     private int _interval;
     private bool _repeating;
     private SignalSinkInfo _sinks = new SignalSinkInfo();
-    public TimerNode() => base.SetVal(this);
     public TimerNode(int interval, bool repeating = false)
     {
+        this.SetVal(this);
         _interval = interval;
         _repeating = repeating;
 

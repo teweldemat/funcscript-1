@@ -8,7 +8,7 @@ using funcscript.nodes;
 
 namespace funcscript.core
 {
-    public class FuncScriptParser
+    public partial class FuncScriptParser
     {
         public enum ParseNodeType
         {
@@ -1889,16 +1889,22 @@ namespace funcscript.core
         static int GetRootExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
-            var i = GetKvcExpression(parseContext, true, exp, index, out var kvc, out parseNode, serrors);
+            var thisErrors = new List<SyntaxErrorData>();
+            var i = GetKvcExpression(parseContext, true, exp, index, out var kvc, out parseNode, thisErrors);
             if (i > index)
             {
                 prog = kvc;
+                serrors.AddRange(thisErrors);
                 return i;
             }
 
-            i = GetExpression(parseContext, exp, index, out prog, out parseNode, serrors);
+            thisErrors = new List<SyntaxErrorData>();
+            i = GetExpression(parseContext, exp, index, out prog, out parseNode, thisErrors);
             if (i > index)
+            {
+                serrors.AddRange(thisErrors);
                 return i;
+            }
             return index;
         }
 

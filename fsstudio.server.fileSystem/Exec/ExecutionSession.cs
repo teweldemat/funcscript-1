@@ -19,7 +19,6 @@ public class ExecutionSession : IFsDataProvider
     private FssAppNode _appNode;
     public IFsDataProvider ParentProvider => _provider;
 
-
    
 
 

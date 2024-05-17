@@ -5,6 +5,7 @@ using System.Text;
 using fsstudio.server.fileSystem;
 using fsstudio.server.fileSystem.exec;
 using funcscript;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Net.Http.Headers; // Ensure namespace includes ExecutionSession and related classes
 
 namespace fsstudio.server.fileSystem.Controllers
@@ -254,6 +255,50 @@ namespace fsstudio.server.fileSystem.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new ErrorData(ex));
+            }
+        }
+
+        public class UiState
+        {
+            public string? SelectedFile { get; set; } = null;
+            public string? SelectedVariable { get; set; } = null;
+            public IList<string> ExpandedNodes { get; set; } = new string[] { };
+        }
+
+        [HttpGet("GetUiState")]
+        public async Task<ActionResult<UiState>> GetUiState()
+        {
+            try
+            {
+                var fileName = Path.Join(sessionManager.RootPath, "ui-state.json");
+                if (!System.IO.File.Exists(fileName))
+                    return Ok(new UiState());
+                var json = await System.IO.File.ReadAllTextAsync(fileName);
+                var uiState = Newtonsoft.Json.JsonConvert.DeserializeObject<UiState>(json);
+                return Ok(uiState);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpPost("SaveUiState")]
+        public async Task<IActionResult> SaveUiState([FromBody] UiState uiState)
+        {
+                if (uiState == null)
+                return BadRequest("UI state is null.");
+
+            try
+            {
+                var fileName = Path.Join(sessionManager.RootPath, "ui-state.json");
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(uiState);
+                await System.IO.File.WriteAllTextAsync(fileName, json);
+                return Ok("UI state saved successfully.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

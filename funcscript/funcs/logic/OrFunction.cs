@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
-    public class OrFunction : IFsFunction
+    public class OrFunction : IFsFunction, IFsDref
     {
         public int MaxParsCount => 2;
 
@@ -15,16 +15,39 @@ namespace funcscript.funcs.logic
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            int count = pars.Count;
+            if (pars.Count != MaxParsCount)
+                return new FsError(FsError.ERROR_PARAMETER_COUNT_MISMATCH,
+                    $"{this.Symbol}: expected {this.MaxParsCount} got {pars.Count}");
 
-            for (int i = 0; i < count; i++)
+            var parBuilder = new CallRefBuilder(this, parent, pars);
+
+            for (int i = 0; i < MaxParsCount; i++)
             {
-                var par = pars.GetParameter(parent, i);
+                var par = parBuilder.GetParameter(i);
+
+                if (par is ValueReferenceDelegate)
+                    return parBuilder.CreateRef();
 
                 if (!(par is bool b))
                     return new FsError(FsError.ERROR_TYPE_MISMATCH,
-                        $"{this.Symbol} doesn't apply to this type:{(par == null ? "null" : par.GetType())} ");
+                        $"{this.Symbol} doesn't apply to this type:{(par == null ? "null" : par.GetType().ToString())}");
 
+                if (b)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            for (int i = 0; i < MaxParsCount; i++)
+            {
+                var par = FuncScript.Dref(pars.GetParameter(null, i), false);
+
+                if (!(par is bool b))
+                    return new FsError(FsError.ERROR_TYPE_MISMATCH,
+                        $"{this.Symbol} doesn't apply to this type:{(par == null ? "null" : par.GetType().ToString())}");
 
                 if (b)
                     return true;

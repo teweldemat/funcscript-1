@@ -12,7 +12,14 @@ public class StoreNode :ListenerCollection, ValueReferenceDelegate, ValueSinkDel
     {
         return _value;
     }
-    public void SetValueSource(object valSource)=>_source = valSource;
+
+    public void SetValueSource(object valSource)
+    {
+        if (_source != null)
+            throw new InvalidOperationException($"Data store source can't be set twice");
+        _source = valSource;
+    }
+
     public void Activate()
     {
         var dr = FuncScript.Dref(_source);

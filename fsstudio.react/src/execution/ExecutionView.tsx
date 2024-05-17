@@ -36,8 +36,8 @@ interface ErrorItem {
 
     return <div ref={editorRef} style={{ height: '100%', overflow: 'scroll', border: '1px solid #ccc' }} />;
 };
-const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
-    const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
+const ExecutionView: React.FC<{ sessionId: string,initiallySelectedNode:string|null,onNodeSelect:(string:string|null)=>void }> = ({ sessionId,initiallySelectedNode,onNodeSelect}) => {
+    const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [expression, setExpression] = useState<string | null>(null);
     const [lastSavedExpression, setLastSavedExpression] = useState<string | null>(null);
     const [resultText, setResultText] = useState('');
@@ -52,7 +52,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
         if(activeSessionId!=null)
             {
                 if(selectedNode!=null && expression!=lastSavedExpression)
-                    saveExpression(selectedNode.path!,expression,false);
+                    saveExpression(selectedNode!,expression,false);
             }
         setSelectedNode(null);
         setExpression(null);
@@ -65,7 +65,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const handleNodeSelect = (nodePath: string|null) => {
         console.log('selected ' + nodePath);
         if (selectedNode && expression !== lastSavedExpression) {
-            saveExpression(selectedNode.path!, expression,false);
+            saveExpression(selectedNode!, expression,false);
         }
         if(nodePath==null)
             {
@@ -77,7 +77,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
             }
         axios.get(`${SERVER_URL}/api/sessions/${sessionId}/node`, { params: { nodePath } })
             .then(response => {
-                setSelectedNode({...response.data, path: nodePath});
+                setSelectedNode(nodePath);
                 console.log('fetched node data');
                 console.log(response.data);
                 setExpression(response.data.expression ?? "");
@@ -85,6 +85,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                 setSaveStatus('All changes saved');
             })
             .catch(error => console.error('Failed to fetch node:', error));
+        onNodeSelect(nodePath);
     };
 
     const saveExpression = (nodePath: string, newExpression: string | null,thenEvalute:boolean) => {
@@ -113,7 +114,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const executeExpression = () => {
         if (!selectedNode) return;
         if (selectedNode && expression === lastSavedExpression) {
-            axios.get(`${SERVER_URL}/api/sessions/${activeSessionId}/node/value`, { params: { nodePath: selectedNode.path } })
+            axios.get(`${SERVER_URL}/api/sessions/${activeSessionId}/node/value`, { params: { nodePath: selectedNode } })
                 .then(response => {
                     if (typeof response.data === 'string') {
                         setResultText(response.data);
@@ -190,14 +191,14 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                     <IconButton onClick={executeExpression} color="primary">
                         <PlayArrowIcon />
                     </IconButton>
-                    <IconButton onClick={() => selectedNode && expression !== lastSavedExpression && saveExpression(selectedNode.path!, expression, false)} color="secondary">
+                    <IconButton onClick={() => selectedNode && expression !== lastSavedExpression && saveExpression(selectedNode!, expression, false)} color="secondary">
                         <SaveIcon />
                     </IconButton>
                     <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 2 }}>
                         {saveStatus}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 2 }}>
-                        {selectedNode?.path}
+                        {selectedNode}
                     </Typography>
                 </Toolbar>
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
@@ -222,7 +223,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                         sessionId={sessionId}
                         onSelect={handleNodeSelect}
                         onModify={() => {}}
-                        selectedNode={selectedNode?.path}
+                        selectedNode={selectedNode}
                     />
                 )}
             </Grid>

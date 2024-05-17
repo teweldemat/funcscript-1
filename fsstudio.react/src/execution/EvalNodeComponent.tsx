@@ -34,7 +34,7 @@ interface EvalNodeComponentProps {
     sessionId: string;
     onSelect: (path: string | null) => void;
     onModify: () => void;
-    selectedNode?: string;
+    selectedNode: string|null;
 }
 
 

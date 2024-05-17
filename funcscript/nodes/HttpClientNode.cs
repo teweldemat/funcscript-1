@@ -16,11 +16,20 @@ public class HttpClientNode:ObjectKvc
 
     private SignalSinkInfo _doneSink = new SignalSinkInfo();
     private SignalSinkInfo _errorSink = new SignalSinkInfo();
+    private ValDel _headerSource;
+    private ValDel _urlSource;
+    private ValDel _inDataSource;
 
-    public HttpClientNode() => base.SetVal(this);
-    public ValueSinkDelegate Headers => new ValDel(val => { _headers = val; });
-    public ValueSinkDelegate Url =>new ValDel( val => { _url = val; });
-    public ValueSinkDelegate InData =>new ValDel( val => { _inData = val; });
+    public HttpClientNode()
+    {
+        base.SetVal(this);   
+        _headerSource=new ValDel(val => { _headers = val; });
+        _urlSource=new ValDel( val => { _url = val; });
+        _inDataSource=new ValDel( val => { _inData = val; });
+    }
+    public ValueSinkDelegate Headers => _headerSource;
+    public ValueSinkDelegate Url => _urlSource;
+    public ValueSinkDelegate InData => _inDataSource;
     public ValueReferenceDelegate OutData => _outData;
     public ValueReferenceDelegate ErrorData => _errorData;
     public SignalSourceDelegate Success =>new SigSource( (n, e) => _doneSink.SetSink(n, e));
@@ -69,7 +78,9 @@ public class HttpClientNode:ObjectKvc
 
             (var request, var response) = await SendGetRequest(url);
             string responseBody = await response.Content.ReadAsStringAsync();
+            
             _outData.Val = FuncScript.Evaluate(null, responseBody);
+            
             response.Dispose();
             request.Dispose();
             _doneSink.Signal();
@@ -123,7 +134,12 @@ public class HttpClientNode:ObjectKvc
             HttpResponseMessage response = await SendPostRequest(url, content);
             string responseBody = await response.Content.ReadAsStringAsync();
             Console.WriteLine("Json\n" + jsonData);
-            _outData.Val = FuncScript.Evaluate(null, responseBody);
+            if(response.Content.Headers.ContentType?.MediaType=="application/json")
+                _outData.Val = FuncScript.Evaluate(null, responseBody);
+            else
+            {
+                _outData.Val = responseBody;
+            }
             response.Dispose();
             _doneSink.Signal();
         }
