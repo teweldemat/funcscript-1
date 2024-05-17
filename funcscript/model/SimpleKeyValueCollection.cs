@@ -8,7 +8,8 @@ namespace funcscript.model
         private IFsDataProvider _parent;
         KeyValuePair<String, object>[] _data;
         Dictionary<String, object> _index;
-        public SimpleKeyValueCollection()
+        public SimpleKeyValueCollection(KeyValuePair<string, object>[] kv)
+        :this(null,kv)
         {
 
         }
