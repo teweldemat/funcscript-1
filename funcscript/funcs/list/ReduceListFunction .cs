@@ -12,7 +12,7 @@ namespace funcscript.funcs.list
     {
         public int MaxParsCount => 3;
 
-        public CallType CallType => CallType.Prefix;
+        public CallType CallType => CallType.Dual;
 
         public string Symbol => "Reduce";
 

@@ -28,7 +28,7 @@ namespace funcscript.core
                     //get an infix with one level higher or call expression when we are parsing for highest precidence operators
                     if (level == 0)
                     {
-                        i2 = GetCallAndMemberAccess(parseContext, exp, i, out prog, out parseNode, serrors);
+                        i2 = GetInfixFunctionCall(parseContext, exp, i, out prog, out parseNode, serrors);
                     }
                     else
                     {
@@ -61,7 +61,7 @@ namespace funcscript.core
                     ExpressionBlock nextOperand;
                     ParseNode nextOperandNode;
                     if (level == 0)
-                        i2 = GetCallAndMemberAccess(parseContext, exp, i, out nextOperand, out nextOperandNode, serrors);
+                        i2 = GetInfixFunctionCall(parseContext, exp, i, out nextOperand, out nextOperandNode, serrors);
                     else
                         i2 = GetInfixExpressionSingleLevel(parseContext, level - 1, s_operatorSymols[level - 1], exp, i, out nextOperand, out nextOperandNode, serrors);
                     if (i2 == i)

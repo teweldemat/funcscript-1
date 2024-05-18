@@ -9,7 +9,7 @@ namespace funcscript.funcs.text
         public const string SYMBOL = "join";
         public int MaxParsCount => 2;
 
-        public CallType CallType => CallType.Infix;
+        public CallType CallType => CallType.Dual;
 
         public string Symbol => SYMBOL;
 

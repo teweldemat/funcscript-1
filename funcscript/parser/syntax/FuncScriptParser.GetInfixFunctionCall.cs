@@ -25,6 +25,9 @@ namespace funcscript.core
                 parseNode = null;
                 return index;
             }
+            prog = firstParam;
+            parseNode = firstPramNode;
+
 
             allOperands.Add(firstParam);
             childNodes.Add(firstPramNode);
@@ -33,15 +36,26 @@ namespace funcscript.core
             var i2 = GetIdentifier(exp, i, out var iden, out var idenLower, out var idenNode);
             if (i2 == i)
             {
+                return i;
+            }
+            var func = parseContext.Get(idenLower);
+            if (!(func is IFsFunction inf))
+            {
                 prog = null;
                 parseNode = null;
+                serrors.Add(new SyntaxErrorData(i,i2-i,"A function expected"));
                 return index;
             }
+            if (inf.CallType!=CallType.Dual)
+            {
+                return i;
+            }
 
+            
             childNodes.Add(idenNode);
             i = SkipSpace(exp, i2);
 
-            i2 = GetInfixExpression(parseContext, exp, i, out var secondParam, out var secondParamNode, serrors);
+            i2 = GetCallAndMemberAccess(parseContext, exp, i, out var secondParam, out var secondParamNode, serrors);
             if (i2 == i)
             {
                 serrors.Add(new SyntaxErrorData(i, 0, $"Right side operand expected for {iden}"));
@@ -61,7 +75,7 @@ namespace funcscript.core
                 if (i2 == i)
                     break;
                 i = SkipSpace(exp, i2);
-                i2 = GetInfixExpression(parseContext, exp, i, out var moreOperand, out var morePrseNode, serrors);
+                i2 = GetCallAndMemberAccess(parseContext, exp, i, out var moreOperand, out var morePrseNode, serrors);
                 if (i2 == i)
                     break;
                 i = SkipSpace(exp, i2);
@@ -78,10 +92,9 @@ namespace funcscript.core
                 return index;
             }
 
-            var func = parseContext.Get(idenLower);
             prog = new FunctionCallExpression
             {
-                Function = func == null ? new ReferenceBlock(iden, idenLower) : new LiteralBlock(func),
+                Function = new LiteralBlock(func),
                 Parameters = allOperands.ToArray()
             };
             parseNode = new ParseNode(ParseNodeType.GeneralInfixExpression, childNodes[0].Pos,
