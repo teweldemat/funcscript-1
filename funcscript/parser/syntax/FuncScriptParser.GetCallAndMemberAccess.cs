@@ -9,7 +9,8 @@ namespace funcscript.core
         {
             parseNode = null;
             prog = null;
-            var i = GetUnit(parseContext, exp, index, out var theUnit, out parseNode, serrors);
+            var i1 = SkipSpace(exp, index);
+            var i = GetUnit(parseContext, exp, i1, out var theUnit, out parseNode, serrors);
             if (i == index)
                 return index;
 
