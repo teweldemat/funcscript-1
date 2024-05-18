@@ -13,7 +13,7 @@ namespace funcscript.funcs.list
     {
         public int MaxParsCount => 2;
 
-        public CallType CallType => CallType.Prefix;
+        public CallType CallType => CallType.Dual;
 
         public string Symbol => "Any";
 

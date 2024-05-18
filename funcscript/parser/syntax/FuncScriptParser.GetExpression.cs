@@ -14,11 +14,11 @@ namespace funcscript.core
         static int GetExpression(IFsDataProvider parseContext, String exp, int index, out ExpressionBlock prog,
             out ParseNode parseNode, List<SyntaxErrorData> serrors)
         {
-            var i = GetInfixFunctionCall(parseContext, exp, index, out prog, out parseNode, serrors);
-            if (i > index)
-                return i;
+            // var i = GetInfixFunctionCall(parseContext, exp, index, out prog, out parseNode, serrors);
+            // if (i > index)
+            //     return i;
 
-            i = GetInfixExpression(parseContext, exp, index, out prog, out parseNode, serrors);
+            var i = GetInfixExpression(parseContext, exp, index, out prog, out parseNode, serrors);
             if (i > index)
                 return i;
 

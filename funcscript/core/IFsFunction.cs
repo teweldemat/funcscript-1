@@ -63,6 +63,7 @@ namespace funcscript.core
     public enum CallType
     {
         Infix,
-        Prefix
+        Prefix,
+        Dual
     }
 }
