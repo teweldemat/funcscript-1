@@ -58,17 +58,21 @@ namespace funcscript.funcs.math
                     }
                     else if (d is long)
                     {
+                        isInt = false;
                         isLong = true;
                         longTotal = intTotal;
+                        longTotal %= (long)d;
                     }
                     else if (d is double)
                     {
+                        isInt = false;
                         isDouble = true;
                         doubleTotal = intTotal;
+                        doubleTotal %= (double)d;
                     }
                 }
 
-                if (isLong)
+                else if (isLong)
                 {
                     if (d is int)
                     {
@@ -80,12 +84,14 @@ namespace funcscript.funcs.math
                     }
                     else if (d is double)
                     {
+                        isLong = false;
                         isDouble = true;
                         doubleTotal = longTotal;
+                        doubleTotal %= (double)d;
                     }
                 }
 
-                if (isDouble)
+                else if (isDouble)
                 {
                     if (d is int)
                     {

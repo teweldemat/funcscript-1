@@ -180,7 +180,80 @@ namespace funcscript.test
         {
             TestResult(expr,res,errorType:errorType);
         }
-
+        
+        [TestCase("10 - 6.0",4.0d)]
+        [TestCase("10 - 6.0", 4.0d)]
+        [TestCase("15 + 5l", 20L)]
+        [TestCase("20 - 4l", 16L)]
+        [TestCase("7.5 + 2.5", 10.0d)]
+        [TestCase("8 * 2.0", 16.0d)]
+        [TestCase("5.0 / 2", 2.5d)]
+        [TestCase("100L - 50", 50L)]
+        [TestCase("2L * 3.0", 6.0d)]
+        [TestCase("12 / 3L", 4L)]
+        [TestCase("3.0 + 4.0", 7.0d)]
+        [TestCase("100 - 50.0", 50.0d)]
+        [TestCase("5 + 5", 10)]
+        [TestCase("25L / 5", 5L)]
+        [TestCase("9.0 - 3L", 6.0d)]
+        [TestCase("6L * 2", 12L)]
+        public void TestNumberTypeMixingLevel1(string expr, object res,string errorType=null)
+        {
+            TestResult(expr,res,errorType:errorType);
+        }
+        
+        [TestCase("10 - 6.0 + 2 * 3", 10.0d)]
+        [TestCase("(15 + 5l) / 2", 10L)]
+        [TestCase("20 - (4l + 6)", 10L)]
+        [TestCase("7.5 + (2.5 * 2)", 12.5d)]
+        [TestCase("(8 * 2.0) / 4", 4.0d)]
+        [TestCase("5.0 / 2 + 3", 5.5d)]
+        [TestCase("100L - (50 + 25)", 25L)]
+        [TestCase("2L * (3.0 + 1)", 8.0d)]
+        [TestCase("(12 / 3L) * 2", 8L)]
+        [TestCase("3.0 + 4.0 - 2", 5.0d)]
+        [TestCase("100 - (50.0 + 25)", 25.0d)]
+        [TestCase("(5 + 5) * 2", 20)]
+        [TestCase("(25L / 5) + 3", 8L)]
+        [TestCase("9.0 - (3L + 1)", 5.0d)]
+        [TestCase("6L * 2 - 4", 8L)]
+        [TestCase("10 + (20 - 5L) * 2", 40L)]
+        [TestCase("(5.0 * 3) - (2 + 1)", 12.0d)]
+        [TestCase("50 % 3 + 1.0", 3.0d)]
+        [TestCase("100L / (5 + 5)", 10L)]
+        [TestCase("(8.0 / 2) * (2 + 1)", 12.0d)]
+        [TestCase("20 % 3L + 2.0", 4.0d)]
+        [TestCase("7.5 * 2 - (4 / 2L)", 13.0d)]
+        [TestCase("(50L - 25) % 4", 1L)]
+        [TestCase("2L + (6 * 3.0) / 2", 11.0d)]
+        public void TestNumberTypeMixingLevel2(string expr, object res,string errorType=null)
+        {
+            TestResult(expr,res,errorType:errorType);
+        }
+        [TestCase("10 + 5L + 2.5", 17.5d)]
+        [TestCase("20 - 4.0 - 3L", 13.0d)]
+        [TestCase("3 * 2L * 4.0", 24.0d)]
+        [TestCase("100 / 5L / 2.0", 10.0d)]
+        [TestCase("50 % 7L % 3.0", 50 % 7L % 3.0)]
+        [TestCase("5 + 10L + 3 + 2.5", 20.5d)]
+        [TestCase("30 - 10L - 5 - 2.0", 13.0d)]
+        [TestCase("2 * 3L * 2.0 * 2", 24.0d)]
+        [TestCase("120 / 4L / 2 / 3.0", 5.0d)]
+        [TestCase("35 % 6L % 5 % 2.0", 35 % 6L % 5 % 2.0)]
+        [TestCase("1 + 2L + 3 + 4 + 5.0", 15.0d)]
+        [TestCase("50 - 10L - 5 - 3 - 2.0", 30.0d)]
+        [TestCase("2 * 3L * 4 * 5 * 1.0", 120.0d)]
+        [TestCase("200 / 4L / 5 / 2 / 2.0", 2.5d)]
+        [TestCase("55 % 7L % 3 % 2 % 1.0", 55 % 7L % 3 % 2 % 1.0)]
+        [TestCase("3 + 5L + 7 + 2.5 + 1", 18.5d)]
+        [TestCase("60 - 20L - 10 - 5 - 3.0", 22.0d)]
+        [TestCase("2 * 3L * 2 * 4.0 * 1", 48.0d)]
+        [TestCase("180 / 3L / 2 / 5.0 / 2", 3.0d)]
+        [TestCase("70 % 10L % 6 % 4.0 % 2", 0.0d)]
+        public void TestNumberTypeMixingLevel3(string expr, object res,string errorType=null)
+        {
+            TestResult(expr,res,errorType:errorType);
+        }
         [Test]
         public void TestListFormat()
         {
