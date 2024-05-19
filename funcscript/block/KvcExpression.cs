@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.Design;
+using System.Data;
 using funcscript.core;
 using funcscript.model;
 using System.Security.Cryptography;
@@ -175,16 +176,20 @@ namespace funcscript.block
         public IList<KeyValueExpression> KeyValues => _keyValues;
 
         public override (object, CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions)
+            => Evaluate(provider, connectionActions, false);
+        public (object, CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions,bool selectorExpression)
         {
-            var evalProvider = new KvcExpressionProvider(provider, this, connectionActions);
+            var evalProvider =selectorExpression?provider: new KvcExpressionProvider(provider, this, connectionActions);
 
             var kvc = new SimpleKeyValueCollection(null, this._keyValues
                 .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
-                    evalProvider.Get(kv.Key))).ToArray());
-
-            var pr = new KvcProvider(kvc, provider);
+                    kv.ValueExpression.Evaluate(evalProvider,connectionActions).Item1)).ToArray());
+            
             if (this._dataConnections.Count > 0 || this._signalConnections.Count > 0)
             {
+                if (selectorExpression)
+                    throw new EvaluationTimeException("Connections can't be placed inside selector expression");
+                var pr =new KvcProvider(kvc, provider);
                 connectionActions.Add(() =>
                 {
                     List<Action> conActions = new List<Action>();
@@ -221,7 +226,9 @@ namespace funcscript.block
             }
 
             if (singleReturn != null)
-                return singleReturn.Evaluate(pr, connectionActions);
+            {
+                return singleReturn.Evaluate(evalProvider, connectionActions);
+            }
             return (kvc, this.CodeLocation);
         }
 
