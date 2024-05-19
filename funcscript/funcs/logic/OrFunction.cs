@@ -5,7 +5,7 @@ namespace funcscript.funcs.logic
 {
     public class OrFunction : IFsFunction, IFsDref
     {
-        public int MaxParsCount => 2;
+        public int MaxParsCount => -1;
 
         public CallType CallType => CallType.Infix;
 
@@ -17,7 +17,7 @@ namespace funcscript.funcs.logic
         {
             var parBuilder = new CallRefBuilder(this, parent, pars);
 
-            for (int i = 0; i < MaxParsCount; i++)
+            for (int i = 0; i < pars.Count; i++)
             {
                 var par = parBuilder.GetParameter(i);
 

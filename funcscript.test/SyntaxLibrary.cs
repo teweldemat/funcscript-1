@@ -180,7 +180,14 @@ namespace funcscript.test
         {
             TestResult(expr,res,errorType:errorType);
         }
+
         
+        [TestCase("false or false or true",true)]
+        public void PrecidenceTests(string expr, object res,string errorType=null)
+        {
+            TestResult(expr,res,errorType:errorType);
+        }
+
         [TestCase("10 - 6.0",4.0d)]
         [TestCase("10 - 6.0", 4.0d)]
         [TestCase("15 + 5l", 20L)]

@@ -11,7 +11,7 @@ namespace funcscript.funcs.logic
 
     public class AndFunction : IFsFunction
     {
-        public int MaxParsCount => 2;
+        public int MaxParsCount => -1;
 
         public CallType CallType => CallType.Infix;
 
