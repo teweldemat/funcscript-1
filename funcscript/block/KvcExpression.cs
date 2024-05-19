@@ -28,21 +28,23 @@ namespace funcscript.block
                 _parent = parent;
                 this._connectionActions = connectionActions;
             }
-
-            public object Get(string key)
+            String _evaluating = null;
+            public object Get(string name)
             {
-                lock (_valCache)
-                {
-                    var lower = key.ToLower();
-                    if (_valCache.TryGetValue(lower, out var ret))
-                        return ret;
-                    var val = _parent.index.TryGetValue(lower, out var ch)
-                        ? ch.ValueExpression.Evaluate(this, _connectionActions).Item1
-                        : ParentProvider.Get(lower);
-
-                    _valCache.Add(lower, val);
+                if (_valCache.TryGetValue(name, out var val))
                     return val;
+                if (_evaluating == null || name != _evaluating)
+                {
+                    if (_parent.index.TryGetValue(name, out var exp) && exp.ValueExpression != null)
+                    {
+                        _evaluating = name;
+                        var v = exp.ValueExpression.Evaluate(this,_connectionActions).Item1;
+                        _evaluating = null;
+                        _valCache[name] = v;
+                        return v;
+                    }
                 }
+                return ParentProvider.Get(name);
             }
         }
 
@@ -176,10 +178,8 @@ namespace funcscript.block
         public IList<KeyValueExpression> KeyValues => _keyValues;
 
         public override (object, CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions)
-            => Evaluate(provider, connectionActions, false);
-        public (object, CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions,bool selectorExpression)
         {
-            var evalProvider =selectorExpression?provider: new KvcExpressionProvider(provider, this, connectionActions);
+            var evalProvider = new KvcExpressionProvider(provider, this, connectionActions);
 
             var kvc = new SimpleKeyValueCollection(null, this._keyValues
                 .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
@@ -187,8 +187,6 @@ namespace funcscript.block
             
             if (this._dataConnections.Count > 0 || this._signalConnections.Count > 0)
             {
-                if (selectorExpression)
-                    throw new EvaluationTimeException("Connections can't be placed inside selector expression");
                 var pr =new KvcProvider(kvc, provider);
                 connectionActions.Add(() =>
                 {

@@ -65,7 +65,7 @@ namespace funcscript.block
                         Provider = provider,
                         SourceVal = l
                     };
-                    ret[i] = Selector.Evaluate(sel,connectionActions,true).Item1;
+                    ret[i] = Selector.Evaluate(sel,connectionActions).Item1;
                     i++;
                 }
                 return (new ArrayFsList(ret),this.CodeLocation);
@@ -78,7 +78,7 @@ namespace funcscript.block
                     Parent = this,
                     Provider = provider,
                     SourceVal=sourceVal
-                },connectionActions,false);
+                },connectionActions);
             }
         }
 

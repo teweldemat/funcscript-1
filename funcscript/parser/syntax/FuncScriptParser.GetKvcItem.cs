@@ -40,7 +40,7 @@ namespace funcscript.core
                     {
                         Key = iden,
                         KeyLower = idenLower,
-                        ValueExpression = new ReferenceBlock(iden, idenLower, true)
+                        ValueExpression = new ReferenceBlock(iden, idenLower, false)
                         {
                             Pos = index,
                             Length = i - index
@@ -58,7 +58,7 @@ namespace funcscript.core
                     {
                         Key = iden,
                         KeyLower = idenLower,
-                        ValueExpression = new ReferenceBlock(iden, iden.ToLower(), true)
+                        ValueExpression = new ReferenceBlock(iden, iden.ToLower(), false)
                         {
                             Pos = index,
                             Length = i - index
