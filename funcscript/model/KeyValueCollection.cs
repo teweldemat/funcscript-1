@@ -32,7 +32,7 @@ namespace funcscript.model
         /// <returns></returns>
         public T ConvertTo<T>()
         {
-            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(this.ToString());
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(FuncScript.FormatToJson(this));
         }
         /// <summary>
         /// Converst a KVC to a .net type
