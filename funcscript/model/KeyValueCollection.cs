@@ -41,7 +41,7 @@ namespace funcscript.model
         /// <returns></returns>
         public object ConvertTo(Type t)
         {
-            var json = this.ToString();
+            var json = FuncScript.FormatToJson(this.ToString());
             return Newtonsoft.Json.JsonConvert.DeserializeObject(json,t);
         }
         /// <summary>
