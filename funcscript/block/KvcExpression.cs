@@ -183,7 +183,7 @@ namespace funcscript.block
 
             var kvc = new SimpleKeyValueCollection(null, this._keyValues
                 .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
-                    kv.ValueExpression.Evaluate(evalProvider,connectionActions).Item1)).ToArray());
+                    evalProvider.Get(kv.KeyLower))).ToArray());
             
             if (this._dataConnections.Count > 0 || this._signalConnections.Count > 0)
             {

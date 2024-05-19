@@ -423,6 +423,15 @@ d";
             var res = FuncScript.Evaluate(exp);
             Assert.AreEqual(5, res);  
         }
+        [Test]
+        public void IndexKvcSensitivyBug2()
+        {
+            var exp = @"{
+'A':5
+}['a']";
+            var res = FuncScript.Evaluate(exp);
+            Assert.AreEqual(5, res);  
+        }
     }
 
 }
