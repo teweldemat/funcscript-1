@@ -174,7 +174,6 @@ namespace funcscript.block
 
         public IList<KeyValueExpression> KeyValues => _keyValues;
 
-
         public override (object, CodeLocation) Evaluate(IFsDataProvider provider, List<Action> connectionActions)
         {
             var evalProvider = new KvcExpressionProvider(provider, this, connectionActions);

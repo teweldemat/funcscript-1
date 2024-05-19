@@ -47,7 +47,7 @@ namespace funcscript.block
 
         }
         public ExpressionBlock Source;
-        public ExpressionBlock Selector;
+        public KvcExpression Selector;
         public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
             var (sourceVal,_) = Source.Evaluate(provider,connectionActions);

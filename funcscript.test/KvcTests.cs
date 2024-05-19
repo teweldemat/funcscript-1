@@ -64,6 +64,32 @@ namespace funcscript.test
             var expected = new ObjectKvc(new { a = 4, c = 6 });
             Assert.AreEqual(expected, res);
         }
+        
+        [Test]
+        public void TestSelectorNovel()
+        {
+            var g = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(g, "{a:4}(a+1)");
+            var expected = 5;
+            Assert.AreEqual(expected, res);
+        }
+        
+        [Test]
+        public void TestSelectorStackOverflowBug()
+        {
+            var g = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(g, "{a:4}{a:a}");
+            var expected = new ObjectKvc(new { a = 4});
+            Assert.AreEqual(expected, res);
+        }
+        [Test]
+        public void TestSelectorStackOverflowBug2()
+        {
+            var g = new DefaultFsDataProvider();
+            var res = FuncScript.Evaluate(g, "{a:4}{a:a+1}");
+            var expected = new ObjectKvc(new { a = 5 });
+            Assert.AreEqual(expected, res);
+        }
 
         [Test]
         public void TestSelector2()
