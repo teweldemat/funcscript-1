@@ -4,10 +4,10 @@ import { Drawer, List, Toolbar, Box, Tooltip, IconButton } from '@mui/material';
 import NavItemComponent from './NavItemComponent'; // Ensure this path is correct
 const drawerWidth = '20%';
 
-interface NavigationProps { onSelected: (path: string) => void }
+interface NavigationProps { onSelected: (path: string) => void,initiallySelectedPath:string|null }
 
-const Navigation: React.FC<NavigationProps> = ({onSelected}) => {
-  const [selectedPath, setSelectedPath] = useState<string>("");
+const Navigation: React.FC<NavigationProps> = ({onSelected,initiallySelectedPath}) => {
+  const [selectedPath, setSelectedPath] = useState<string>(initiallySelectedPath??"");
 
   const handleSelect = (path: string) => {
     if (selectedPath !== path) {
@@ -28,7 +28,7 @@ const Navigation: React.FC<NavigationProps> = ({onSelected}) => {
     >
 
       <Box sx={{ overflow: 'auto' }}>
-        <NavItemComponent item={{ path: "/", name: "root", isFolder: true }} onDelete={() => { }} onRename={() => { }} selectedPath={selectedPath} onSelect={handleSelect} />
+        <NavItemComponent   item={{ path: "/", name: "root", isFolder: true }} onDelete={() => { }} onRename={() => { }} selectedPath={selectedPath} onSelect={handleSelect} />
       </Box>
     </Drawer>
   );

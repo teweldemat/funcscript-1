@@ -1,32 +1,35 @@
 using System;
+using System.Text;
 using funcscript.core;
 using funcscript.funcs.misc;
 using funcscript.model;
 
 namespace funcscript.nodes;
 
-class TextLogNode
+class TextLogNode:ObjectKvc, ValueSinkDelegate,SignalListenerDelegate
 {
     private object _source=null;
+
     public TextLogNode()
     {
+        base.SetVal(this);   
     }
-
-    // Value sink that logs input to the console
-    public ValueSinkDelegate Text => source =>
-    {
-        _source = source;
-    };
-
-    public SignalListenerDelegate Log => () =>
+    public void Activate()
     {
         var dr = FuncScript.Dref(_source);
-        Fslogger.DefaultLogger.WriteLine(dr.ToString());
-    };
-    public SignalListenerDelegate Clear => () =>
+        var sb = new StringBuilder();
+        FuncScript.Format(sb,dr,null);
+        Fslogger.DefaultLogger.WriteLine(sb.ToString());
+    }
+    public SignalListenerDelegate Clear =>new SigSink(() =>
     {
         Fslogger.DefaultLogger.Clear();
-    };
+    });
+
+    public void SetValueSource(object valSource)
+    {
+        _source = valSource;
+    }
 }
 
 public class CreateTextLogFunction : IFsFunction
@@ -37,9 +40,11 @@ public class CreateTextLogFunction : IFsFunction
         var n = new TextLogNode();
         if (pars.Count > 0)
         {
-            n.Text(pars.GetParameter(parent, 0));
+            var source = pars.GetParameter(parent, 0);
+            n.SetValueSource(source);
         }
-        return new ObjectKvc(n);
+
+        return n;
     }
 
     public string ParName(int index)

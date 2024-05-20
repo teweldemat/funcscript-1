@@ -2,6 +2,8 @@
 {
     public interface IFsDataProvider        
     {
-        object GetData(String name);
+        object Get(String name);
+        public IFsDataProvider ParentProvider { get; }
+        bool IsDefined(string key);
     }
 }

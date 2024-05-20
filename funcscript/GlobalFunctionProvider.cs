@@ -16,19 +16,35 @@ namespace funcscript
         {
             LoadFromAssembly(Assembly.GetExecutingAssembly()); //always load builtin functions. May be we don't need this
         }
+        public IFsDataProvider ParentProvider => null;
+        public bool IsDefined(string key)
+        {
+            return s_funcByName.ContainsKey(key);
+        }
+
         public static void LoadFromAssembly(Assembly a)
         {
             foreach (var t in a.GetTypes())
             {
-                if (t.GetInterface(typeof(IFsFunction).Name) != null)
+                if (t.GetInterface(nameof(IFsFunction)) != null)
                 {
-                    if (t.GetConstructor(new Type[0]) != null) //load only functions with default constructor
+                    if (t.GetConstructor(Type.EmptyTypes) != null) //load only functions with default constructor
                     {
                         var f = Activator.CreateInstance(t) as IFsFunction;
                         var lower = f.Symbol.ToLower();
-                        if (s_funcByName.ContainsKey(lower))
-                            throw new Exception($"{f.Symbol} alraedy defined");
-                        s_funcByName.Add(lower, f);
+                        if (!s_funcByName.TryAdd(lower, f))
+                            throw new Exception($"{f.Symbol} already defined");
+                        var aliace=t.GetCustomAttribute<FunctionAliasAttribute>();
+                        if (aliace != null)
+                        {
+                            foreach (var al in aliace.Aliaces)
+                            {
+                                lower = al.ToLowerInvariant();
+                                if (!s_funcByName.TryAdd(lower, f))
+                                    throw new Exception($"{f.Symbol} already defined");
+                            }
+
+                        }
                     }
                 }
             }
@@ -49,7 +65,7 @@ namespace funcscript
                     _data.Add(k.Key, FuncScript.NormalizeDataType(k.Value));
             }
         }
-        public object GetData(string name)
+        public object Get(string name)
         {
             if (_data != null)
             {
@@ -74,21 +90,30 @@ namespace funcscript
     /// </summary>
     public class KvcProvider : IFsDataProvider
     {
-        KeyValueCollection _kvc;
+        IFsDataProvider _kvc;
         IFsDataProvider _parent;
-        public KvcProvider(KeyValueCollection kvc, IFsDataProvider parent)
+        public KvcProvider(IFsDataProvider kvc, IFsDataProvider parent)
         {
             _kvc = kvc;
             _parent = parent;
         }
 
-        public object GetData(string name)
+        public object Get(string name)
         {
-            if (_kvc.ContainsKey(name))
+            if (_kvc.IsDefined(name))
                 return _kvc.Get(name);
             if (_parent == null)
                 return null;
-            return _parent.GetData(name);
+            return _parent.Get(name);
+        }
+        public IFsDataProvider ParentProvider => _parent;
+        public bool IsDefined(string key)
+        {
+            if (_kvc.IsDefined(key))
+                return true;
+            if (_parent != null)
+                return _parent.IsDefined(key);
+            return false;
         }
     }
 

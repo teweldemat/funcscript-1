@@ -6,32 +6,42 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-public class SigSequenceFunction:IFsFunction
-{
-    public class SigSequenceNode
+public class SigSequenceNode:SignalSourceDelegate,SignalListenerDelegate
     {
-        public Item[] Items;
+        public FsList Items;
+        private SignalSinkInfo _sink = new SignalSinkInfo();
+        public void SetSource(object listener, object catcher)=>
+            _sink.SetSink(listener,catcher);
 
-        public class Item
-        {
-            public object Sink;
-            public object Catch;
-        }
-
-        public SignalListenerDelegate Listner => ()=>
+        public void Activate()
         {
             if(Items==null || Items.Length==0)
                 return;
             foreach (var item in Items)
             {
+                object sink;
+                object fault=null;
                 try
                 {
-                    if (FuncScript.Dref(item.Sink) is SignalListenerDelegate s)
-                        s();
+                    if (item is FsList pair)
+                    {
+                        if (pair.Length != 2)
+                            throw new EvaluationTimeException(
+                                "Exactly two elemeents, normal and listners  are expected");
+                        sink = pair[0];
+                        fault = pair[1];
+                    }
+                    else
+                    {
+                        sink = item;
+                    }
+                    if (FuncScript.Dref(sink,true) is SignalListenerDelegate s)
+                            s.Activate();
+                    
                 }
                 catch (Exception ex)
                 {
-                    if (FuncScript.Dref(item.Catch) is SignalListenerDelegate s)
+                    if (FuncScript.Dref(fault,true) is SignalListenerDelegate s)
                     {
                         var x = ex;
                         var sb = new StringBuilder();
@@ -48,7 +58,7 @@ public class SigSequenceFunction:IFsFunction
                                 Message = sb.ToString(),
                                 ErrorType = ex.GetType().ToString(),
                             });
-                        s();
+                        s.Activate();
                         SignalSinkInfo.ThreadErrorObjects.TryRemove(System.Threading.Thread.CurrentThread.ManagedThreadId, out _);
                     }
                     else
@@ -58,61 +68,56 @@ public class SigSequenceFunction:IFsFunction
                     }
                 }
             }
-        };
-}
+            _sink.Signal();
+        }
+    }
+[FunctionAlias(">>")]
+public class SigSequenceFunction : IFsFunction, IFsDref
+{
+    public const string SYMBOL = "SigSequence";
+    public string Symbol => SYMBOL;
+    public int MaxParsCount => -1;  // Variable number of parameters
+    public CallType CallType => CallType.Prefix;
+    public int Precidence => 0;
+
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        var par0 = pars.GetParameter(parent, 0);
+        var parBuilder = new CallRefBuilder(this, parent, pars);
+        var par0 = parBuilder.GetParameter(0);
+        
         if (par0 is ValueReferenceDelegate)
-        {
-            var r= CallRef.Create(parent, this, pars);
-            return r;
-        }
-        var list = par0 as FsList;
-        if (list == null)
-            throw new TypeMismatchError($"List of signal sinks expected found {(par0==null?"null":par0.GetType().ToString())} found");
+            return parBuilder.CreateRef();
 
-        var c = list.Length;
-        var parVals = new object[c];
-        for(int i=0;i<c;i++)
-        {
-            parVals[i] = list[i];
-        }
+        if (!(par0 is FsList list))
+            throw new TypeMismatchError($"List of signal sinks expected, found {(par0 == null ? "null" : par0.GetType().ToString())}.");
 
-       
-        return new SigSequenceNode()
+        return CreateSigSequenceNode(list);
+    }
+
+    public object DrefEvaluate(IParameterList pars)
+    {
+        var list = FuncScript.Dref(pars.GetParameter(null, 0)) as FsList;
+        return CreateSigSequenceNode(list);
+    }
+
+    
+
+    private bool IsDeferredPair(object item)
+    {
+        if (item is FsList l && l.Length == 2)
         {
-            Items = parVals.Select(p =>
-            {
-                if (p is FsList l)
-                {
-                    if (l.Length != 2)
-                        throw new EvaluateException("Exactly two values:normal signal, and error signal are expected");
-                    return new SigSequenceNode.Item
-                    {
-                        Sink = l[0],
-                        Catch = l[1]
-                    };
-                }
-                
-                return new SigSequenceNode.Item
-                {
-                    Sink = p,
-                    Catch = null
-                };
-            }).ToArray()
-        }.Listner;
+            return l[0] is ValueReferenceDelegate || l[1] is ValueReferenceDelegate;
+        }
+        return false;
+    }
+
+    private object CreateSigSequenceNode(FsList list)
+    {
+        return new SigSequenceNode {Items = list};
     }
 
     public string ParName(int index)
     {
-        return $"Expression {index+1}";
+        return $"Expression {index + 1}";
     }
-
-    public int MaxParsCount => -1;
-    public CallType CallType => CallType.Prefix;
-    
-    public const string SYMBOL = "SigSequence";
-    public string Symbol => SYMBOL;
-    public int Precidence => 0;
 }

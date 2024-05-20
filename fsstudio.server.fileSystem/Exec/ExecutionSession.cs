@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using fsstudio.server.fileSystem.exec.funcs;
 using funcscript;
 using funcscript.core;
 using funcscript.funcs.misc;
@@ -16,16 +17,15 @@ public class ExecutionSession : IFsDataProvider
     public Guid SessionId { get; private set; } = Guid.NewGuid();
     private ObjectKvc _sessionVars;
     private FssAppNode _appNode;
-    void UpdateFile()
-    {
-        System.IO.File.WriteAllText(fileName, System.Text.Json.JsonSerializer.Serialize(_nodes));
-    }
-
+    public IFsDataProvider ParentProvider => _provider;
 
    
-    public ExecutionSession(string fileName)
+
+
+    private RemoteLogger logger;
+    public ExecutionSession(string fileName,RemoteLogger logger)
     {
-        
+        this.logger = logger;
         this.fileName = fileName;
         var json=System.IO.File.ReadAllText(fileName);
         InitFromNodes(System.Text.Json.JsonSerializer.Deserialize<List<ExecutionNode>>(json)??[]);
@@ -39,12 +39,18 @@ public class ExecutionSession : IFsDataProvider
         _sessionVars = new ObjectKvc(new
         {
             app=new ObjectKvc(_appNode=new FssAppNode()),
+            markdown=new CreateMarkdownNodeFunction(logger),
         });
         this._provider = new KvcProvider(_sessionVars, new DefaultFsDataProvider());
     }
-    public ExecutionSession(IEnumerable<ExecutionNode> nodes)
+    public ExecutionSession(IEnumerable<ExecutionNode> nodes,RemoteLogger logger)
     {
+        this.logger = logger;
         InitFromNodes(nodes);
+    }
+    void UpdateFile()
+    {
+        System.IO.File.WriteAllText(fileName, System.Text.Json.JsonSerializer.Serialize(_nodes));
     }
    
     private ExecutionNode? FindNodeByPath(string nodePath)
@@ -207,33 +213,42 @@ public class ExecutionSession : IFsDataProvider
             Expression = node.Expression
         };
     }
-    public object GetData(string name)
+    public object Get(string name)
     {
         var n = _nodes.FirstOrDefault(c => c.NameLower == name);
         if (n == null)
-            return _provider.GetData(name);
+            return _provider.Get(name);
         return n.Evaluate(_provider);
     }
-    public object? RunNode(string nodePath)
+    public bool IsDefined(string name)
+    {
+        var n = _nodes.FirstOrDefault(c => c.NameLower == name);
+        if (n != null)
+            return true;
+        return _provider.IsDefined(name);
+    }
+
+    
+    public async Task<object?> RunNode(string nodePath)
     {
         var n = FindNodeByPath(nodePath);
         if (n == null)
             return null;
         var segments = nodePath.Split('.');
         var parentNodePath = string.Join(".", segments.Take(segments.Length - 1));
-        IFsDataProvider provider= (segments.Length > 1)?FindNodeByPath(parentNodePath)!:this;
+        IFsDataProvider provider = (segments.Length > 1) ? FindNodeByPath(parentNodePath) : this;
         
         _appNode.ClearSink();
-        var ret= n.Evaluate(provider);
-        try
-        {
-            _appNode.ActivateSignal();
-        }
-        catch (Exception e)
-        {
-            Fslogger.DefaultLogger.WriteLine("General error sending start signal: \n"+e.Message);
-            
-        }
-        return ret;
+
+        var _res = FuncScript.Evaluate(n.Expression,provider,
+            new {
+                app=_appNode
+            },FuncScript.ParseMode.Standard);
+        var res = FuncScript.Dref(_res);
+
+        _appNode.ActivateSignal();
+        return res;
+        
     }
+
 }

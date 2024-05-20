@@ -45,7 +45,7 @@ namespace funcscript.funcs.keyvalue
                 }
             }
 
-            return new SimpleKeyValueCollection(second.ToArray());
+            return new SimpleKeyValueCollection(parent,second.ToArray());
         }
 
         public string ParName(int index)

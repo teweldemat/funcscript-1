@@ -1,44 +1,36 @@
 ﻿using funcscript.core;
 using funcscript.model;
+using System.Collections.Generic;
 
 namespace funcscript.funcs.list
 {
-    public class FilterListFunction : IFsFunction
+    public class FilterListFunction : IFsFunction, IFsDref
     {
         public int MaxParsCount => 2;
 
-        public CallType CallType => CallType.Prefix;
+        public CallType CallType => CallType.Dual;
 
         public string Symbol => "Filter";
 
         public int Precidence => 0;
-        class FilterListFuncPar : IParameterList
-        {
-            public object X;
-            public object I;
-
-            public int Count => 2;
-
-            public object GetParameter(IFsDataProvider provider, int index)
-            {
-                return index switch
-                {
-                    0 => X,
-                    1 => I,
-                    _ => null,
-                };
-            }
-        }
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
-            var par0 = pars.GetParameter(parent, 0);
-            var par1 = pars.GetParameter(parent, 1);
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var par0 = parBuilder.GetParameter(0);
+            var par1 = parBuilder.GetParameter(1);
+
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return FunctionRef.Create(parent, this, pars);
+                return parBuilder.CreateRef();
+
+            return EvaluateInternal(parent, par0, par1);
+        }
+
+        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1)
+        {
             if (par0 == null)
                 return null;
 
@@ -47,20 +39,15 @@ namespace funcscript.funcs.list
 
             if (!(par1 is IFsFunction))
                 throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter should be {this.ParName(1)}");
-            
-            var func = par1 as IFsFunction;
 
-            if (func == null)
-                throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter didn't evaluate to a function");
-
+            var func = (IFsFunction)par1;
             var lst = (FsList)par0;
             var res = new List<object>();
 
             for (int i = 0; i < lst.Length; i++)
             {
-                var val = func.Evaluate(parent, new FilterListFuncPar { X = lst[i], I = i });
-
-                if ((val is bool) && (bool)val)
+                var val = func.Evaluate(parent, new ArrayParameterList(new object[] { lst[i], i }));
+                if (val is bool && (bool)val)
                 {
                     res.Add(lst[i]);
                 }
@@ -68,17 +55,22 @@ namespace funcscript.funcs.list
 
             return new ArrayFsList(res);
         }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
+            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
+            return EvaluateInternal(null, par0, par1); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
+        }
+
         public string ParName(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0:
-                    return "List";
-                case 1:
-                    return "Filter Function";
-                default:
-                    return "";
-            }
+                0 => "List",
+                1 => "Filter Function",
+                _ => "",
+            };
         }
     }
 }

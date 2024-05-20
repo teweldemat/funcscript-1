@@ -7,13 +7,14 @@ namespace funcscript.block
 {
     public class ListExpression:ExpressionBlock
     {
+       
         public ExpressionBlock[] ValueExpressions;
 
        
-        public override object Evaluate(IFsDataProvider provider)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions )
         {
-            var lst = ValueExpressions.Select(x => x.Evaluate(provider)).ToArray();
-            return new ArrayFsList(lst);
+            var lst = ValueExpressions.Select(x => x.Evaluate(provider,connectionActions).Item1).ToArray();
+            return (new ArrayFsList(lst),this.CodeLocation);
         }
         public override IList<ExpressionBlock> GetChilds()
         {

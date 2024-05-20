@@ -10,7 +10,43 @@ using System.Threading.Tasks;
 
 namespace funcscript.funcs.math
 {
-    public class AddFunction : IFsFunction
+    public class SumList : FsList
+    {
+        private IList<FsList> _lists;
+        private int _length;
+        public SumList(IList<FsList> lists)
+        {
+            this._lists = lists;
+            this._length = lists.Sum(l => l.Length);
+        }
+
+        public override object this[int index]
+        {
+            get
+            {
+                if (index < 0)
+                    return null;
+                foreach (var list in _lists)
+                {
+                    if (index < list.Length)
+                        return list[index];
+                    index -= list.Length;
+                }
+
+                return null;
+            }
+        }
+
+        public override int Length => _length;
+        public override IEnumerator<object> GetEnumerator()
+        {
+            for (int i = 0; i < _length; i++)
+            {
+                yield return this[i];
+            }
+        }
+    }
+    public class AddFunction : IFsFunction,IFsDref
     {
         public int MaxParsCount => -1;
 
@@ -22,6 +58,24 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var doRef = false;
+            var ret = EvaluateInteral(pars, (i) =>
+            {
+                var ret = pars.GetParameter(parent, i);
+                if (ret is ValueReferenceDelegate)
+                {
+                    doRef = true;
+                    return (false, null);
+                }
+                return (true, ret);
+            });
+            if (doRef)
+                return parBuilder.CreateRef();
+            return ret;
+        }
+        object EvaluateInteral(IParameterList pars,Func<int,(bool,object)> getPar)
+        {
             bool isNull=true, isInt=false,isLong=false,isDouble=false,isString=false,isList=false;
             bool isKv = false;
 
@@ -30,13 +84,14 @@ namespace funcscript.funcs.math
             double doubleTotal = 0;
             StringBuilder stringTotal = null;
             KeyValueCollection kvTotal = null;
-            List<object> listTotal= new List<object>();
+            List<FsList> listTotal= new List<FsList>();
             int c = pars.Count;
             for(int i=0;i<c;i++)
             {
-                var d=pars.GetParameter(parent,i);
-                if (d is ValueReferenceDelegate)
-                    return FunctionRef.Create(parent, this, pars);
+                var p = getPar( i);
+                if (!p.Item1)
+                    return null;
+                var d = p.Item2;
                 if(isNull)
                 {
                     if (d is int)
@@ -98,7 +153,7 @@ namespace funcscript.funcs.math
                     {
                         isList = true;
                         isInt = false;
-                        listTotal = new List<object>(new object[] { intTotal });
+                        listTotal = new List<FsList>(new []{ new ArrayFsList(new object[] { intTotal })});
                     }
                 }
                 if (isLong)
@@ -128,7 +183,7 @@ namespace funcscript.funcs.math
                     {
                         isList = true;
                         isLong = false;
-                        listTotal = new List<object>(new object[] { longTotal });
+                        listTotal = new List<FsList>(new []{new ArrayFsList(new object[] { longTotal })});
                     }
 
                     else if (d is KeyValueCollection)
@@ -161,7 +216,7 @@ namespace funcscript.funcs.math
                     {
                         isList= true;
                         isDouble = false;
-                        listTotal = new List<object>(new object[] { longTotal});
+                        listTotal = new List<FsList>(new []{new ArrayFsList(new object[] { longTotal})});
                     }
 
                     else if (d is KeyValueCollection)
@@ -197,7 +252,7 @@ namespace funcscript.funcs.math
                     {
                         isList = true;
                         isString= false;
-                        listTotal = new List<object>(new object[] { stringTotal.ToString()});
+                        listTotal = new List<FsList>(new []{new ArrayFsList(new object[] { stringTotal.ToString()})});
                     }
                     else if (d is KeyValueCollection)
                     {
@@ -216,18 +271,20 @@ namespace funcscript.funcs.math
                 }
                 if (isList)
                 {
-                    if (d is FsList)
+                    if (d is FsList lst)
                     {
-                        foreach(var v in ((FsList)d).Data)
-                            listTotal.Add(v);
+                        listTotal.Add(lst);
                     }
                     else
-                        listTotal.Add(d);
+                        listTotal.Add(new ArrayFsList(new []{d}));
                 }
 
             }
+
             if (isList)
-                return new ArrayFsList(listTotal);
+            {
+                return new SumList(listTotal);
+            }
             if (isString)
                 return stringTotal.ToString();
             if (isDouble)
@@ -246,6 +303,16 @@ namespace funcscript.funcs.math
         public string ParName(int index)
         {
             return $"Op {index + 1}";
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var ret = EvaluateInteral( pars, (i) =>
+            {
+                var ret = FuncScript.Dref(pars.GetParameter(null, i),false);
+                return (true, ret);
+            });
+            return ret;
         }
     }
 }

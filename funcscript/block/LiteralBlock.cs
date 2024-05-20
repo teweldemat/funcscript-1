@@ -18,9 +18,16 @@ namespace funcscript.block
             return sb.ToString();
         }
 
-        public override object Evaluate(IFsDataProvider provider)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
-            return Value;
+            if (Value is ExpressionFunction exp)
+            {
+                lock (exp)
+                {
+                    exp.SetContext(provider);
+                }
+            }
+            return (Value,this.CodeLocation);
         }
         public override IList<ExpressionBlock> GetChilds()
         {

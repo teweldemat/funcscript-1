@@ -22,16 +22,18 @@ namespace fsstudio.server.fileSystem.exec
         private readonly ConcurrentDictionary<Guid, ExecutionSession> _sessions = new();
 
         private readonly string _rootPath;
-
+        public String RootPath => _rootPath;
+        private readonly RemoteLogger remoteLogger;
         public SessionManager(IConfiguration configuration,RemoteLogger remoteLogger)
         {
+            this.remoteLogger = remoteLogger;
             _rootPath = configuration.GetValue<string>("RootFolder")!;
             Fslogger.SetDefaultLogger(new RemoteLoggerForFs(remoteLogger));
         }
 
         public ExecutionSession CreateSession(string fromFile)
         {
-            var session = new ExecutionSession(Program.GetAbsolutePath(_rootPath, fromFile + ".fsp"));
+            var session = new ExecutionSession(Program.GetAbsolutePath(_rootPath, fromFile + ".fsp"),remoteLogger);
             _sessions.TryAdd(session.SessionId, session);
             return session;
         }

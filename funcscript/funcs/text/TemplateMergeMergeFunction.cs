@@ -23,9 +23,9 @@ namespace funcscript.funcs.math
 
         void MergeList(StringBuilder sb,FsList list) 
         {
-            if (list == null || list.Data == null)
+            if (list == null || list == null)
                 return;
-            foreach(var o in list.Data)
+            foreach(var o in list)
             {
                 if(o is FsList)
                     MergeList(sb,(FsList)o);
@@ -37,12 +37,13 @@ namespace funcscript.funcs.math
         {
             StringBuilder sb = new StringBuilder();
             int c = pars.Count;
+            var parBuilder = new CallRefBuilder(this, parent, pars);
             for (int i = 0; i < c; i++)
             {
 
                 var o = pars.GetParameter(parent, i);
                 if (o is ValueReferenceDelegate)
-                    return CallRef.Create(parent, this, pars);
+                    return parBuilder.CreateRef();
                 if (o is FsList)
                     MergeList(sb, (FsList)o);
                 else

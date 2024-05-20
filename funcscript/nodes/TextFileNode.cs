@@ -4,22 +4,24 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-public class TextFileNode
+public class TextFileNode:ObjectKvc, SignalListenerDelegate
 {
     private object _text = null;
     private object _fileName = null;
 
-    public ValueSinkDelegate TextIn => val =>
+    public TextFileNode() => base.SetVal(this);
+    public ValueSinkDelegate TextIn =>new ValSink(val =>
     {
         this._text = val;
-    };
+    });
 
-    public ValueSinkDelegate FileName => val =>
+    public ValueSinkDelegate FileName =>new ValSink(val =>
     {
         this._fileName = val;
-    };
+    });
 
-    public SignalListenerDelegate Save => () =>
+
+    public void Activate()
     {
         string fileName=FuncScript.Dref(this._fileName) as string;
 
@@ -29,20 +31,29 @@ public class TextFileNode
         string strText = text?.ToString() ?? "";
 
         System.IO.File.WriteAllText(fileName, strText);
-    };
+    }
 }
 
 public class CreateTextFileNodeFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new ObjectKvc(new TextFileNode());
+        var ret = new TextFileNode();
+        if (pars.Count > 0)
+        {
+            ret.FileName.SetValueSource(pars.GetParameter(parent,0));
+        }
+        if (pars.Count > 1)
+        {
+            ret.TextIn.SetValueSource(pars.GetParameter(parent,1));
+        }
+        return ret;
     }
 
     public string ParName(int index) => null;
 
     public int MaxParsCount => 0;
     public CallType CallType => CallType.Prefix;
-    public string Symbol => "TextFileStore";
+    public string Symbol => "TextFile";
     public int Precidence => 0;
 }

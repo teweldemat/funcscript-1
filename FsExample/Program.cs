@@ -18,9 +18,6 @@ do
     {
         if (syntaxError.Message != null)
             Console.WriteLine(syntaxError.Message);
-        foreach(var d in syntaxError.data)
-        {
-            Console.WriteLine($"Error at {d.Loc+1}\n{d.Message}");
-        }
+        Console.WriteLine($"{syntaxError.Message}\n{syntaxError.Line}" );
     }
 } while (true);

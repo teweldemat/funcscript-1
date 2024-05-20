@@ -12,7 +12,7 @@ class FssAppNode
     }
 
     // SignalSourceDelegate that allows registration to the signal this node emits
-    public SignalSourceDelegate Start => _sinks.SetSink;
+    public SignalSourceDelegate Start =>new SigSource((a,b)=>_sinks.SetSink(a,b));
 
     // Method to activate the signal, could be used internally or externally to trigger the event
     public void ActivateSignal()

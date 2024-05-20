@@ -4,26 +4,36 @@ using funcscript.model;
 
 namespace funcscript.nodes;
 
-public class HttpClientNode
+public class HttpClientNode:ObjectKvc
 {
     private object _url = null;
     private object _inData = null;
     private object _headers = null;
 
     private readonly HttpClient _httpClient = new HttpClient();
-    private object _outData;
-    private string _errorData;
+    private VariableValue _outData = new VariableValue();
+    private VariableValue _errorData = new VariableValue();
 
     private SignalSinkInfo _doneSink = new SignalSinkInfo();
     private SignalSinkInfo _errorSink = new SignalSinkInfo();
+    private ValDel _headerSource;
+    private ValDel _urlSource;
+    private ValDel _inDataSource;
 
-    public ValueSinkDelegate Headers => val => { _headers = val; };
-    public ValueSinkDelegate Url => val => { _url = val; };
-    public ValueSinkDelegate InData => val => { _inData = val; };
-    public ValueReferenceDelegate OutData => () => _outData;
-    public ValueReferenceDelegate ErrorData => () => _errorData;
-    public SignalSourceDelegate Success => (n, e) => _doneSink.SetSink(n, e);
-    public SignalSourceDelegate Fail => (n, e) => _errorSink.SetSink(n, e);
+    public HttpClientNode()
+    {
+        base.SetVal(this);   
+        _headerSource=new ValDel(val => { _headers = val; });
+        _urlSource=new ValDel( val => { _url = val; });
+        _inDataSource=new ValDel( val => { _inData = val; });
+    }
+    public ValueSinkDelegate Headers => _headerSource;
+    public ValueSinkDelegate Url => _urlSource;
+    public ValueSinkDelegate InData => _inDataSource;
+    public ValueReferenceDelegate OutData => _outData;
+    public ValueReferenceDelegate ErrorData => _errorData;
+    public SignalSourceDelegate Success =>new SigSource( (n, e) => _doneSink.SetSink(n, e));
+    public SignalSourceDelegate Fail =>new SigSource( (n, e) => _errorSink.SetSink(n, e));
 
     async Task<(HttpRequestMessage, HttpResponseMessage)> SendGetRequest(string url)
     {
@@ -58,41 +68,43 @@ public class HttpClientNode
         }
     }
 
-    public SignalListenerDelegate GetJson => async () =>
+    public SignalListenerDelegate GetJson =>new SigSink( async () =>
     {
         try
         {
-            _errorData = null;
-            _outData = null;
+            _errorData.Val = null;
+            _outData.Val = null;
             string url = FuncScript.Dref(_url).ToString();
 
             (var request, var response) = await SendGetRequest(url);
             string responseBody = await response.Content.ReadAsStringAsync();
-            _outData = FuncScript.Evaluate(null, responseBody);
+            
+            _outData.Val = FuncScript.Evaluate(null, responseBody);
+            
             response.Dispose();
             request.Dispose();
             _doneSink.Signal();
         }
         catch (HttpRequestException e)
         {
-            _errorData = $"Error: {e.Message}";
+            _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
-    };
+    });
 
-    public SignalListenerDelegate GetText => async () =>
+    public SignalListenerDelegate GetText => new SigSink(async () =>
     {
         try
         {
-            _errorData = null;
-            _outData = null;
+            _errorData.Val = null;
+            _outData.Val = null;
             string url = FuncScript.Dref(_url).ToString();
 
             (var request, var response) = await SendGetRequest(url);
             string responseBody = await response.Content.ReadAsStringAsync();
             string contentType = response.Content.Headers.ContentType?.MediaType; // Safely get the Content-Type
 
-            _outData = new
+            _outData.Val = new
             {
                 ContentType = contentType,
                 Content = responseBody
@@ -103,41 +115,47 @@ public class HttpClientNode
         }
         catch (HttpRequestException e)
         {
-            _errorData = $"Error: {e.Message}";
+            _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
-    };
+    });
 
-    public SignalListenerDelegate PostJson => async () =>
+    public SignalListenerDelegate PostJson => new SigSink(async () =>
     {
         try
         {
-            _errorData = null;
-            _outData = null;
+            _errorData.Val = null;
+            _outData.Val = null;
             string url = FuncScript.Dref(_url).ToString();
-            string jsonData = FuncScript.Dref(_inData)?.ToString() ?? "{}";
+            object data = FuncScript.Dref(_inData);
+            var jsonData = FuncScript.FormatToJson(data);
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
             HttpResponseMessage response = await SendPostRequest(url, content);
             string responseBody = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Json\n"+jsonData);
-            _outData = FuncScript.Evaluate(null, responseBody);
+            Console.WriteLine("Json\n" + jsonData);
+            if(response.Content.Headers.ContentType?.MediaType=="application/json")
+                _outData.Val = FuncScript.Evaluate(null, responseBody);
+            else
+            {
+                _outData.Val = responseBody;
+            }
             response.Dispose();
             _doneSink.Signal();
         }
         catch (Exception e)
         {
-            _errorData = $"Error: {e.Message}";
+            _errorData.Val = $"Error: {e.Message}";
             _errorSink.Signal();
         }
-    };
+    });
 }
 
 public class CreateHttpClientNodeFunction : IFsFunction
 {
     public object Evaluate(IFsDataProvider parent, IParameterList pars)
     {
-        return new ObjectKvc(new HttpClientNode());
+        return new HttpClientNode();
     }
 
     public string ParName(int index)

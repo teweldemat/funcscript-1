@@ -15,18 +15,20 @@ namespace funcscript.funcs.list
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var par0 = pars.GetParameter(parent, 0);
+            var parBuilder = new CallRefBuilder(this, parent, pars);
+
+            var par0 = parBuilder.GetParameter( 0);
 
             if (par0 is ValueReferenceDelegate)
-                return CallRef.Create(parent, this, pars);
+                return parBuilder.CreateRef();
             if (!(par0 is int))
                 throw new error.TypeMismatchError($"{this.Symbol}: {ParName(0)} must be an integer");
 
             int start = (int)par0;
 
-            var par1 = pars.GetParameter(parent, 1);
+            var par1 = parBuilder.GetParameter(1);
             if (par1 is ValueReferenceDelegate)
-                return CallRef.Create(parent, this, pars);
+                return parBuilder.CreateRef();
 
             if (!(par1 is int))
                 throw new error.TypeMismatchError($"{this.Symbol}: {ParName(1)} must be an integer");

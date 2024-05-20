@@ -1,26 +1,31 @@
-using System.Security.Authentication.ExtendedProtection;
 using funcscript.core;
 using funcscript.model;
 
 namespace funcscript.nodes;
 
-public class StoreNode
+public class StoreNode :ListenerCollection, ValueReferenceDelegate, ValueSinkDelegate,SignalListenerDelegate
 {
     private object _value = null;
     private object _source = null;
-        
-
-    public ValueSinkDelegate In => val =>
+    
+    public object Dref()
     {
-        this._source = val;
-    };
-    public ValueReferenceDelegate Out => ()=>this._value;
-    public SignalListenerDelegate Store => ()=>
+        return _value;
+    }
+
+    public void SetValueSource(object valSource)
+    {
+        if (_source != null)
+            throw new InvalidOperationException($"Data store source can't be set twice");
+        _source = valSource;
+    }
+
+    public void Activate()
     {
         var dr = FuncScript.Dref(_source);
         this._value = dr;
-    };
-        
+        base.Notify();
+    }
 }
 
 public class CreateStoreFunction : IFsFunction
@@ -29,8 +34,11 @@ public class CreateStoreFunction : IFsFunction
     {
         var n = new StoreNode();
         if (pars.Count > 0)
-            n.In(pars.GetParameter(parent, 0));
-        return new ObjectKvc(n);      
+        {
+            var source = pars.GetParameter(parent, 0);
+            n.SetValueSource(source);
+        }
+        return n;      
     }
 
     public string ParName(int index)

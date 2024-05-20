@@ -7,7 +7,7 @@ namespace funcscript.model
 {
     public abstract class FsList:IEnumerable<object>
     {
-        public abstract  IEnumerable<object> Data { get; }
+        //public abstract  IEnumerable<object> Data { get; }
         public abstract object this[int index] { get; }
         public abstract int Length { get; }
         public abstract IEnumerator<object> GetEnumerator();
@@ -19,8 +19,8 @@ namespace funcscript.model
                 return false;
             }
             var other = (FsList)obj;
-            var otherData = other.Data.ToArray();
-            var thisData = this.Data.ToArray();
+            var otherData = other.ToArray();
+            var thisData = this.ToArray();
             if (otherData.Length != thisData.Length)
                 return false;
             for(int i=0;i<otherData.Length;i++)
@@ -38,14 +38,12 @@ namespace funcscript.model
         }
         public override string ToString()
         {
-            if (this.Data == null)
-                return "Uninitialized list";
             var sb = new StringBuilder();
             sb.Append("[");
-            if (Data.Any())
+            if (this.Any())
             {
                 var first = true;
-                foreach (var d in this.Data)
+                foreach (var d in this)
                 {
                     if (first)
                         first = false;
@@ -68,10 +66,6 @@ namespace funcscript.model
         }
 
         // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return this.Data.GetHashCode();
-        }
         public static bool IsListType(Type t) =>
             t.IsAssignableTo(typeof(System.Collections.IEnumerable)) || t.IsAssignableTo(typeof(System.Collections.IList)) || IsGenericList(t);
         static bool IsGenericList(Type t)
@@ -113,8 +107,11 @@ namespace funcscript.model
                 }
             }
         }
+        public override int GetHashCode()
+        {
+            return this.GetHashCode();
+        }
 
-        public override IEnumerable<object> Data => _data;
 
         public override object this[int index] => (index<0||index>=_data.Length)?null:_data[index];
         public override int Length =>_data.Length;

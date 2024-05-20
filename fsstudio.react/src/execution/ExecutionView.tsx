@@ -11,6 +11,7 @@ import { json } from 'stream/consumers';
 import { useCodeMirror } from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { isDisabled } from '@testing-library/user-event/dist/utils';
+import ReactMarkdown from 'react-markdown';
 
 interface ErrorItem {
     type: string;
@@ -21,9 +22,22 @@ interface ErrorItem {
   interface ErrorData {
     errors: ErrorItem[];
   }
-  
-const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
-    const [selectedNode, setSelectedNode] = useState<NodeItem | null>(null);
+
+  const CodeEditor:React.FC<{expression:string|null,setExpression:(exp:string)=>void}> = ({ expression, setExpression }) => {
+    const editorRef = useRef(null);
+    useCodeMirror({
+        container: editorRef.current,
+        value: expression??"",
+        extensions: [javascript()],
+        onChange: value => {
+            setExpression(value);
+        },
+    });
+
+    return <div ref={editorRef} style={{ height: '100%', overflow: 'scroll', border: '1px solid #ccc' }} />;
+};
+const ExecutionView: React.FC<{ sessionId: string,initiallySelectedNode:string|null,onNodeSelect:(string:string|null)=>void }> = ({ sessionId,initiallySelectedNode,onNodeSelect}) => {
+    const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [expression, setExpression] = useState<string | null>(null);
     const [lastSavedExpression, setLastSavedExpression] = useState<string | null>(null);
     const [resultText, setResultText] = useState('');
@@ -32,12 +46,13 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const [messages,setMessages]=useState<string[]>([])
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [activeSessionId,setActiveSessionId]=useState<string|null>(null);
+    const [markdown,setMarkdown]=useState<string>('');
 
     useEffect(() => {
         if(activeSessionId!=null)
             {
                 if(selectedNode!=null && expression!=lastSavedExpression)
-                    saveExpression(selectedNode.path!,expression,false);
+                    saveExpression(selectedNode!,expression,false);
             }
         setSelectedNode(null);
         setExpression(null);
@@ -50,7 +65,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const handleNodeSelect = (nodePath: string|null) => {
         console.log('selected ' + nodePath);
         if (selectedNode && expression !== lastSavedExpression) {
-            saveExpression(selectedNode.path!, expression,false);
+            saveExpression(selectedNode!, expression,false);
         }
         if(nodePath==null)
             {
@@ -62,7 +77,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
             }
         axios.get(`${SERVER_URL}/api/sessions/${sessionId}/node`, { params: { nodePath } })
             .then(response => {
-                setSelectedNode({...response.data, path: nodePath});
+                setSelectedNode(nodePath);
                 console.log('fetched node data');
                 console.log(response.data);
                 setExpression(response.data.expression ?? "");
@@ -70,6 +85,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                 setSaveStatus('All changes saved');
             })
             .catch(error => console.error('Failed to fetch node:', error));
+        onNodeSelect(nodePath);
     };
 
     const saveExpression = (nodePath: string, newExpression: string | null,thenEvalute:boolean) => {
@@ -98,7 +114,7 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const executeExpression = () => {
         if (!selectedNode) return;
         if (selectedNode && expression === lastSavedExpression) {
-            axios.get(`${SERVER_URL}/api/sessions/${activeSessionId}/node/value`, { params: { nodePath: selectedNode.path } })
+            axios.get(`${SERVER_URL}/api/sessions/${activeSessionId}/node/value`, { params: { nodePath: selectedNode } })
                 .then(response => {
                     if (typeof response.data === 'string') {
                         setResultText(response.data);
@@ -127,11 +143,15 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
             switch(msg.cmd)
             {
                 case "log":
-                    setTabIndex(1);
+                    setTabIndex(2);
                     setMessages(prev => [...prev, msg.data]);
                     break;
                 case "clear":
                     setMessages(prev=>[]);
+                    break;
+                case "markdown":
+                    setTabIndex(3);
+                    setMarkdown(msg.data);
                     break;
             }
             
@@ -146,16 +166,16 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const renderTabContent = () => {
         switch (tabIndex) {
             case 0:
-                return <pre style={{
-                    whiteSpace: 'pre-wrap',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    border: '1px solid #ccc',
-                    padding: '10px',
-                    fontFamily: '"Lucida Console", monospace',
-                  }}>{resultText}</pre>
+                return <CodeEditor expression={expression} setExpression={(e)=>{
+                    setExpression(e);
+                    setSaveStatus('Unsaved changes');  
+                }} />;
             case 1:
-                return <TextLogger messages={messages}/>;
+                return <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word', border: '1px solid #ccc', padding: '10px', fontFamily: '"Lucida Console", monospace' }}>{resultText}</pre>;
+            case 2:
+                return <TextLogger messages={messages} />;
+            case 3:
+                return <ReactMarkdown children={markdown} />
             default:
                 return null;
         }
@@ -163,57 +183,49 @@ const ExecutionView: React.FC<{ sessionId: string }> = ({ sessionId }) => {
 
     const editorRef = useRef<HTMLDivElement | null>(null);
     
-    const { state, view }= useCodeMirror({
-        container: editorRef.current!,
-        value: expression || '',
-        extensions: selectedNode?.expressionType===ExpressionType.FuncScript?[javascript()]:[],
-        onChange:  value => {
-            setExpression(value);
-            setSaveStatus('Unsaved changes');
-        },
-    });
-    
-
 
     return (
-        <Grid container spacing={2}>
-            <Grid item xs={8}>
+        <Grid container spacing={2} style={{ height: '100vh' }}> {/* Adjust the height as needed */}
+            <Grid item xs={8} style={{ display: 'flex', flexDirection: 'column' }}>
                 <Toolbar>
                     <IconButton onClick={executeExpression} color="primary">
                         <PlayArrowIcon />
                     </IconButton>
-                    <IconButton onClick={() => selectedNode && expression !== lastSavedExpression && saveExpression(selectedNode.path!, expression, false)} color="secondary">
+                    <IconButton onClick={() => selectedNode && expression !== lastSavedExpression && saveExpression(selectedNode!, expression, false)} color="secondary">
                         <SaveIcon />
                     </IconButton>
                     <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 2 }}>
                         {saveStatus}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" style={{ flexGrow: 1, paddingLeft: 2 }}>
-                        {selectedNode?.path}
+                        {selectedNode}
                     </Typography>
                 </Toolbar>
-                <div ref={editorRef}  style={{ height: '400px',overflow: 'auto', border: '1px solid #ccc' }} />
                 <Tabs value={tabIndex} onChange={(event, newValue) => setTabIndex(newValue)} aria-label="Data tabs">
+                    <Tab label="Script" />
                     <Tab label="Result" />
                     <Tab label="Log" />
+                    <Tab label="Document" />
                 </Tabs>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Box sx={{ flexGrow: 1, borderBottom: 1, borderColor: 'divider', overflow: 'auto' }}>
                     {renderTabContent()}
                 </Box>
             </Grid>
-            <Grid item xs={4}>
-                {activeSessionId && (<EvalNodeComponent
-                    node={{
-                        name: "Root Node",
-                        expressionType: ExpressionType.FuncScript,
-                        childrenCount: 0,
-                        expression: null,
-                    }}
-                    sessionId={activeSessionId}
-                    onSelect={handleNodeSelect}
-                    onModify={() => {}}
-                    selectedNode={selectedNode?.path}
-                />)}
+            <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column' }}>
+                {sessionId && (
+                    <EvalNodeComponent
+                        node={{
+                            name: "Root Node",
+                            expressionType: ExpressionType.FuncScript,
+                            childrenCount: 0,
+                            expression: null,
+                        }}
+                        sessionId={sessionId}
+                        onSelect={handleNodeSelect}
+                        onModify={() => {}}
+                        selectedNode={selectedNode}
+                    />
+                )}
             </Grid>
         </Grid>
     );

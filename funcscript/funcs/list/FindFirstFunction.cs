@@ -7,7 +7,7 @@ namespace funcscript.funcs.list
     {
         public int MaxParsCount => 2;
 
-        public CallType CallType => CallType.Prefix;
+        public CallType CallType => CallType.Dual;
 
         public string Symbol => "First";
 
@@ -17,15 +17,15 @@ namespace funcscript.funcs.list
             public object X;
             public object I;
 
-            public int Count => 2;
+            public override int Count => 2;
 
-            public object GetParameter(IFsDataProvider provider, int index)
+            public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
             {
                 return index switch
                 {
-                    0 => X,
-                    1 => I,
-                    _ => null,
+                    0 => (X,null),
+                    1 => (I,null),
+                    _ => (null,null),
                 };
             }
         }

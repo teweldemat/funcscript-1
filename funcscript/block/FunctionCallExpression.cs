@@ -15,11 +15,12 @@ namespace funcscript.block
         class FuncParameterList : IParameterList
         {
             public FunctionCallExpression parent;
-            public int Count => parent.Parameters.Length;
-            public object GetParameter(IFsDataProvider provider, int index)
+            public List<Action> connectionActions;
+            public override int Count => parent.Parameters.Length;
+            public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
             {
-                var ret = index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider);
-                return ret;
+                var ret = index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider,connectionActions).Item1;
+                return (ret,parent.Parameters[index].CodeLocation);
             }
         }
 
@@ -27,12 +28,14 @@ namespace funcscript.block
         public int Count => Parameters.Length;
 
         
-        public override object Evaluate(IFsDataProvider provider)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
-            var func = Function.Evaluate(provider);
+            
+            var (func,_) = Function.Evaluate(provider,connectionActions);
             var paramList=new FuncParameterList
             {
-                parent = this
+                parent = this,
+                connectionActions=connectionActions
             };
             if (func is IFsFunction)
             {
@@ -42,7 +45,7 @@ namespace funcscript.block
                 {
                    
                     var ret = ((IFsFunction)func).Evaluate(provider, paramList);
-                    return ret;
+                    return (ret,this.CodeLocation);
                 }
                 catch (error.EvaluationException)
                 {
@@ -69,7 +72,7 @@ namespace funcscript.block
                 }
                 else
                     ret = null;
-                return ret;
+                return (ret,this.CodeLocation);
             }
             else if (func is KeyValueCollection collection)
             {
@@ -80,19 +83,22 @@ namespace funcscript.block
                 {
                     var kvc = collection;
                     var value = kvc.Get(key.ToLower());
-                    return value;
+                    return (value,this.CodeLocation);
                 }
                 else
                     ret = null;
-                return ret;
+                return (ret,this.CodeLocation);
             }
             else if (func is ValueReferenceDelegate r)
             {
-                return CallRef.Create(provider, r, paramList);
+                return (CallRef.Create(this.CodeLocation, provider, r, paramList),this.CodeLocation);
             }
             throw new EvaluationException(this.Pos, this.Length,
                 new TypeMismatchError($"Function part didn't evaluate to a function or a list. {FuncScript.GetFsDataType(func)}"));
         }
+
+        
+
         public override IList<ExpressionBlock> GetChilds()
         {
             var ret = new List<ExpressionBlock>();
@@ -109,7 +115,7 @@ namespace funcscript.block
             string infix = null;
             if (this.Function is ReferenceBlock)
             {
-                var f = provider.GetData(((ExpressionBlock)this.Function).ToString().ToLower()) as IFsFunction;
+                var f = provider.Get(((ExpressionBlock)this.Function).ToString().ToLower()) as IFsFunction;
                 if (f != null && f.CallType == CallType.Infix)
                 {
                     infix = f.Symbol;

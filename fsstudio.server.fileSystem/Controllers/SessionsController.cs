@@ -5,6 +5,7 @@ using System.Text;
 using fsstudio.server.fileSystem;
 using fsstudio.server.fileSystem.exec;
 using funcscript;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Net.Http.Headers; // Ensure namespace includes ExecutionSession and related classes
 
 namespace fsstudio.server.fileSystem.Controllers
@@ -66,8 +67,9 @@ namespace fsstudio.server.fileSystem.Controllers
             public string Expression { get; set; }
             public ExpressionType ExpressionType { get; set; }
         }
+
         [HttpPost("{sessionId}/node")]
-        public IActionResult CreateNode(Guid sessionId,[FromBody] ClassCreateNodePars pars)
+        public IActionResult CreateNode(Guid sessionId, [FromBody] ClassCreateNodePars pars)
         {
             lock (GetSessionLock(sessionId))
             {
@@ -99,7 +101,7 @@ namespace fsstudio.server.fileSystem.Controllers
                 try
                 {
                     var ret = session.GetExpression(nodePath);
-                    Console.WriteLine("Get expression:"+ret?.Expression);
+                    Console.WriteLine("Get expression:" + ret?.Expression);
                     return Ok(ret);
                 }
                 catch (Exception ex)
@@ -135,6 +137,7 @@ namespace fsstudio.server.fileSystem.Controllers
             public string NodePath { get; set; }
             public string NewName { get; set; }
         }
+
         [HttpPost("{sessionId}/node/rename")]
         public IActionResult RenameNode(Guid sessionId, [FromBody] RenameNodeRequest model)
         {
@@ -181,6 +184,7 @@ namespace fsstudio.server.fileSystem.Controllers
         {
             public string Expression { get; set; }
         }
+
         [HttpPost("{sessionId}/node/expression/{nodePath}")]
         public IActionResult UpdateExpression(Guid sessionId, string nodePath, [FromBody] UpdateExpressionModel model)
         {
@@ -222,32 +226,79 @@ namespace fsstudio.server.fileSystem.Controllers
                 }
             }
         }
+
         [HttpGet("{sessionId}/node/value/")]
-        public IActionResult GetValue(Guid sessionId, string nodePath)
+        public async Task<IActionResult> GetValue(Guid sessionId, string nodePath)
         {
+            ExecutionSession? session;
             lock (GetSessionLock(sessionId))
             {
-                var session = sessionManager.GetSession(sessionId);
+                session = sessionManager.GetSession(sessionId);
                 if (session == null)
                     return NotFound($"Session with ID {sessionId} not found.");
+            }
 
-                try
-                {
-                    var val = session.RunNode(nodePath);
+            try
+            {
+                var val = await session.RunNode(nodePath);
 
-                    if (val is string str)
-                    {
-                        return Content(str,MediaTypeHeaderValue.Parse("text/plain"));
-                    }
-                    var sb = new StringBuilder();
-                    FuncScript.Format(sb,val,asJsonLiteral:true);
-                    var json = sb.ToString();
-                    return Content(json,MediaTypeHeaderValue.Parse("text/plain"));
-                }
-                catch (Exception ex)
+                if (val is string str)
                 {
-                    return StatusCode(500, new ErrorData(ex));
+                    return Content(str, MediaTypeHeaderValue.Parse("text/plain"));
                 }
+
+                var sb = new StringBuilder();
+                FuncScript.Format(sb, val, asJsonLiteral: true);
+                var json = sb.ToString();
+                return Content(json, MediaTypeHeaderValue.Parse("text/plain"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorData(ex));
+            }
+        }
+
+        public class UiState
+        {
+            public string? SelectedFile { get; set; } = null;
+            public string? SelectedVariable { get; set; } = null;
+            public IList<string> ExpandedNodes { get; set; } = new string[] { };
+        }
+
+        [HttpGet("GetUiState")]
+        public async Task<ActionResult<UiState>> GetUiState()
+        {
+            try
+            {
+                var fileName = Path.Join(sessionManager.RootPath, "ui-state.json");
+                if (!System.IO.File.Exists(fileName))
+                    return Ok(new UiState());
+                var json = await System.IO.File.ReadAllTextAsync(fileName);
+                var uiState = Newtonsoft.Json.JsonConvert.DeserializeObject<UiState>(json);
+                return Ok(uiState);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpPost("SaveUiState")]
+        public async Task<IActionResult> SaveUiState([FromBody] UiState uiState)
+        {
+                if (uiState == null)
+                return BadRequest("UI state is null.");
+
+            try
+            {
+                var fileName = Path.Join(sessionManager.RootPath, "ui-state.json");
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(uiState);
+                await System.IO.File.WriteAllTextAsync(fileName, json);
+                return Ok("UI state saved successfully.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

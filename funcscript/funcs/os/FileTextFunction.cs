@@ -27,7 +27,7 @@ namespace funcscript.funcs.os
                 return null;
 
             if (!(par0 is string))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. Type mistmatch");
+                throw new error.TypeMismatchError($"Function {this.Symbol}. Type mismatch");
             var fileName = (string)par0;
             if (!System.IO.File.Exists(fileName))
                 throw new error.TypeMismatchError($"Function {this.Symbol}. File '{par0}' doesn't exist");

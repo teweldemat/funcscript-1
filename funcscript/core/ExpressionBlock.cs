@@ -20,12 +20,18 @@ namespace funcscript.core
         ///The the number of charadcters in the parsed exprssion string block consists of
         /// </summary>
         public int Length;
+
+        public CodeLocation CodeLocation => new CodeLocation(Pos, Length);
+
         /// <summary>
         /// Evaluates the expression block
         /// </summary>
         /// <param name="provider">Source data for variables references in the expression block</param>
         /// <returns></returns>
-        public abstract object Evaluate(IFsDataProvider provider);
+        public abstract (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectActions);
+
+
+        
         
         /// <summary>
         /// Gets list of child expression blocks

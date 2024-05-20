@@ -5,6 +5,7 @@ namespace funcscript.block
     public class ReferenceBlock : ExpressionBlock
     {
         string _name, _nameLower;
+        private bool _fromParent;
         public string Name
         {
             get
@@ -27,15 +28,25 @@ namespace funcscript.block
         public ReferenceBlock(string name)
         {
             Name = name;
+            _fromParent = false;
         }
         public ReferenceBlock(string name, string nameLower)
         {
             Name = name;
             _nameLower = nameLower;
+            _fromParent = false;
         }
-        public override object Evaluate(IFsDataProvider provider)
+        public ReferenceBlock(string name, string nameLower,bool fromParent)
         {
-            return provider.GetData(_nameLower);
+            Name = name;
+            _nameLower = nameLower;
+            _fromParent =fromParent;
+        }
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
+        {
+            if (_fromParent)
+                return (provider.ParentProvider?.Get(_nameLower),this.CodeLocation);
+            return (provider.Get(_nameLower), this.CodeLocation);
         }
 
         public override IList<ExpressionBlock> GetChilds()

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using funcscript.core;
 
 namespace funcscript.model
 {
@@ -39,13 +40,22 @@ namespace funcscript.model
             }
         }
         object _val;
+
+        protected ObjectKvc()
+        {
+            
+        }
         public ObjectKvc(object val)
         {
-            _val = val;
+            this.SetVal(val);
         }
 
+        protected void SetVal(object val)
+        {
+            this._val = val;
+        }
         public object GetUnderlyingValue() => _val;
-        public override bool ContainsKey(string key)
+        public override bool IsDefined(string key)
         {
             if (_val == null)
                 return false;
@@ -65,6 +75,8 @@ namespace funcscript.model
                 return FuncScript.NormalizeDataType(val.Prop.GetValue(_val));
             return FuncScript.NormalizeDataType(val.Field.GetValue(_val));
         }
+
+        public override IFsDataProvider ParentProvider => null;
 
         public override IList<KeyValuePair<string, object>> GetAll()
         {

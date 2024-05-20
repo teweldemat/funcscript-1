@@ -1,15 +1,10 @@
 ﻿using funcscript.core;
 using funcscript.model;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace funcscript.funcs.keyvalue
 {
-
-    public class KvcNoneNullMemberFunction : IFsFunction
+    public class KvcNoneNullMemberFunction : IFsFunction, IFsDref
     {
         public int MaxParsCount => 2;
 
@@ -19,37 +14,54 @@ namespace funcscript.funcs.keyvalue
 
         public int Precidence => 200;
 
+        private object EvaluateInternal(object target, object key)
+        {
+            if (!(key is string))
+                throw new error.TypeMismatchError($"{Symbol} function: The second parameter should be a string (Member key).");
+
+            if (target == null)
+                return null;
+
+            if (!(target is KeyValueCollection))
+                throw new error.TypeMismatchError($"{Symbol} function: Cannot access member '{key}' on non-KeyValueCollection type '{FuncScript.GetFsDataType(target)}'.");
+
+            return ((KeyValueCollection)target).Get(((string)key).ToLower());
+        }
+
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
+                throw new error.TypeMismatchError($"{Symbol} function: Expected {MaxParsCount} parameters, received {pars.Count}.");
 
-            var par0 = pars.GetParameter(parent, 0);
-            var par1 = pars.GetParameter(parent, 1);
+            var parBuilder = new CallRefBuilder(this, parent, pars);
+            
+            var key = parBuilder.GetParameter(1);
+            var target = parBuilder.GetParameter(0);
+            
+            if (target is ValueReferenceDelegate || key is ValueReferenceDelegate)
+            {
+                return parBuilder.CreateRef();
+            }
 
-            if (!(par1 is string))
-                throw new error.TypeMismatchError($"{Symbol} function: The second parameter should be {ParName(1)}");
-
-            if (par0 == null)
-                return null;
-
-            if (!(par0 is KeyValueCollection))
-                throw new error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {FuncScript.GetFsDataType(par0)}");
-
-            return ((KeyValueCollection)par0).Get(((string)par1).ToLower());
+            return EvaluateInternal(target, key);
         }
 
         public string ParName(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0:
-                    return "Key-value collection";
-                case 1:
-                    return "Member key";
-                default:
-                    return "";
-            }
+                0 => "Key-value collection",
+                1 => "Member key",
+                _ => string.Empty,
+            };
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var member = FuncScript.Dref(pars.GetParameter(null, 1),false);
+            var kvc = FuncScript.Dref(pars.GetParameter(null, 0),false);
+            var result = EvaluateInternal(kvc, member);
+            return result;
         }
     }
 }

@@ -2,14 +2,14 @@
 using funcscript.model;
 using System.Text;
 
-namespace funcscript.funcs.math
+namespace funcscript.funcs.text
 {
-    public class JoinTextFunction : IFsFunction
+    public class JoinTextFunction : IFsFunction, IFsDref
     {
         public const string SYMBOL = "join";
         public int MaxParsCount => 2;
 
-        public CallType CallType => CallType.Infix;
+        public CallType CallType => CallType.Dual;
 
         public string Symbol => SYMBOL;
 
@@ -17,48 +17,71 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            StringBuilder sb = new StringBuilder();
+            if (pars.Count != MaxParsCount)
+                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: Two parameters expected");
 
-            int c = pars.Count;
-            FsList? list;
-            if (c < 2)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: two paramters expected");
-            var par0 = pars.GetParameter(parent, 0);
-            var par1 = pars.GetParameter(parent, 1);
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var par0 = parBuilder.GetParameter(0);
+            var par1 = parBuilder.GetParameter(1);
+
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return CallRef.Create(parent, this, pars);
-            if ((list = par0 as FsList) == null)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: list expected");
-            
-            String? separator;
-            if ((separator = par1 as String) == null)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: separator expected");
+                return parBuilder.CreateRef();
 
+            if (par0 == null || par1 == null)
+                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: List and separator expected as parameters");
+            if(!(par0 is FsList list))
+               throw new InvalidOperationException($"{this.Symbol}: first parameter should be list");
+            if(!(par1 is string separator))
+                throw new InvalidOperationException($"{this.Symbol}: second parameter should be string");
+            
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < list.Length; i++)
             {
-                var o = list[i];
-                if (o != null)
+                var item = list[i];
+                if (item is ValueReferenceDelegate)
+                    return parBuilder.CreateRef();
+                if (item != null)
                 {
-                    if (i> 0)
+                    if (i > 0)
                         sb.Append(separator);
-                    if (o is ValueReferenceDelegate)
-                        return CallRef.Create(parent, this,pars);
-                    sb.Append(FuncScript.Dref(o)??"".ToString());
+                    sb.Append(item?? "");
                 }
             }
             return sb.ToString();
         }
+
+        
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var list = FuncScript.Dref(pars.GetParameter(null, 0),false) as FsList;
+            var separator = FuncScript.Dref(pars.GetParameter(null, 1),false) as string;
+
+            if (list == null || separator == null)
+                throw new funcscript.error.TypeMismatchError($"{Symbol}: List and separator expected as parameters");
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.Length; i++)
+            {
+                var item = list[i];
+                if (item != null)
+                {
+                    if (i > 0)
+                        sb.Append(separator);
+                    sb.Append(FuncScript.Dref(item,false) ?? "");
+                }
+            }
+            return sb.ToString();
+        }
+
         public string ParName(int index)
         {
-            switch (index)
+            return index switch
             {
-                case 0:
-                    return "List";
-                case 1:
-                    return "Separator";
-                default:
-                    return "";
-            }
+                0 => "List",
+                1 => "Separator",
+                _ => ""
+            };
         }
     }
 }

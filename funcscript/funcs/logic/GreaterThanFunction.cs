@@ -1,9 +1,10 @@
 ﻿using funcscript.core;
 using funcscript.model;
+using System;
 
 namespace funcscript.funcs.logic
 {
-    public class GreaterThanFunction : IFsFunction
+    public class GreaterThanFunction : IFsFunction, IFsDref
     {
         public int MaxParsCount => 2;
 
@@ -15,14 +16,22 @@ namespace funcscript.funcs.logic
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException(
-                    $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+            if (pars.Count != MaxParsCount)
+                return new FsError(FsError.ERROR_PARAMETER_COUNT_MISMATCH,
+                    $"{this.Symbol}: expected {this.MaxParsCount} got {pars.Count}");
 
-            var par0 = pars.GetParameter(parent, 0);
-            var par1 = pars.GetParameter(parent, 1);
+            var parBuilder = new CallRefBuilder(this,parent, pars);
+            var par0 = parBuilder.GetParameter(0);
+            var par1 = parBuilder.GetParameter(1);
+
             if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return CallRef.Create(parent, this, pars);
+                return parBuilder.CreateRef();
+
+            return EvaluateInternal(par0, par1);
+        }
+
+        private object EvaluateInternal(object par0, object par1)
+        {
             if (par0 == null || par1 == null)
                 return null;
 
@@ -32,14 +41,19 @@ namespace funcscript.funcs.logic
             }
 
             if (par0.GetType() != par1.GetType())
-                throw new error.TypeMismatchError(
-                    $"{this.Symbol} function can't compare incompatible types.");
+                return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol}: Can't compare incompatible types");
 
-            if (par0 is IComparable)
-                return ((IComparable)par0).CompareTo(par1) > 0;
+            if (par0 is IComparable comparable)
+                return comparable.CompareTo(par1) > 0;
+            return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol} function can't compare these data types: {par0.GetType()}");
 
-            throw new error.TypeMismatchError(
-                $"{this.Symbol} function can't compare these data types: {par0.GetType()}");
+        }
+
+        public object DrefEvaluate(IParameterList pars)
+        {
+            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
+            var par1 = FuncScript.Dref(pars.GetParameter(null, 1),false);
+            return EvaluateInternal(par0, par1); // Using EvaluateInternal to handle actual comparison
         }
 
         public string ParName(int index)
@@ -55,5 +69,4 @@ namespace funcscript.funcs.logic
             }
         }
     }
-
 }

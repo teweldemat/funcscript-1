@@ -15,6 +15,8 @@ namespace funcscript.block
         {
             public IFsDataProvider Provider;
             public SelectorExpression Parent;
+            public IFsDataProvider ParentProvider => Provider;
+
             public object SourceVal
             {
                 set
@@ -23,38 +25,51 @@ namespace funcscript.block
                 }
             }
             KeyValueCollection _sourceVal;
-            public object GetData(string name)
+            public object Get(string name)
             {
                 if (_sourceVal != null)
                 {
-                    if (_sourceVal.ContainsKey(name))
+                    if (_sourceVal.IsDefined(name))
                         return _sourceVal.Get(name);
                 }
-                return Provider.GetData(name);
-
+                return Provider.Get(name);
             }
+            public bool IsDefined(string key)
+            {
+                if (_sourceVal != null)
+                {
+                    if (_sourceVal.IsDefined(key))
+                        return true;
+                }
+
+                return Provider.IsDefined(key);
+            }
+
         }
         public ExpressionBlock Source;
-        public ExpressionBlock Selector;
-        public override object Evaluate(IFsDataProvider provider)
+        public KvcExpression Selector;
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
         {
-            var sourceVal = Source.Evaluate(provider);
+            var (sourceVal,_) = Source.Evaluate(provider,connectionActions);
             if (sourceVal is FsList)
             {
                 var lst = (FsList)sourceVal;
                 var ret = new object[lst.Length];
                 int i = 0;
-                var sel=new SelectorProvider
+                
+                foreach (var l in lst)
                 {
-                    Parent = this,
-                    Provider = provider,
-                };
-                foreach (var l in lst.Data)
-                {
-                    sel.SourceVal = l;
-                    ret[i++] = Selector.Evaluate(sel);
+                    var sel=new SelectorProvider
+                    {
+                        Parent = this,
+                        Provider = provider,
+                        SourceVal = l
+                    };
+                    ret[i] = Selector.Evaluate(sel,connectionActions).Item1;
+                    i++;
                 }
-                return new ArrayFsList(ret);
+                return (new ArrayFsList(ret),this.CodeLocation);
+            
             }
             else
             {
@@ -63,7 +78,7 @@ namespace funcscript.block
                     Parent = this,
                     Provider = provider,
                     SourceVal=sourceVal
-                });
+                },connectionActions);
             }
         }
 

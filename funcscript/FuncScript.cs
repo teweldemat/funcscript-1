@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Xml.XPath;
+using funcscript.block;
 using Newtonsoft.Json.Serialization;
 
 namespace funcscript
@@ -83,14 +84,14 @@ namespace funcscript
                     return null;
             }
         }
-        static KeyValueCollection FromJObject(JObject jobj)
+        static KeyValueCollection FromJObject( JObject jobj)
         {
             var pairs = new List<KeyValuePair<string, object>>();
             foreach (var p in jobj)
             {
                 pairs.Add(new KeyValuePair<string, object>(p.Key, FromJToken(p.Value)));
             }
-            return new SimpleKeyValueCollection(pairs.ToArray());
+            return new SimpleKeyValueCollection(null,pairs.ToArray());
 
         }
         public static object FromJson(String json)
@@ -126,6 +127,7 @@ namespace funcscript
                 || value is ValueSinkDelegate
                 || value is SignalSourceDelegate
                 || value is SignalListenerDelegate
+                || value is FsError
                 )
             {
                 return value; ;
@@ -180,7 +182,7 @@ namespace funcscript
             {
                 JsonValueKind.Array => new ArrayFsList(el.EnumerateArray().Select(x => collect(x)).ToArray()),
                 JsonValueKind.String => el.GetString(),
-                JsonValueKind.Object => new SimpleKeyValueCollection(el.EnumerateObject().Select(x =>
+                JsonValueKind.Object => new SimpleKeyValueCollection(null,el.EnumerateObject().Select(x =>
                                     new KeyValuePair<string, object>(x.Name, collect(x.Value))
                                     ).ToArray()),
                 JsonValueKind.Number => el.GetDouble(),
@@ -219,7 +221,7 @@ namespace funcscript
                     }
                 }
                 if (kv)
-                    return new SimpleKeyValueCollection(arr.Select(x => (KeyValuePair<string, object>)x).ToArray());
+                    return new SimpleKeyValueCollection(null,arr.Select(x => (KeyValuePair<string, object>)x).ToArray());
                 return arr;
             }
             if (obj is JArray)
@@ -258,6 +260,14 @@ namespace funcscript
 
             Format("", sb, val, format, asFuncScriptLiteral, asJsonLiteral, true);
         }
+        
+        public static string  FormatToJson(object val)
+        {
+
+            var sb = new StringBuilder();
+            Format( sb, val,  asJsonLiteral:true);
+            return  sb.ToString();
+        }
         static String TestFormat(object val, string format = null,
             bool asFuncScriptLiteral = false,
             bool asJsonLiteral = false)
@@ -271,6 +281,19 @@ namespace funcscript
             bool asFuncScriptLiteral,
             bool asJsonLiteral, bool adaptiveLineBreak)
         {
+            if (val is ValueReferenceDelegate r)
+            {
+                Format(indent, sb, r.Dref(), format, asFuncScriptLiteral, asJsonLiteral,adaptiveLineBreak);
+                return;
+            }
+
+            if (val is FsError error)
+            {
+                sb.Append($"Error: {error.ErrorMessage}");
+                sb.Append($"  type: {error.ErrorType}");
+                if(error.ErrorData!=null)
+                    sb.Append($"\nData:\n{error.ErrorData}");
+            }
             if (val == null)
             {
                 sb.Append("null");
@@ -523,6 +546,8 @@ namespace funcscript
                 return FSDataType.SigSource;
             if (value is SignalListenerDelegate)
                 return FSDataType.SigSink;
+            if (value is FsError)
+                return FSDataType.Error;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
         public static bool IsNumeric(object val)
@@ -659,20 +684,24 @@ namespace funcscript
                 case ParseMode.FsTemplate:
                     exp = core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
                     break;
-                default:
+                default:    
                     exp = null;
                     break;
             }
 
             if (exp == null)
-                throw new error.SyntaxError(serrors);
+                throw new error.SyntaxError(expression,serrors);
             return Evaluate(exp, expression, provider, vars);
         }
         public static object Evaluate(ExpressionBlock exp, string expression, IFsDataProvider provider, object vars)
         {
             try
             {
-                return exp.Evaluate(provider);
+                List<Action> connectionActions = new List<Action>();
+                var (ret,_)=exp.Evaluate(provider,connectionActions);
+                foreach(var con in connectionActions)
+                    con.Invoke();
+                return ret;
             }
             catch (EvaluationException ex)
             {
@@ -685,34 +714,39 @@ namespace funcscript
             }
         }
 
-        public static object Dref(object obj)
+        public static object Dref(object obj) => Dref(obj, true);
+        public static object Dref(object obj,bool allowSignals)
         {
-             /*if(obj is ValueReferenceDelegate d)
-                return d();
-            if (obj is FsList lst)
+            if(allowSignals)
             {
-                return new ArrayFsList(lst.Data.Select(x => Dref(x)).ToArray());
+                if (obj is SignalListenerDelegate || obj is SignalSourceDelegate)
+                    return obj;
             }
 
-            if (obj is KeyValueCollection kvc)
-            {
-                return new SimpleKeyValueCollection(kvc.GetAll().Select(x=>KeyValuePair.Create<string,object>(x.Key,Dref(x.Value))).ToArray());
-            }
-            return obj;
-            */
-            if(obj is ValueReferenceDelegate d)
-                return Dref(d());
-            if (obj is FsList lst)
-            {
-                return new ArrayFsList(lst.Data.Select(x => Dref(x)).ToArray());
-            }
-
-            if (obj is KeyValueCollection kvc)
-            {
-                return new SimpleKeyValueCollection(kvc.GetAll().Select(x=>KeyValuePair.Create<string,object>(x.Key,Dref(x.Value))).ToArray());
-            }
+            if (obj is ValueReferenceDelegate d)
+                return d.Dref();
             return obj;
         }
+        
     
+        // public static object DeepDref(object obj)
+        // {
+        //     if(obj is ValueReferenceDelegate d)
+        //        return DeepDref(d.Dref());
+        //    if (obj is FsList lst)
+        //    {
+        //        return new ArrayFsList(lst.Select(x => DeepDref(x)).ToArray());
+        //    }
+        //
+        //    if (obj is KeyValueCollection kvc)
+        //    {
+        //        return new SimpleKeyValueCollection(kvc.GetAll().Select(
+        //                 x=>KeyValuePair.Create<string,object>(x.Key,DeepDref(x.Value))
+        //            ).ToArray());
+        //    }
+        //    return obj;
+        //     
+        //     return obj;
+        // }
     }
 }
