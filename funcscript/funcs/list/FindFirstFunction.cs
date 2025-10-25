@@ -19,13 +19,13 @@ namespace funcscript.funcs.list
 
             public override int Count => 2;
 
-            public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
+            public override object GetParameter(IFsDataProvider provider, int index)
             {
                 return index switch
                 {
-                    0 => (X,null),
-                    1 => (I,null),
-                    _ => (null,null),
+                    0 => X,
+                    1 => I,
+                    _ => null
                 };
             }
         }

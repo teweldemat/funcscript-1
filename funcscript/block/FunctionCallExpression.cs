@@ -16,12 +16,9 @@ namespace funcscript.block
         {
             public FunctionCallExpression parent;
             public override int Count => parent.Parameters.Length;
-            public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
+            public override object GetParameter(IFsDataProvider provider, int index)
             {
-                var ret = index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider);
-                if (ret == null)
-                    return (null, null);
-                return (ret,parent.Parameters[index].CodeLocation);
+                return index < 0 || index >= parent.Parameters.Length ? null : parent.Parameters[index].Evaluate(provider);
             }
         }
 

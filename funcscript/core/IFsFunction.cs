@@ -49,12 +49,7 @@ namespace funcscript.core
     public abstract class IParameterList
     {
         public abstract int Count { get; }
-        public object GetParameter(IFsDataProvider provider, int index)
-        {
-            var (ret, _) = GetParameterWithLocation(provider, index);
-            return ret;
-        }
-        public abstract (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index);
+        public abstract object GetParameter(IFsDataProvider provider, int index);
     }
 
     public enum CallType

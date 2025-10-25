@@ -25,16 +25,16 @@ namespace funcscript.funcs.list
 
             public override int Count => 2;
 
-            public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
+            public override object GetParameter(IFsDataProvider provider, int index)
             {
                 switch (index)
                 {
                     case 0:
-                        return (X,null);
+                        return X;
                     case 1:
-                        return (I,null);
+                        return I;
                     default:
-                        return (null,null);
+                        return null;
                 }
             }
         }

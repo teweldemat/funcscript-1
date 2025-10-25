@@ -13,7 +13,7 @@ public class ArrayParameterList : IParameterList
 
     public override int Count { get; }
 
-    public override (object,CodeLocation) GetParameterWithLocation(IFsDataProvider provider, int index)
+    public override object GetParameter(IFsDataProvider provider, int index)
     {
         // Check for out-of-bounds to prevent runtime exceptions.
         if (index < 0 || index >= this.parameters.Length)
@@ -22,6 +22,6 @@ public class ArrayParameterList : IParameterList
         }
 
         // Return the parameter from the internal array.
-        return (this.parameters[index],null);
+        return this.parameters[index];
     }
 }
