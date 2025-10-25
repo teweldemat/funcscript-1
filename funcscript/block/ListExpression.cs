@@ -11,10 +11,10 @@ namespace funcscript.block
         public ExpressionBlock[] ValueExpressions;
 
        
-        public override (object,CodeLocation) Evaluate(IFsDataProvider provider )
+        public override object Evaluate(IFsDataProvider provider )
         {
-            var lst = ValueExpressions.Select(x => x.Evaluate(provider).Item1).ToArray();
-            return (new ArrayFsList(lst),this.CodeLocation);
+            var lst = ValueExpressions.Select(x => x.Evaluate(provider)).ToArray();
+            return new ArrayFsList(lst);
         }
         public override IList<ExpressionBlock> GetChilds()
         {

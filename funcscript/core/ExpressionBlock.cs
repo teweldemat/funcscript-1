@@ -21,6 +21,8 @@ namespace funcscript.core
         /// </summary>
         public int Length;
 
+        public CodeLocation CodeLocation => new CodeLocation(Pos, Length);
+
 
         /// <summary>
         /// Evaluates the expression block
@@ -28,9 +30,6 @@ namespace funcscript.core
         /// <param name="provider">Source data for variables references in the expression block</param>
         /// <returns></returns>
         public abstract object Evaluate(IFsDataProvider provider);
-
-
-        
         
         /// <summary>
         /// Gets list of child expression blocks

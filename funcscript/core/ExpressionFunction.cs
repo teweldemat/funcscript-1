@@ -64,7 +64,7 @@ namespace funcscript.core
         {
             if (_context == null)
                 throw new error.EvaluationTimeException("Context not set to expression function");
-            var (ret,_)= Expression.Evaluate(new ParameterDataProvider
+            var ret= Expression.Evaluate(new ParameterDataProvider
             {
                 expressionFunction = this,
                 parentSymbolProvider = new KvcProvider(_context,parent),

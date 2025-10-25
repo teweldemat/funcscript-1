@@ -680,10 +680,7 @@ namespace funcscript
         {
             try
             {
-                List<Action> connectionActions = new List<Action>();
-                var (ret,_)=exp.Evaluate(provider);
-                foreach(var con in connectionActions)
-                    con.Invoke();
+                var ret = exp.Evaluate(provider);
                 return ret;
             }
             catch (EvaluationException ex)
@@ -699,24 +696,6 @@ namespace funcscript
 
         
     
-        // public static object DeepDref(object obj)
-        // {
-        //     if(obj is ValueReferenceDelegate d)
-        //        return DeepDref(d.Dref());
-        //    if (obj is FsList lst)
-        //    {
-        //        return new ArrayFsList(lst.Select(x => DeepDref(x)).ToArray());
-        //    }
-        //
-        //    if (obj is KeyValueCollection kvc)
-        //    {
-        //        return new SimpleKeyValueCollection(kvc.GetAll().Select(
-        //                 x=>KeyValuePair.Create<string,object>(x.Key,DeepDref(x.Value))
-        //            ).ToArray());
-        //    }
-        //    return obj;
-        //     
-        //     return obj;
-        // }
+        
     }
 }

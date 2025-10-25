@@ -36,7 +36,7 @@ namespace funcscript.block
                     if (_parent.index.TryGetValue(name, out var exp) && exp.ValueExpression != null)
                     {
                         _evaluating = name;
-                        var v = exp.ValueExpression.Evaluate(this).Item1;
+                        var v = exp.ValueExpression.Evaluate(this);
                         _evaluating = null;
                         _valCache[name] = v;
                         return v;
@@ -107,7 +107,7 @@ namespace funcscript.block
 
         public IList<KeyValueExpression> KeyValues => _keyValues;
 
-        public override (object, CodeLocation) Evaluate(IFsDataProvider provider)
+        public override object Evaluate(IFsDataProvider provider)
         {
             var evalProvider = new KvcExpressionProvider(provider, this);
 
@@ -120,7 +120,7 @@ namespace funcscript.block
             {
                 return singleReturn.Evaluate(evalProvider);
             }
-            return (kvc, this.CodeLocation);
+            return kvc;
         }
 
         public override IList<ExpressionBlock> GetChilds()
