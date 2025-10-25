@@ -21,14 +21,13 @@ namespace funcscript.core
         /// </summary>
         public int Length;
 
-        public CodeLocation CodeLocation => new CodeLocation(Pos, Length);
 
         /// <summary>
         /// Evaluates the expression block
         /// </summary>
         /// <param name="provider">Source data for variables references in the expression block</param>
         /// <returns></returns>
-        public abstract (object,CodeLocation) Evaluate(IFsDataProvider provider);
+        public abstract object Evaluate(IFsDataProvider provider);
 
 
         
