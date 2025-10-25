@@ -42,4 +42,12 @@ function createTestProvider() {
   assert.strictEqual(result.value[1], -7);
 }
 
+{
+  const provider = createTestProvider();
+  const { expression } = parse(provider, '((x, y) => x + y)(1, 2)');
+  const result = expression.evaluate(provider);
+  assert.strictEqual(result.value[0], FSDataType.INTEGER);
+  assert.strictEqual(result.value[1], 3);
+}
+
 console.log('evaluation tests passed');

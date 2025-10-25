@@ -1,5 +1,6 @@
 const { ParseNodeType, ParseNode, SyntaxErrorData } = require('../core/parseNode');
 const { ListExpression } = require('../ast/listExpression');
+const { ReferenceBlock } = require('../ast/referenceBlock');
 const { KvcExpression } = require('../ast/kvcExpression');
 const { KEYWORDS } = require('../core/constants');
 const { skipSpace, matchLiteral } = require('./utils');
@@ -132,6 +133,120 @@ function getKeyValuePair(context, exp, index, errors, getExpression) {
   return { index: i, keyValue, node };
 }
 
+function getConnectionItem(context, exp, index, errors, getExpression, nodeType) {
+  const attemptErrors = [];
+  let i = skipSpace(exp, index);
+  const source = getExpression(context, exp, i, attemptErrors);
+  if (!source) {
+    return null;
+  }
+
+  i = skipSpace(exp, source.index);
+  const arrowLiteral = nodeType === ParseNodeType.DATA_CONNECTION ? ':->' : '->';
+  const afterArrow = matchLiteral(exp, i, arrowLiteral);
+  if (afterArrow === i) {
+    return null;
+  }
+
+  i = skipSpace(exp, afterArrow);
+  const sink = getExpression(context, exp, i, attemptErrors);
+  if (!sink) {
+    errors.push(new SyntaxErrorData(i, 0, 'Sink expression expected'));
+    return null;
+  }
+
+  i = skipSpace(exp, sink.index);
+
+  let connectionExpression;
+  if (sink.expression instanceof ListExpression) {
+    const expressions = sink.expression.valueExpressions;
+    if (expressions.length !== 2) {
+      errors.push(new SyntaxErrorData(i, 0, 'Exactly two items, sink and fault are expected'));
+      return null;
+    }
+
+    connectionExpression = {
+      source: source.expression,
+      sink: expressions[0],
+      catch: expressions[1],
+    };
+  } else {
+    connectionExpression = {
+      source: source.expression,
+      sink: sink.expression,
+      catch: null,
+    };
+  }
+
+  const node = new ParseNode(
+    nodeType,
+    index,
+    i - index,
+    [source.node, sink.node],
+  );
+
+  return { index: i, connection: connectionExpression, node };
+}
+
+function getKvcItem(context, nakedMode, exp, index, errors, getExpression) {
+  const kvErrors = [];
+  const keyValueResult = getKeyValuePair(context, exp, index, kvErrors, getExpression);
+  if (keyValueResult) {
+    return {
+      index: keyValueResult.index,
+      item: keyValueResult.keyValue,
+      node: keyValueResult.node,
+    };
+  }
+
+  const retErrors = [];
+  const returnResult = getReturnDefinition(context, exp, index, retErrors, getExpression);
+  if (returnResult) {
+    return {
+      index: returnResult.index,
+      item: {
+        key: null,
+        keyLower: null,
+        valueExpression: returnResult.expression,
+      },
+      node: returnResult.node,
+    };
+  }
+
+  if (!nakedMode) {
+    const identifier = getIdentifier(exp, index);
+    if (identifier) {
+      const reference = new ReferenceBlock(identifier.text).setSpan(index, identifier.index - index);
+      return {
+        index: identifier.index,
+        item: {
+          key: identifier.text,
+          keyLower: identifier.textLower,
+          valueExpression: reference,
+        },
+        node: identifier.node,
+      };
+    }
+
+    const stringKey = getSimpleString(exp, index, []);
+    if (stringKey) {
+      const key = stringKey.expression.value[1];
+      const reference = new ReferenceBlock(key).setSpan(index, stringKey.index - index);
+      return {
+        index: stringKey.index,
+        item: {
+          key,
+          keyLower: key.toLowerCase(),
+          valueExpression: reference,
+        },
+        node: stringKey.node,
+      };
+    }
+  }
+
+  return null;
+}
+
 function getKvcExpression(context, nakedMode, exp, index, errors, getExpression) {
   let i = skipSpace(exp, index);
   if (!nakedMode) {
@@ -144,6 +259,8 @@ function getKvcExpression(context, nakedMode, exp, index, errors, getExpression)
 
   const keyValues = [];
   const nodeItems = [];
+  const dataConnections = [];
+  const signalConnections = [];
   let returnExpression = null;
   let parsedAny = false;
 
@@ -154,27 +271,46 @@ function getKvcExpression(context, nakedMode, exp, index, errors, getExpression)
       break;
     }
 
-    const returnResult = getReturnDefinition(context, exp, i, errors, getExpression);
-    if (returnResult) {
-      if (returnExpression) {
-        errors.push(new SyntaxErrorData(returnResult.node.pos, 0, 'Duplicate return statement'));
-        return null;
-      }
-
-      returnExpression = returnResult.expression;
-      nodeItems.push(returnResult.node);
+    const dataConnection = getConnectionItem(context, exp, i, errors, getExpression, ParseNodeType.DATA_CONNECTION);
+    if (dataConnection) {
+      dataConnections.push(dataConnection.connection);
+      nodeItems.push(dataConnection.node);
       parsedAny = true;
-      i = returnResult.index;
+      i = dataConnection.index;
     } else {
-      const keyValueResult = getKeyValuePair(context, exp, i, errors, getExpression);
-      if (!keyValueResult) {
-        break;
-      }
+      const signalConnection = getConnectionItem(
+        context,
+        exp,
+        i,
+        errors,
+        getExpression,
+        ParseNodeType.SIGNAL_CONNECTION,
+      );
+      if (signalConnection) {
+        signalConnections.push(signalConnection.connection);
+        nodeItems.push(signalConnection.node);
+        parsedAny = true;
+        i = signalConnection.index;
+      } else {
+        const item = getKvcItem(context, nakedMode, exp, i, errors, getExpression);
+        if (!item) {
+          break;
+        }
 
-      keyValues.push(keyValueResult.keyValue);
-      nodeItems.push(keyValueResult.node);
-      parsedAny = true;
-      i = keyValueResult.index;
+        if (!item.item.key && returnExpression) {
+          errors.push(new SyntaxErrorData(item.node.pos, 0, 'Duplicate return statement'));
+          return null;
+        }
+
+        if (!item.item.key) {
+          returnExpression = item.item.valueExpression;
+        } else {
+          keyValues.push(item.item);
+        }
+        nodeItems.push(item.node);
+        parsedAny = true;
+        i = item.index;
+      }
     }
 
     i = skipSpace(exp, i);
@@ -198,7 +334,12 @@ function getKvcExpression(context, nakedMode, exp, index, errors, getExpression)
   }
 
   const kvcExpr = new KvcExpression();
-  const errorMessage = kvcExpr.setKeyValues(keyValues, returnExpression, [], []);
+  const errorMessage = kvcExpr.setKeyValues(
+    keyValues,
+    returnExpression,
+    dataConnections,
+    signalConnections,
+  );
   if (errorMessage) {
     errors.push(new SyntaxErrorData(index, i - index, errorMessage));
     return null;

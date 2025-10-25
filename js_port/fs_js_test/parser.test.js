@@ -16,6 +16,8 @@ class TestProvider {
       ['-', [FSDataType.FUNCTION, { symbol: '-', arity: 2 }]],
       ['neg', [FSDataType.FUNCTION, { symbol: 'neg', arity: 1 }]],
       ['not', [FSDataType.FUNCTION, { symbol: 'not', arity: 1 }]],
+      ['case', [FSDataType.FUNCTION, { symbol: 'case' }]],
+      ['switch', [FSDataType.FUNCTION, { symbol: 'switch' }]],
     ]);
   }
 
@@ -108,6 +110,50 @@ function assertLiteral(block, expectedValue) {
   assert(expression.parameters.length === 1);
   assert(expression.parameters[0] instanceof ReferenceBlock);
   assert.strictEqual(expression.parameters[0].identifier, 'foo');
+}
+
+{
+  const provider = new TestProvider();
+  const { expression, errors } = parse(provider, '(x, y) => x + y');
+  assert.strictEqual(errors.length, 0);
+  assert(expression instanceof LiteralBlock);
+  assert.strictEqual(expression.value[0], FSDataType.FUNCTION);
+  assert.strictEqual(expression.value[1].arity, 2);
+}
+
+{
+  const provider = new TestProvider();
+  const { expression, errors } = parse(provider, 'case foo: bar, baz: qux');
+  assert.strictEqual(errors.length, 0);
+  assert(expression instanceof FunctionCallExpression);
+  assert.strictEqual(expression.parameters.length, 4);
+}
+
+{
+  const provider = new TestProvider();
+  const { expression, errors } = parse(provider, 'switch selector, 1: first, 2: second');
+  assert.strictEqual(errors.length, 0);
+  assert(expression instanceof FunctionCallExpression);
+  assert.strictEqual(expression.parameters.length, 5);
+}
+
+{
+  const provider = new TestProvider();
+  const { expression, errors } = parse(
+    provider,
+    '{ foo: 1; alpha -> beta; gamma :-> [sink, fault] }',
+  );
+  assert.strictEqual(errors.length, 0);
+  assert(expression instanceof KvcExpression);
+  assert.strictEqual(expression.signalConnections.length, 1);
+  assert.strictEqual(expression.dataConnections.length, 1);
+  const [signalConn] = expression.signalConnections;
+  const [dataConn] = expression.dataConnections;
+  assert(signalConn.source);
+  assert(signalConn.sink);
+  assert(dataConn.source);
+  assert(dataConn.sink);
+  assert(dataConn.catch);
 }
 
 console.log('parser tests passed');

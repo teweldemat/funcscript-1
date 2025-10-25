@@ -7,8 +7,8 @@
   [ ] Collections, templates, and advanced constructs
     [x] Lists and key-value collection parsing
     [x] String template handling with prefix operators
-    [ ] Switch/case, lambda, and connection syntax
+    [x] Switch/case, lambda, and connection syntax
 [ ] Runtime evaluation parity with .NET implementation
   [x] Core data provider and function wrappers
   [x] Literal, reference, list, and basic function call evaluation
-  [ ] Advanced constructs (lazy evaluation, connections, signals)
+  [ ] Advanced constructs (lazy evaluation)

@@ -1,5 +1,5 @@
 const { ParseNodeType, ParseNode, SyntaxErrorData } = require('../core/parseNode');
-const { literalString } = require('../core/values');
+const { literalString, literalFunction } = require('../core/values');
 const { LiteralBlock } = require('../ast/literalBlock');
 const { ReferenceBlock } = require('../ast/referenceBlock');
 const { FunctionCallExpression } = require('../ast/functionCallExpression');
@@ -19,6 +19,9 @@ const { getStringTemplate } = require('./stringTemplate');
 const { getListExpression, getKvcExpression } = require('./collections');
 const { getPrefixOperator } = require('./prefix');
 const { getFunctionCall } = require('./functionCall');
+const { getCaseExpression, getSwitchExpression } = require('./caseSwitch');
+const { getLambdaExpression } = require('./lambda');
+const { ExpressionFunction } = require('../runtime/expressionFunction');
 
 const operatorSymbols = [
   ['^'],
@@ -82,6 +85,27 @@ function getUnit(context, exp, index, errors) {
     return kvcExpression;
   }
 
+  const caseExpression = getCaseExpression(context, exp, i, errors, getExpression);
+  if (caseExpression) {
+    return caseExpression;
+  }
+
+  const switchExpression = getSwitchExpression(context, exp, i, errors, getExpression);
+  if (switchExpression) {
+    return switchExpression;
+  }
+
+  const lambdaExpression = getLambdaExpression(context, exp, i, errors, getExpression);
+  if (lambdaExpression) {
+    const expressionFunction = new ExpressionFunction(lambdaExpression.parameters, lambdaExpression.body);
+    const literal = new LiteralBlock(literalFunction(expressionFunction)).setSpan(
+      index,
+      lambdaExpression.index - index,
+    );
+    const node = lambdaExpression.node;
+    return { index: lambdaExpression.index, expression: literal, node };
+  }
+
   const keywordLiteral = getKeywordLiteral(exp, i);
   if (keywordLiteral) {
     return keywordLiteral;
@@ -139,6 +163,9 @@ function getInfixExpressionSingleLevel(context, level, exp, index, errors) {
   let i = skipSpace(exp, left.index);
   while (true) {
     const operatorPos = i;
+    if (exp.startsWith('->', operatorPos) || exp.startsWith(':->', operatorPos)) {
+      break;
+    }
     const operatorMatch = matchAnyLiteral(exp, i, candidates);
     if (operatorMatch === i) {
       break;

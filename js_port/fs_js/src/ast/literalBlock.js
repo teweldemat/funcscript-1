@@ -1,4 +1,5 @@
 const { ExpressionBlock } = require('./expressionBlock');
+const { isExpressionFunctionValue } = require('../runtime/expressionFunction');
 
 class LiteralBlock extends ExpressionBlock {
   constructor(value) {
@@ -6,7 +7,11 @@ class LiteralBlock extends ExpressionBlock {
     this.value = value;
   }
 
-  evaluate() {
+  evaluate(provider) {
+    if (isExpressionFunctionValue(this.value)) {
+      const [, expressionFunction] = this.value;
+      expressionFunction.setContext(provider);
+    }
     return this.makeResult(this.value);
   }
 
