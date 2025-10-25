@@ -37,13 +37,10 @@ namespace funcscript.funcs.math
         {
             StringBuilder sb = new StringBuilder();
             int c = pars.Count;
-            var parBuilder = new CallRefBuilder(this, parent, pars);
             for (int i = 0; i < c; i++)
             {
 
                 var o = pars.GetParameter(parent, i);
-                if (o is ValueReferenceDelegate)
-                    return parBuilder.CreateRef();
                 if (o is FsList)
                     MergeList(sb, (FsList)o);
                 else

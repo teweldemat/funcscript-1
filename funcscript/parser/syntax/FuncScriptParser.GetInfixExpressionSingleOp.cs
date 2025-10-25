@@ -1,7 +1,6 @@
 using funcscript.funcs.math;
 using funcscript.funcs.logic;
 using funcscript.model;
-using funcscript.nodes;
 using System.Collections.Generic;
 using funcscript.block;
 
@@ -90,24 +89,6 @@ namespace funcscript.core
                             Length = operands[^1].Pos + operands[^1].Length - prog.Length
                         };
 
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
-                            operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
-                    }
-                    else if (func is SigSequenceFunction)
-                    {
-                        prog = new FunctionCallExpression
-                        {
-                            Function = new LiteralBlock(func),
-                            Parameters = new ExpressionBlock[]
-                            {
-                                new ListExpression
-                                {
-                                    ValueExpressions = operands.ToArray()
-                                }
-                            },
-                            Pos = prog.Pos,
-                            Length = operands[^1].Pos + operands[^1].Length - prog.Length
-                        };
                         parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
                             operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
                     }

@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.math
 {
-    public class NegateFunction : IFsFunction, IFsDref
+    public class NegateFunction : IFsFunction
     {
         public const string SYMBOL="neg";
         public int MaxParsCount => 1;
@@ -29,23 +29,6 @@ namespace funcscript.funcs.math
                 return -doubleValue;
 
             return null;
-        }
-
-        public object DrefEvaluate(IParameterList pars)
-        {
-            if (pars.Count != 1)
-                return null;
-
-            var param = FuncScript.Dref(pars.GetParameter(null, 0));
-
-            if (param is int intValue)
-                return -intValue;
-            if (param is long longValue)
-                return -longValue;
-            if (param is double doubleValue)
-                return -doubleValue;
-    
-            return new FsError(FsError.ERROR_TYPE_MISMATCH,"Numeric value expected");
         }
 
         public string ParName(int index)

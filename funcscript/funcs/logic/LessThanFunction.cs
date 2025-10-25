@@ -25,11 +25,8 @@ namespace funcscript.funcs.logic
                 return new FsError(FsError.ERROR_PARAMETER_COUNT_MISMATCH,
                     $"{this.Symbol}: expected {this.MaxParsCount} got {pars.Count}");
 
-            var parBuilder = new CallRefBuilder(this, parent, pars);
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
-            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return parBuilder.CreateRef();
             if (par0 == null || par1 == null)
                 return null;
 

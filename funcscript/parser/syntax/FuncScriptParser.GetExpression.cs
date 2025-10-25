@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using funcscript.funcs.logic;
 using funcscript.model;
-using funcscript.nodes;
 using System.Collections.Generic;
 
 namespace funcscript.core

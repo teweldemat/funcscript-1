@@ -6,7 +6,7 @@ namespace funcscript.funcs.list
 {
     
     //Optimization: it is not necessary to dereference skipped elements
-    public class SkipFunction : IFsFunction, IFsDref
+    public class SkipFunction : IFsFunction
     {
         public int MaxParsCount => 2;
 
@@ -50,12 +50,6 @@ namespace funcscript.funcs.list
             return new ArrayFsList(lst.Skip(n).ToArray());
         }
 
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
-            return EvaluateInternal(par0, par1); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
-        }
 
         public string ParName(int index)
         {

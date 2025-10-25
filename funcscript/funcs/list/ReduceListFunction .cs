@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace funcscript.funcs.list
 {
-    public class ReduceListFunction : IFsFunction,IFsDref
+    public class ReduceListFunction : IFsFunction
     {
         public int MaxParsCount => 3;
 
@@ -42,10 +42,10 @@ namespace funcscript.funcs.list
             var par0 = pars.GetParameter(parent,0);
             var par1 = pars.GetParameter(parent,1);
             var par2 = pars.GetParameter(parent,2);
-            return EvaluateInternal(parent, par0, par1, par2,false);
+            return EvaluateInternal(parent, par0, par1, par2);
         }
 
-        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1, object par2,bool dref)
+        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1, object par2)
         {
             if (par0 == null)
                 return null;
@@ -66,19 +66,8 @@ namespace funcscript.funcs.list
 
             for (int i = 0; i < lst.Length; i++)
             {
-                if (dref)
-                {
-                    if (func is IFsDref dreff)
-                    {
-                        total = dreff.DrefEvaluate(new DoListFuncPar { S = total, X = lst[i], I = i });
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"{func.GetType()} doesn't implement IFsDref");
-                    }
-                }
-                else
-                    total = func.Evaluate(parent, new DoListFuncPar { S = total, X = lst[i], I = i });
+                
+                total = func.Evaluate(parent, new DoListFuncPar { S = total, X = lst[i], I = i });
             }
 
             return FuncScript.NormalizeDataType(total);
@@ -97,13 +86,5 @@ namespace funcscript.funcs.list
             }
         }
 
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1),false);
-            var par2 = FuncScript.Dref(pars.GetParameter(null, 2));
-            return EvaluateInternal(null, par0, par1,par2,true);
-
-        }
     }
 }

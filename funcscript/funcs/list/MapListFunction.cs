@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace funcscript.funcs.list
 {
-    public class MapListFunction : IFsFunction, IFsDref
+    public class MapListFunction : IFsFunction
     {
         public int MaxParsCount => 2;
 
@@ -23,10 +23,10 @@ namespace funcscript.funcs.list
             var par1 = pars.GetParameter(parent,1);
 
             
-            return EvaluateInternal(parent, par0, par1,false);
+            return EvaluateInternal(parent, par0, par1);
         }
 
-        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1,bool dref)
+        private object EvaluateInternal(IFsDataProvider parent, object par0, object par1)
         {
             if (par0 == null)
                 return null;
@@ -45,30 +45,13 @@ namespace funcscript.funcs.list
             {
                 var item = lst[i];
                 var pars = new ArrayParameterList(new object[] { item, i });
-                if (dref)
-                {
-                    if (func is IFsDref fderf)
-                    {
-                        res.Add(fderf.DrefEvaluate(pars));
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"{func.GetType()} doesn't implement IFsDref");
-                    }
-                }
-                else
                     res.Add(func.Evaluate(parent, pars));
             }
 
             return new ArrayFsList(res);
         }
 
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
-            return EvaluateInternal(null, par0, par1,true); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
-        }
+        
 
         public string ParName(int index)
         {

@@ -1,7 +1,4 @@
 using funcscript.block;
-using funcscript.model;
-using funcscript.nodes;
-using System.Collections.Generic;
 
 namespace funcscript.core
 {

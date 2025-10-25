@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.math
 {
-    public class SubstractFunction : IFsFunction, IFsDref
+    public class SubstractFunction : IFsFunction
     {
         public int MaxParsCount => -1;
 
@@ -15,20 +15,11 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var parBuilder = new CallRefBuilder(this, parent, pars);
-            var doRef = false;
             var ret = EvaluateInternal(pars, (i) =>
             {
                 var ret = pars.GetParameter(parent, i);
-                if (ret is ValueReferenceDelegate)
-                {
-                    doRef = true;
-                    return (false, null);
-                }
                 return (true, ret);
             });
-            if (doRef)
-                return parBuilder.CreateRef();
             return ret;
         }
 
@@ -137,16 +128,6 @@ namespace funcscript.funcs.math
                 return intTotal;
 
             return null;
-        }
-
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var ret = EvaluateInternal(pars, (i) =>
-            {
-                var ret = FuncScript.Dref(pars.GetParameter(null, i));
-                return (true, ret);
-            });
-            return ret;
         }
 
         public string ParName(int index)

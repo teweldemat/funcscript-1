@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
-    public class OrFunction : IFsFunction, IFsDref
+    public class OrFunction : IFsFunction
     {
         public int MaxParsCount => -1;
 
@@ -15,31 +15,9 @@ namespace funcscript.funcs.logic
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var parBuilder = new CallRefBuilder(this, parent, pars);
-
             for (int i = 0; i < pars.Count; i++)
             {
-                var par = parBuilder.GetParameter(i);
-
-                if (par is ValueReferenceDelegate)
-                    return parBuilder.CreateRef();
-
-                if (!(par is bool b))
-                    return new FsError(FsError.ERROR_TYPE_MISMATCH,
-                        $"{this.Symbol} doesn't apply to this type:{(par == null ? "null" : par.GetType().ToString())}");
-
-                if (b)
-                    return true;
-            }
-
-            return false;
-        }
-
-        public object DrefEvaluate(IParameterList pars)
-        {
-            for (int i = 0; i < MaxParsCount; i++)
-            {
-                var par = FuncScript.Dref(pars.GetParameter(null, i), false);
+                var par = pars.GetParameter(parent, i);
 
                 if (!(par is bool b))
                     return new FsError(FsError.ERROR_TYPE_MISMATCH,

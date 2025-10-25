@@ -3,8 +3,6 @@ using System.Text;
 using funcscript.block;
 using funcscript.funcs.math;
 using funcscript.funcs.logic;
-using funcscript.model;
-using funcscript.nodes;
 
 namespace funcscript.core
 {

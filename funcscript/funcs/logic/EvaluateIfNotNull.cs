@@ -4,7 +4,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.logic
 {
-    public class EvaluateIfNotNull : IFsFunction, IFsDref
+    public class EvaluateIfNotNull : IFsFunction
     {
         public int MaxParsCount => 2; // Set to 2 for consistent parameter handling
 
@@ -19,26 +19,13 @@ namespace funcscript.funcs.logic
             if (pars.Count != MaxParsCount)
                 throw new error.TypeMismatchError($"{Symbol} function expects exactly two parameters.");
 
-            var parBuilder = new CallRefBuilder(this, parent, pars);
-            var val = parBuilder.GetParameter(0);
-            if (val is ValueReferenceDelegate)
-                return parBuilder.CreateRef(); // Defer if the first parameter is a reference.
+            var val = pars.GetParameter(parent, 0);
 
             if (val == null)
                 return null;
 
-            var val2 = parBuilder.GetParameter(1);
-            if (val2 is ValueSinkDelegate)
-                return parBuilder.CreateRef();
-            return  val2; 
-        }
-
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var val = FuncScript.Dref(pars.GetParameter(null, 0), false);
-            if (val != null)
-                return FuncScript.Dref(pars.GetParameter(null, 1), false);;
-            return null;
+            var val2 = pars.GetParameter(parent, 1);
+            return val2;
         }
 
         public string ParName(int index)

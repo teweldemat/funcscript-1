@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace funcscript.funcs.list
 {
-    public class SortListFunction : IFsFunction, IFsDref
+    public class SortListFunction : IFsFunction
     {
         public int MaxParsCount => 2;
 
@@ -55,12 +55,6 @@ namespace funcscript.funcs.list
             return new ArrayFsList(res);
         }
 
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1));
-            return EvaluateInternal(null, par0, par1); // Passing `null` for IFsDataProvider since no parent is specified in DrefEvaluate context.
-        }
 
         public string ParName(int index)
         {

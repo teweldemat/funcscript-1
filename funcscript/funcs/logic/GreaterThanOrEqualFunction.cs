@@ -4,7 +4,7 @@ using System;
 
 namespace funcscript.funcs.logic
 {
-    public class GreaterThanOrEqualFunction : IFsFunction, IFsDref
+    public class GreaterThanOrEqualFunction : IFsFunction
     {
         public int MaxParsCount => 2;
 
@@ -19,12 +19,8 @@ namespace funcscript.funcs.logic
             if (pars.Count != this.MaxParsCount)
                 throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
-            var parBuilder = new CallRefBuilder(this,parent, pars);
-            var par0 = parBuilder.GetParameter(0);
-            var par1 = parBuilder.GetParameter(1);
-
-            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return parBuilder.CreateRef();
+            var par0 = pars.GetParameter(parent, 0);
+            var par1 = pars.GetParameter(parent, 1);
 
             return EvaluateInternal(par0, par1);
         }
@@ -46,13 +42,6 @@ namespace funcscript.funcs.logic
                 return comparable.CompareTo(par1) >= 0;
 
             return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol} function can't compare these data types: {par0.GetType()}");
-        }
-
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0),false);
-            var par1 = FuncScript.Dref(pars.GetParameter(null, 1),false);
-            return EvaluateInternal(par0, par1); // Using EvaluateInternal to handle actual comparison
         }
 
         public string ParName(int index)

@@ -3,7 +3,7 @@ using funcscript.model;
 
 namespace funcscript.funcs.math
 {
-    public class DivisionFunction : IFsFunction,IFsDref
+    public class DivisionFunction : IFsFunction
     {
         public int MaxParsCount => -1;
 
@@ -15,20 +15,11 @@ namespace funcscript.funcs.math
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var parBuilder = new CallRefBuilder(this,parent, pars);
-            var doRef = false;
             var ret = EvaluateInteral(pars, (i) =>
             {
                 var ret = pars.GetParameter(parent, i);
-                if (ret is ValueReferenceDelegate)
-                {
-                    doRef = true;
-                    return (false, null);
-                }
                 return (true, ret);
             });
-            if (doRef)
-                return parBuilder.CreateRef();
             return ret;
         }
         object EvaluateInteral(IParameterList pars,Func<int,(bool,object)> getPar)
@@ -138,15 +129,6 @@ namespace funcscript.funcs.math
             return null;
         }
 
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var ret = EvaluateInteral( pars, (i) =>
-            {
-                var ret = FuncScript.Dref(pars.GetParameter(null, i));
-                return (true, ret);
-            });
-            return ret;
-        }
         public string ParName(int index)
         {
             return $"Op {index + 1}";

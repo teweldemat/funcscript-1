@@ -5,7 +5,7 @@ using funcscript.funcs.misc;
 
 namespace funcscript.funcs.list
 {
-    public class ReverseListFunction : IFsFunction, IFsDref
+    public class ReverseListFunction : IFsFunction
     {
         public int MaxParsCount => 1;
 
@@ -42,11 +42,6 @@ namespace funcscript.funcs.list
             return new ArrayFsList(res);
         }
 
-        public object DrefEvaluate(IParameterList pars)
-        {
-            var par0 = FuncScript.Dref(pars.GetParameter(null, 0));
-            return EvaluateInternal(par0);
-        }
 
         public string ParName(int index)
         {
