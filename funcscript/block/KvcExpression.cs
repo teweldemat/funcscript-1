@@ -79,71 +79,7 @@ namespace funcscript.block
             }
         }
 
-        class ConnectionSourceListener : ConnectionInfo
-        {
-            public object fault;
-
-            public void OnChange()
-            {
-                var source = FuncScript.Dref(vref,false);
-                this.TryConnect(source);
-            }
-
-            public void TryConnect(object source)
-            {
-                if (source is SignalSourceDelegate sigSource)
-                {
-                    try
-                    {
-                        sigSource.SetSource(sink, fault);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new EvaluationException(location, ex);
-                    }
-                }
-                else if (source is ValueReferenceDelegate r)
-                {
-                    vref = r;
-                    r.AddListener(this.OnChange);
-                }
-                else
-                    ThrowInvalidConnectionError("Invalid connection, source should be a signal source");
-            }
-        }
-
-        class DataConnectionSourceListener : ConnectionInfo
-        {
-            public object source;
-
-            public void OnChange()
-            {
-                var sink = FuncScript.Dref(vref,true);
-                TryConnect(sink);
-            }
-
-            public void TryConnect(object sink)
-            {
-                if (sink is ValueSinkDelegate valSink)
-                {
-                    try
-                    {
-                        valSink.SetValueSource(source);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new EvaluationException(location, ex);
-                    }
-                }
-                else if (sink is ValueReferenceDelegate r)
-                {
-                    vref = r;
-                    r.AddListener(this.OnChange);
-                }
-                else
-                    ThrowInvalidConnectionError("Invalid connection, data should be a data source");
-            }
-        }
+        
 
         public String SetKeyValues(IList<KeyValueExpression> kv, ExpressionBlock retExpression,
             IList<ConnectionExpression> datConns,

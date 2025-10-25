@@ -33,7 +33,6 @@ namespace funcscript.core
 
         private Dictionary<string, int> ParamterNameIndex;
         private String[] _parameters;
-        private ValueReferenceDelegate[] _parameterRefs = null;
         private object _expressionValue = null;
         private IFsDataProvider _context = null;
 
@@ -65,18 +64,12 @@ namespace funcscript.core
         {
             if (_context == null)
                 throw new error.EvaluationTimeException("Context not set to expression function");
-            List<Action> connectionActions=new List<Action>();
             var (ret,_)= Expression.Evaluate(new ParameterDataProvider
             {
                 expressionFunction = this,
                 parentSymbolProvider = new KvcProvider(_context,parent),
                 pars = pars
             });
-            foreach (var con in connectionActions)
-            {
-                con.Invoke();
-            }
-
             return ret;
         }
 

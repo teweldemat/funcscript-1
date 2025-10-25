@@ -19,13 +19,10 @@ namespace funcscript.funcs.list
             if (pars.Count != this.MaxParsCount)
                 throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
-            var parBuilder = new CallRefBuilder(this,parent, pars);
-            var par0 = parBuilder.GetParameter(0);
-            var par1 = parBuilder.GetParameter(1);
+            var par0 = pars.GetParameter(parent,0);
+            var par1 = pars.GetParameter(parent,1);
 
-            if (par0 is ValueReferenceDelegate || par1 is ValueReferenceDelegate)
-                return parBuilder.CreateRef();
-
+            
             return EvaluateInternal(parent, par0, par1,false);
         }
 

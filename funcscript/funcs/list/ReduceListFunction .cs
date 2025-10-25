@@ -39,21 +39,9 @@ namespace funcscript.funcs.list
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            var parBuilder = new CallRefBuilder(this,parent, pars);
-
-            var par0 = parBuilder.GetParameter(0);
-            if (par0 is ValueReferenceDelegate)
-                return parBuilder.CreateRef();
-            
-
-            var par1 = parBuilder.GetParameter(1);
-            if (par1 is ValueReferenceDelegate)
-                return parBuilder.CreateRef();
- 
-            var par2 = parBuilder.GetParameter(2);
-            if (par2 is ValueReferenceDelegate)
-                return parBuilder.CreateRef();
-
+            var par0 = pars.GetParameter(parent,0);
+            var par1 = pars.GetParameter(parent,1);
+            var par2 = pars.GetParameter(parent,2);
             return EvaluateInternal(parent, par0, par1, par2,false);
         }
 

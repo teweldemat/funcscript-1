@@ -87,10 +87,6 @@ namespace funcscript.block
                     ret = null;
                 return (ret,this.CodeLocation);
             }
-            else if (func is ValueReferenceDelegate r)
-            {
-                return (CallRef.Create(this.CodeLocation, provider, r, paramList),this.CodeLocation);
-            }
             throw new EvaluationException(this.Pos, this.Length,
                 new TypeMismatchError($"Function part didn't evaluate to a function or a list. {FuncScript.GetFsDataType(func)}"));
         }
