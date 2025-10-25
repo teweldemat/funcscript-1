@@ -11,11 +11,11 @@ class FuncParameterList extends ParameterList {
   }
 
   get count() {
-    return this.parentExpression.parameters.length;
+    return this.parentExpression.Parameters.length;
   }
 
   getParameter(provider, index) {
-    const exp = this.parentExpression.parameters[index];
+    const exp = this.parentExpression.Parameters[index];
     if (!exp) {
       return typedNull();
     }
@@ -29,6 +29,8 @@ class FunctionCallExpression extends ExpressionBlock {
     super(position, length);
     this.functionExpression = fnExpression;
     this.parameters = parameterExpressions || [];
+    this.Function = this.functionExpression;
+    this.Parameters = this.parameters;
   }
 
   evaluate(provider) {

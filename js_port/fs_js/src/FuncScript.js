@@ -2,9 +2,19 @@ const { FuncScriptParser } = require('./parser/FuncScriptParser');
 const { MapDataProvider } = require('./core/dataProvider');
 const { ensureTyped } = require('./core/value');
 const { IFFunction } = require('./funcs/logic/IFFunction');
+const { EqualsFunction } = require('./funcs/logic/EqualsFunction');
+const { AddFunction } = require('./funcs/math/AddFunction');
+const { SubtractFunction } = require('./funcs/math/SubtractFunction');
+const { MultiplyFunction } = require('./funcs/math/MultiplyFunction');
+const { DivisionFunction } = require('./funcs/math/DivisionFunction');
 
 const builtinProvider = new MapDataProvider({
-  if: new IFFunction()
+  if: new IFFunction(),
+  '=': new EqualsFunction(),
+  '+': new AddFunction(),
+  '-': new SubtractFunction(),
+  '*': new MultiplyFunction(),
+  '/': new DivisionFunction()
 });
 
 class DefaultFsDataProvider extends MapDataProvider {

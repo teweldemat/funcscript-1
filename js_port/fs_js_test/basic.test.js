@@ -23,6 +23,26 @@ function run() {
   result = evaluate('If(1=1, "yes", "no")', provider);
   assert.strictEqual(result[0], FSDataType.String);
   assert.strictEqual(result[1], 'yes');
+
+  result = evaluate('1=1', provider);
+  assert.strictEqual(result[0], FSDataType.Boolean);
+  assert.strictEqual(result[1], true);
+
+  result = evaluate('[1,2,3]', provider);
+  assert.strictEqual(result[0], FSDataType.List);
+  const list = result[1];
+  assert.strictEqual(list.length, 3);
+  assert.strictEqual(list.get(1)[1], 2);
+
+  result = evaluate('{x:5; y:x+1;}', provider);
+  assert.strictEqual(result[0], FSDataType.KeyValueCollection);
+  const collection = result[1];
+  assert.strictEqual(collection.get('x')[1], 5);
+  assert.strictEqual(collection.get('y')[1], 6);
+
+  result = evaluate('{value:[10,20,30]; return value(2);}', provider);
+  assert.strictEqual(result[0], FSDataType.Integer);
+  assert.strictEqual(result[1], 30);
 }
 
 module.exports = {

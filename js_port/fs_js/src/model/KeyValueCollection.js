@@ -70,11 +70,14 @@ class SimpleKeyValueCollection extends KeyValueCollection {
   constructor(parentOrEntries, entriesMaybe) {
     let parent = null;
     let entries = [];
-    if (Array.isArray(parentOrEntries) || parentOrEntries === undefined || parentOrEntries === null) {
-      entries = parentOrEntries || [];
-    } else {
-      parent = parentOrEntries;
+    if (entriesMaybe !== undefined) {
+      parent = parentOrEntries || null;
       entries = entriesMaybe || [];
+    } else if (Array.isArray(parentOrEntries)) {
+      entries = parentOrEntries;
+    } else {
+      parent = parentOrEntries || null;
+      entries = [];
     }
     super(parent);
     this._data = [];
