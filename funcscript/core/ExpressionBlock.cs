@@ -28,7 +28,7 @@ namespace funcscript.core
         /// </summary>
         /// <param name="provider">Source data for variables references in the expression block</param>
         /// <returns></returns>
-        public abstract (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectActions);
+        public abstract (object,CodeLocation) Evaluate(IFsDataProvider provider);
 
 
         

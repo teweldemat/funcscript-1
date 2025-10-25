@@ -4,7 +4,7 @@ namespace funcscript.block
 {
     public class NullExpressionBlock : ExpressionBlock
     {
-        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider)
         {
             return (null,this.CodeLocation);
         }

@@ -42,7 +42,7 @@ namespace funcscript.block
             _nameLower = nameLower;
             _fromParent =fromParent;
         }
-        public override (object,CodeLocation) Evaluate(IFsDataProvider provider,List<Action> connectionActions)
+        public override (object,CodeLocation) Evaluate(IFsDataProvider provider)
         {
             if (_fromParent)
                 return (provider.ParentProvider?.Get(_nameLower),this.CodeLocation);

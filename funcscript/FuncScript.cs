@@ -698,7 +698,7 @@ namespace funcscript
             try
             {
                 List<Action> connectionActions = new List<Action>();
-                var (ret,_)=exp.Evaluate(provider,connectionActions);
+                var (ret,_)=exp.Evaluate(provider);
                 foreach(var con in connectionActions)
                     con.Invoke();
                 return ret;

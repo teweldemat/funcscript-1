@@ -71,7 +71,7 @@ namespace funcscript.core
                 expressionFunction = this,
                 parentSymbolProvider = new KvcProvider(_context,parent),
                 pars = pars
-            },connectionActions);
+            });
             foreach (var con in connectionActions)
             {
                 con.Invoke();
