@@ -123,10 +123,6 @@ namespace funcscript
                 || value is IFsFunction    //we treat function as a data. Function objects should not retain state
                 || value is ByteArray
                 || value is FsList
-                || value is ValueReferenceDelegate
-                || value is ValueSinkDelegate
-                || value is SignalSourceDelegate
-                || value is SignalListenerDelegate
                 || value is FsError
                 )
             {
@@ -281,11 +277,6 @@ namespace funcscript
             bool asFuncScriptLiteral,
             bool asJsonLiteral, bool adaptiveLineBreak)
         {
-            if (val is ValueReferenceDelegate r)
-            {
-                Format(indent, sb, r.Dref(), format, asFuncScriptLiteral, asJsonLiteral,adaptiveLineBreak);
-                return;
-            }
 
             if (val is FsError error)
             {
@@ -538,14 +529,6 @@ namespace funcscript
                 return FSDataType.KeyValueCollection;
             if (value is IFsFunction)
                 return FSDataType.Function;
-            if (value is ValueReferenceDelegate)
-                return FSDataType.ValRef;
-            if (value is ValueSinkDelegate)
-                return FSDataType.ValSink;
-            if (value is SignalSourceDelegate)
-                return FSDataType.SigSource;
-            if (value is SignalListenerDelegate)
-                return FSDataType.SigSink;
             if (value is FsError)
                 return FSDataType.Error;
             throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
@@ -714,19 +697,6 @@ namespace funcscript
             }
         }
 
-        public static object Dref(object obj) => Dref(obj, true);
-        public static object Dref(object obj,bool allowSignals)
-        {
-            if(allowSignals)
-            {
-                if (obj is SignalListenerDelegate || obj is SignalSourceDelegate)
-                    return obj;
-            }
-
-            if (obj is ValueReferenceDelegate d)
-                return d.Dref();
-            return obj;
-        }
         
     
         // public static object DeepDref(object obj)

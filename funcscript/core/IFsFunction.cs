@@ -21,10 +21,7 @@ namespace funcscript.core
         }
     }
 
-    public interface IFsDref
-    {
-        public object DrefEvaluate(IParameterList pars);
-    }
+    
 
     public record CodeLocation(int Position,int Length)
     {

@@ -119,18 +119,7 @@ namespace funcscript.core
                 return i;
             }
 
-            //get error
-            i = GetLiteralMatch(exp, index, KW_ERROR);
-            if (i > index)
-            {
-                parseNode = new ParseNode(ParseNodeType.ErrorKeyWord, index, i - index);
-                prog = new LiteralBlock(SignalSinkInfo.ErrorDelegate)
-                {
-                    Pos = index,
-                    Length = i - index,
-                };
-                return i;
-            }
+            
 
             //get identifier
             i = GetIdentifier(exp, index, out var ident, out var identLower, out nodeUnit);
