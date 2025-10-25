@@ -1,0 +1,30 @@
+{
+  "name": "@ts-port/funcscript",
+  "version": "0.1.0",
+  "description": "TypeScript port of funcscript expression evaluation",
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "funcscript",
+    "expressions",
+    "dsl"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  }
+}
