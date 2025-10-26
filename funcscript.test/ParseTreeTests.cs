@@ -2,13 +2,8 @@
 using funcscript.core;
 using funcscript.model;
 using NUnit.Framework;
-using NUnit.Framework.Internal.Commands;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
 using static funcscript.core.FuncScriptParser;
 
 namespace funcscript.test
@@ -90,7 +85,7 @@ namespace funcscript.test
             Assert.That(leftExp.CodeLocation.Position, Is.EqualTo(0));
             Assert.That(leftExp.CodeLocation.Length, Is.EqualTo(1));
 
-            var rightExp =function.Parameters[0];
+            var rightExp = function.Parameters[1];
             Assert.That(rightExp.CodeLocation.Position, Is.EqualTo(2));
             Assert.That(rightExp.CodeLocation.Length, Is.EqualTo(1));
 

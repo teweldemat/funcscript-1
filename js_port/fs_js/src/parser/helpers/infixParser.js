@@ -2,6 +2,22 @@ module.exports = function createInfixParser(env) {
   const { LiteralBlock } = env;
   const { skipSpace, getLiteralMatch, OPERATOR_SYMBOLS, getIdentifier } = env.utils;
 
+  const getBlockRange = (block) => {
+    if (!block || typeof block !== 'object') {
+      return null;
+    }
+    const start = Number.isFinite(block.Pos) ? block.Pos : Number.isFinite(block.position) ? block.position : null;
+    const length = Number.isFinite(block.Length)
+      ? block.Length
+      : Number.isFinite(block.length)
+        ? block.length
+        : null;
+    if (start === null || length === null) {
+      return null;
+    }
+    return { start, end: start + length };
+  };
+
   function getOperator(context, candidates, exp, index) {
     for (const op of candidates) {
       const i = getLiteralMatch(exp, index, op);
@@ -40,7 +56,8 @@ module.exports = function createInfixParser(env) {
         continue;
       }
 
-      const operatorRes = getOperator(context, candidates, exp, i);
+      const operatorStart = i;
+      const operatorRes = getOperator(context, candidates, exp, operatorStart);
       if (operatorRes.next === i || !operatorRes.functionValue) {
         break;
       }
@@ -49,6 +66,7 @@ module.exports = function createInfixParser(env) {
       i = skipSpace(exp, operatorRes.next);
 
       const operands = [prog];
+      const operatorLocations = [{ start: operatorStart, end: operatorRes.next }];
       while (true) {
         let operandRes;
         if (level === 0) {
@@ -66,14 +84,37 @@ module.exports = function createInfixParser(env) {
         if (repeat === i) {
           break;
         }
+        if (repeat > i) {
+          operatorLocations.push({ start: i, end: repeat });
+        }
         i = skipSpace(exp, repeat);
       }
 
-      const funcLiteral = new LiteralBlock(env.makeValue(env.FSDataType.Function, func));
-      const call = new env.FunctionCallExpression(funcLiteral, operands);
-      call.Pos = operands[0].Pos;
-      const last = operands[operands.length - 1];
-      call.Length = (last.Pos + last.Length) - call.Pos;
+      const firstOperand = operands[0];
+      const lastOperand = operands[operands.length - 1];
+      const firstRange = getBlockRange(firstOperand) ?? { start: 0, end: 0 };
+      const lastRange = getBlockRange(lastOperand) ?? firstRange;
+      const startPos = firstRange.start;
+      const endPos = Math.max(startPos, lastRange.end);
+      const spanLength = Math.max(0, endPos - startPos);
+
+      const primaryOperator = operatorLocations[0] ?? { start: startPos, end: startPos };
+      const operatorLength = Math.max(0, primaryOperator.end - primaryOperator.start);
+      const funcLiteral = new LiteralBlock(
+        env.makeValue(env.FSDataType.Function, func),
+        primaryOperator.start,
+        operatorLength
+      );
+      funcLiteral.Pos = primaryOperator.start;
+      funcLiteral.position = primaryOperator.start;
+      funcLiteral.Length = operatorLength;
+      funcLiteral.length = operatorLength;
+
+      const call = new env.FunctionCallExpression(funcLiteral, operands, startPos, spanLength);
+      call.Pos = startPos;
+      call.position = startPos;
+      call.Length = spanLength;
+      call.length = spanLength;
       prog = call;
     }
 

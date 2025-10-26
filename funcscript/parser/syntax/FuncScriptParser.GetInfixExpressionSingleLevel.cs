@@ -83,6 +83,16 @@ namespace funcscript.core
                 if (operands.Count > 1)
                 {
                     var func = parseContext.Get(symbol);
+                    var firstOperand = operands[0];
+                    var lastOperand = operands[^1];
+                    var startPos = firstOperand.Pos;
+                    var endPos = lastOperand.Pos + lastOperand.Length;
+                    if (endPos < startPos)
+                        endPos = startPos;
+                    var spanLength = endPos - startPos;
+
+                    var primaryOperatorNode = operatorNodes.Count > 0 ? operatorNodes[0] : operatorNode;
+
                     if (symbol == "|")
                     {
                         if (operands.Count > 2)
@@ -94,21 +104,25 @@ namespace funcscript.core
                         prog = new ListExpression
                         {
                             ValueExpressions = operands.ToArray(),
-                            Pos = prog.Pos,
-                            Length = operands[^1].Pos + operands[^1].Length - prog.Length
+                            Pos = startPos,
+                            Length = spanLength
                         };
 
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
-                            operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
+                        parseNode = new ParseNode(ParseNodeType.InfixExpression, startPos, spanLength);
                     }
                     else
                     {
+                        var functionLiteral = new LiteralBlock(func)
+                        {
+                            Pos = primaryOperatorNode?.Pos ?? startPos,
+                            Length = primaryOperatorNode?.Length ?? 0
+                        };
                         prog = new FunctionCallExpression
                         {
-                            Function = new LiteralBlock(func),
+                            Function = functionLiteral,
                             Parameters = operands.ToArray(),
-                            Pos = prog.Pos,
-                            Length = operands[^1].Pos + operands[^1].Length - prog.Length
+                            Pos = startPos,
+                            Length = spanLength
                         };
                     }
 
@@ -140,12 +154,12 @@ namespace funcscript.core
 
                     if (firstChild != null && lastChild != null)
                     {
-                        var startPos = firstChild.Pos;
-                        var endPos = lastChild.Pos + lastChild.Length;
-                        var length = endPos - startPos;
+                        var firstPos = firstChild.Pos;
+                        var lastPos = lastChild.Pos + lastChild.Length;
+                        var length = lastPos - firstPos;
                         if (length < 0)
                             length = 0;
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, startPos, length, infixChildren);
+                        parseNode = new ParseNode(ParseNodeType.InfixExpression, firstPos, length, infixChildren);
                     }
                 }
             }
