@@ -4,9 +4,10 @@
   [.] Extend builtin functions and advanced blocks
     [x] List literals and key-value scopes
     [x] Lambda expressions and function blocks
-   [.] Additional operator set / advanced literals
-     [x] Arithmetic and equality operators
+    [x] Additional operator set / advanced literals
+      [x] Arithmetic and equality operators
       [x] Case/switch constructs & prefix ops
+      [x] Key-value selector chaining resilient to browser bundlers
 [ ] Port funcscript.test file for file
   [ ] AdvancedSyntax parity
     [x] Naked key-value literal expressions
@@ -22,6 +23,7 @@
   [ ] FsToDotNet conversion helpers
   [ ] GetLiteralMatch stress coverage
   [ ] KvcTests advanced scenarios (selection, merging, delegates, JSON parity)
+    [x] Select alias/null passthrough semantics
   [ ] ParseTree parse-node exposure
   [x] DotNetExperiment parity
   [x] TestCommons utilities

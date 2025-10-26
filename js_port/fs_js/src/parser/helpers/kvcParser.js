@@ -10,13 +10,19 @@ module.exports = function createKvcParser(env) {
       return null;
     }
     if (strRes.next > index) {
-      return { key: env.valueOf(strRes.value), next: strRes.next };
+      const key = env.valueOf(strRes.value);
+      return { key, keyLower: key.toLowerCase(), next: strRes.next, start: index };
     }
     const idRes = getIdentifier(exp, index);
     if (idRes.next === index) {
       return null;
     }
-    return { key: idRes.identifier, next: idRes.next };
+    return {
+      key: idRes.identifier,
+      keyLower: idRes.identifierLower || idRes.identifier.toLowerCase(),
+      next: idRes.next,
+      start: index
+    };
   }
 
   function buildKvc(entries, returnExpression, startIndex, endIndex, errors) {
@@ -39,7 +45,7 @@ module.exports = function createKvcParser(env) {
     exp,
     index,
     errors,
-    { requireClosing = true, start: startOverride = index } = {}
+    { requireClosing = true, start: startOverride = index, allowImplicit = false } = {}
   ) {
     let i = skipSpace(exp, index);
 
@@ -82,8 +88,21 @@ module.exports = function createKvcParser(env) {
       i = skipSpace(exp, keyRes.next);
       const colon = getLiteralMatch(exp, i, ':');
       if (colon === i) {
-        errors.push({ position: i, message: "':' expected" });
-        return null;
+        if (!allowImplicit) {
+          errors.push({ position: i, message: "':' expected" });
+          return null;
+        }
+        const kv = new KeyValueExpression();
+        kv.Key = keyRes.key;
+        kv.KeyLower = keyRes.keyLower;
+        kv.ValueExpression = new env.ReferenceBlock(
+          keyRes.key,
+          keyRes.start,
+          keyRes.next - keyRes.start,
+          false
+        );
+        entries.push(kv);
+        continue;
       }
       i = skipSpace(exp, colon);
 
@@ -94,6 +113,7 @@ module.exports = function createKvcParser(env) {
       }
       const kv = new KeyValueExpression();
       kv.Key = keyRes.key;
+      kv.KeyLower = keyRes.keyLower;
       kv.ValueExpression = valueRes.block;
       entries.push(kv);
       i = skipSpace(exp, valueRes.next);
@@ -123,14 +143,21 @@ module.exports = function createKvcParser(env) {
     let i = skipSpace(exp, index);
     const open = getLiteralMatch(exp, i, '{');
     if (open === i) {
-      const naked = parseEntries(context, exp, index, errors, { requireClosing: false, start: index });
+      const naked = parseEntries(context, exp, index, errors, {
+        requireClosing: false,
+        start: index,
+        allowImplicit: false
+      });
       if (naked) {
         return naked;
       }
       return { next: index, block: null };
     }
     i = skipSpace(exp, open);
-    const withBraces = parseEntries(context, exp, i, errors, { start: index });
+    const withBraces = parseEntries(context, exp, i, errors, {
+      start: index,
+      allowImplicit: true
+    });
     if (!withBraces) {
       return { next: index, block: null };
     }

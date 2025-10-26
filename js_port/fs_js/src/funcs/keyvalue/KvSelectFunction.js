@@ -36,31 +36,20 @@ class KvSelectFunction extends BaseFunction {
     }
 
     const source = helpers.valueOf(sourceTyped);
-    const mergedEntries = [];
-    const index = new Map();
+    const selection = helpers.valueOf(selectionTyped);
+    const projectedEntries = [];
 
-    for (const [key, value] of source.getAll()) {
-      mergedEntries.push([key, value]);
-      index.set(key.toLowerCase(), mergedEntries.length - 1);
-    }
-
-    for (const [key, value] of helpers.valueOf(selectionTyped).getAll()) {
-      const lower = key.toLowerCase();
+    for (const [key, value] of selection.getAll()) {
       let resolved = value;
-      if (!value || helpers.typeOf(value) === helpers.FSDataType.Null) {
-        resolved = source.get(lower);
+      if (!resolved || helpers.typeOf(resolved) === helpers.FSDataType.Null) {
+        resolved = source.get(key);
       }
-      if (index.has(lower)) {
-        mergedEntries[index.get(lower)][1] = resolved;
-      } else {
-        mergedEntries.push([key, resolved]);
-        index.set(lower, mergedEntries.length - 1);
-      }
+      projectedEntries.push([key, resolved]);
     }
 
     return helpers.makeValue(
       helpers.FSDataType.KeyValueCollection,
-      new SimpleKeyValueCollection(provider, mergedEntries)
+      new SimpleKeyValueCollection(provider, projectedEntries)
     );
   }
 

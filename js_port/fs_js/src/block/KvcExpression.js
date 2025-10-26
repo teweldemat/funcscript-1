@@ -22,14 +22,17 @@ class KvcExpressionProvider extends FsDataProvider {
       return this.cache.get(lower);
     }
     if (this.evaluating.has(lower)) {
-      throw new Error(`Circular reference detected for key '${entry.Key}'`);
+      return super.get(name);
     }
 
     this.evaluating.add(lower);
-    const value = ensureTyped(entry.ValueExpression.evaluate(this));
-    this.evaluating.delete(lower);
-    this.cache.set(lower, value);
-    return value;
+    try {
+      const value = ensureTyped(entry.ValueExpression.evaluate(this));
+      this.cache.set(lower, value);
+      return value;
+    } finally {
+      this.evaluating.delete(lower);
+    }
   }
 
   isDefined(name) {
