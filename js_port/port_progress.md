@@ -7,4 +7,5 @@
    [.] Additional operator set / advanced literals
      [x] Arithmetic and equality operators
       [x] Case/switch constructs & prefix ops
+  [ ] Port funcscript.test file for file
   [ ] Port comprehensive FuncScript feature set
