@@ -1,5 +1,6 @@
 const { ExpressionBlock } = require('./ExpressionBlock');
 const { ensureTyped } = require('../core/value');
+const { ExpressionFunction } = require('../core/ExpressionFunction');
 
 class LiteralBlock extends ExpressionBlock {
   constructor(value, position = 0, length = 0) {
@@ -8,6 +9,10 @@ class LiteralBlock extends ExpressionBlock {
   }
 
   evaluate(provider) {
+    const raw = this.value[1];
+    if (raw instanceof ExpressionFunction) {
+      raw.setContext(provider);
+    }
     return this.value;
   }
 

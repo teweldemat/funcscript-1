@@ -1,6 +1,6 @@
 module.exports = function createCallAndMemberParser(env) {
   const { FunctionCallExpression } = env;
-  const { skipSpace, getLiteralMatch } = env.utils;
+const { skipSpace, getLiteralMatch } = env.utils;
 
   function getFunctionCallParametersList(context, current, exp, index, errors) {
     let i = skipSpace(exp, index);
@@ -59,6 +59,19 @@ module.exports = function createCallAndMemberParser(env) {
         i = skipSpace(exp, callRes.next);
         continue;
       }
+
+      const selectorRes = env.getKvcExpression(context, exp, i, errors);
+      if (selectorRes.next > i) {
+        const selectorBlock = new env.SelectorExpression();
+        selectorBlock.Source = current;
+        selectorBlock.Selector = selectorRes.block;
+        selectorBlock.Pos = current.Pos;
+        selectorBlock.Length = selectorRes.block.Pos + selectorRes.block.Length - selectorBlock.Pos;
+        current = selectorBlock;
+        i = skipSpace(exp, selectorRes.next);
+        continue;
+      }
+
       break;
     }
 

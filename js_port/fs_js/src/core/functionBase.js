@@ -16,9 +16,17 @@ class ParameterList {
 
 class BaseFunction {
   constructor() {
-    this.callType = CallType.Infix;
+    this._callType = CallType.Infix;
     this.symbol = null;
     this.precidence = 0;
+  }
+
+  get callType() {
+    return this._callType;
+  }
+
+  set callType(value) {
+    this._callType = value;
   }
 
   evaluate(provider, parameters) {

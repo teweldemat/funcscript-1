@@ -28,7 +28,7 @@ module.exports = function createInfixParser(env) {
       if (!prog) {
         let res;
         if (level === 0) {
-          res = env.getCallAndMemberAccess(context, exp, i, errors);
+          res = env.getPrefixOrCall(context, exp, i, errors);
         } else {
           res = getInfixExpressionSingleLevel(context, level - 1, OPERATOR_SYMBOLS[level - 1], exp, i, errors);
         }
@@ -52,7 +52,7 @@ module.exports = function createInfixParser(env) {
       while (true) {
         let operandRes;
         if (level === 0) {
-          operandRes = env.getCallAndMemberAccess(context, exp, i, errors);
+          operandRes = env.getPrefixOrCall(context, exp, i, errors);
         } else {
           operandRes = getInfixExpressionSingleLevel(context, level - 1, OPERATOR_SYMBOLS[level - 1], exp, i, errors);
         }
@@ -80,6 +80,14 @@ module.exports = function createInfixParser(env) {
     return { next: i, block: prog };
   }
 
+  function getPrefixOrCall(context, exp, index, errors) {
+    const prefix = env.getPrefixOperator(context, exp, index, errors);
+    if (prefix.block) {
+      return prefix;
+    }
+    return env.getCallAndMemberAccess(context, exp, index, errors);
+  }
+
   function getInfixExpression(context, exp, index, errors) {
     return getInfixExpressionSingleLevel(
       context,
@@ -91,15 +99,9 @@ module.exports = function createInfixParser(env) {
     );
   }
 
-  function getExpression(context, exp, index, errors) {
-    const infix = getInfixExpression(context, exp, index, errors);
-    if (infix.block) {
-      return infix;
-    }
-    return { next: index, block: null };
-  }
-
   return {
-    getExpression
+    getInfixExpression,
+    getInfixExpressionSingleLevel,
+    getPrefixOrCall
   };
 };

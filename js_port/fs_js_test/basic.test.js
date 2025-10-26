@@ -43,6 +43,33 @@ function run() {
   result = evaluate('{value:[10,20,30]; return value(2);}', provider);
   assert.strictEqual(result[0], FSDataType.Integer);
   assert.strictEqual(result[1], 30);
+
+  result = evaluate('[{a:1},{a:2}] { return a; }', provider);
+  assert.strictEqual(result[0], FSDataType.List);
+  const projected = result[1];
+  assert.strictEqual(projected.length, 2);
+  assert.strictEqual(projected.get(0)[1], 1);
+  assert.strictEqual(projected.get(1)[1], 2);
+
+  result = evaluate('{item:{a:5}; return item { return a; };}', provider);
+  assert.strictEqual(result[0], FSDataType.Integer);
+  assert.strictEqual(result[1], 5);
+
+  result = evaluate('((x)=>x+1)(5)', provider);
+  assert.strictEqual(result[0], FSDataType.Integer);
+  assert.strictEqual(result[1], 6);
+
+  result = evaluate('case false: "none"; 1=0: "one"; true: "fallback"', provider);
+  assert.strictEqual(result[1], 'fallback');
+
+  result = evaluate('switch 2, 1:"one", 2:"two", "other"', provider);
+  assert.strictEqual(result[1], 'two');
+
+  result = evaluate('! (1 = 0)', provider);
+  assert.strictEqual(result[1], true);
+
+  result = evaluate('- -5', provider);
+  assert.strictEqual(result[1], 5);
 }
 
 module.exports = {

@@ -1,4 +1,5 @@
 const { FSDataType, getTypeName } = require('./fstypes');
+const { FsError } = require('../model/FsError');
 
 let listModule;
 function ensureListModule() {
@@ -100,6 +101,9 @@ function normalize(value) {
   if (typeof value === 'function') {
     const { DelegateFunction } = require('../model/DelegateFunction');
     return makeValue(FSDataType.Function, new DelegateFunction(value));
+  }
+  if (value instanceof FsError) {
+    return makeValue(FSDataType.Error, value);
   }
   throw new Error(`Unsupported JS value for FuncScript: ${value}`);
 }

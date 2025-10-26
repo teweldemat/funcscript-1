@@ -63,6 +63,30 @@ module.exports = function createUnitParser(env) {
       return { next: kvcRes.next, block };
     }
 
+    const switchRes = env.getSwitchExpression(context, exp, i, errors);
+    if (switchRes.next > i) {
+      const block = switchRes.block;
+      block.Pos = index;
+      block.Length = switchRes.next - index;
+      return { next: switchRes.next, block };
+    }
+
+    const caseRes = env.getCaseExpression(context, exp, i, errors);
+    if (caseRes.next > i) {
+      const block = caseRes.block;
+      block.Pos = index;
+      block.Length = caseRes.next - index;
+      return { next: caseRes.next, block };
+    }
+
+    const lambdaRes = env.getLambdaExpression(context, exp, i, errors);
+    if (lambdaRes.next > i && lambdaRes.func) {
+      const lambdaBlock = new LiteralBlock(env.makeValue(env.FSDataType.Function, lambdaRes.func));
+      lambdaBlock.Pos = index;
+      lambdaBlock.Length = lambdaRes.next - index;
+      return { next: lambdaRes.next, block: lambdaBlock };
+    }
+
     const kwRes = getKeyWordLiteral(exp, i);
     if (kwRes.next > i) {
       const block = new LiteralBlock(kwRes.value);

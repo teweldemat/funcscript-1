@@ -3,7 +3,8 @@
   [x] Minimal parser and evaluator wiring
   [.] Extend builtin functions and advanced blocks
     [x] List literals and key-value scopes
-    [ ] Lambda expressions and function blocks
-    [.] Additional operator set / advanced literals
-      [x] Arithmetic and equality operators
+    [x] Lambda expressions and function blocks
+   [.] Additional operator set / advanced literals
+     [x] Arithmetic and equality operators
+      [x] Case/switch constructs & prefix ops
   [ ] Port comprehensive FuncScript feature set
