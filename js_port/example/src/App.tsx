@@ -253,7 +253,7 @@ const describeNode = (node: any): { label: string; detail?: string } => {
   }
 };
 
-const buildParseTree = (node: any, path = '0'): ParseTreeNode => {
+const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNode => {
   if (!node || typeof node !== 'object') {
     return {
       id: path,
@@ -272,7 +272,7 @@ const buildParseTree = (node: any, path = '0'): ParseTreeNode => {
         ? node._keyValues
         : [];
     const children: ParseTreeNode[] = entries.map((kv: any, index: number) => {
-      const childNode = buildParseTree(kv?.ValueExpression, `${path}.${index}`);
+      const childNode = buildParseTree(kv?.ValueExpression, expression, `${path}.${index}`);
       const keyLabel = typeof kv?.Key === 'string' ? kv.Key : `entry ${index + 1}`;
       return {
         ...childNode,
@@ -281,7 +281,7 @@ const buildParseTree = (node: any, path = '0'): ParseTreeNode => {
     });
 
     if (node?.singleReturn) {
-      const returnNode = buildParseTree(node.singleReturn, `${path}.${children.length}`);
+      const returnNode = buildParseTree(node.singleReturn, expression, `${path}.${children.length}`);
       children.push({
         ...returnNode,
         label: 'Return'
@@ -297,11 +297,75 @@ const buildParseTree = (node: any, path = '0'): ParseTreeNode => {
     };
   }
 
+  if (node?.constructor?.name === 'FunctionCallExpression') {
+    const fnExpression = node?.Function ?? node?.functionExpression;
+    const params = Array.isArray(node?.Parameters)
+      ? node.Parameters
+      : Array.isArray(node?.parameters)
+        ? node.parameters
+        : [];
+
+    const fnValue = fnExpression?.value?.[1];
+    const fnCallType = typeof fnValue?.callType === 'string' ? fnValue.callType.toLowerCase() : '';
+    const isInfixCall = fnCallType === 'infix' || fnCallType === 'dual';
+    const operatorSymbol = typeof fnValue?.symbol === 'string' && fnValue.symbol.trim().length ? fnValue.symbol : null;
+
+    if (isInfixCall && params.length >= 2) {
+      const operandNodes = params
+        .filter((child: any): child is Record<string, unknown> => Boolean(child))
+        .map((child: any, index: number) => ({
+          raw: child,
+          tree: buildParseTree(child, expression, `${path}.${index * 2}`)
+        }));
+
+      const operatorNodes: ParseTreeNode[] = [];
+      for (let idx = 0; idx < params.length - 1; idx += 1) {
+        const leftRaw = params[idx];
+        const rightRaw = params[idx + 1];
+        const leftRange = getNodeRange(leftRaw);
+        const rightRange = getNodeRange(rightRaw);
+        if (!leftRange || !rightRange) {
+          continue;
+        }
+        const start = leftRange.end;
+        const end = Math.max(start, rightRange.start);
+        if (end < start) {
+          continue;
+        }
+        const detailSlice = expression.slice(start, end);
+        operatorNodes.push({
+          id: `${path}.op${idx}`,
+          label: operatorSymbol ? `Operator ${operatorSymbol}` : 'Operator',
+          detail: detailSlice.trim() || operatorSymbol || detailSlice || 'operator',
+          range: { start, end },
+          children: []
+        });
+      }
+
+      const children: ParseTreeNode[] = [];
+      for (let idx = 0; idx < operandNodes.length; idx += 1) {
+        const operand = operandNodes[idx];
+        children.push(operand.tree);
+        if (idx < operatorNodes.length) {
+          children.push(operatorNodes[idx]);
+        }
+      }
+
+      return {
+        id: path,
+        label: baseInfo.label,
+        detail: baseInfo.detail,
+        range,
+        children
+      };
+    }
+  }
+
   const rawChildren = typeof node.getChilds === 'function' ? node.getChilds() : [];
   const children = Array.isArray(rawChildren)
     ? rawChildren
         .filter((child): child is Record<string, unknown> => Boolean(child))
-        .map((child, index) => buildParseTree(child, `${path}.${index}`))
+        .map((child, index) => buildParseTree(child, expression, `${path}.${index}`))
     : [];
 
   return {
@@ -496,7 +560,7 @@ function App() {
       const typed = ensureTyped(block.evaluate(provider));
       const plain = convertTypedValue(typed);
       const typeName = getTypeName(typed[0]);
-      const parseTree = buildParseTree(block);
+      const parseTree = buildParseTree(block, expression);
       setState({
         status: 'success',
         typed,

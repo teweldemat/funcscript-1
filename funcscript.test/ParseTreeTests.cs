@@ -53,7 +53,6 @@ namespace funcscript.test
             Assert.IsNotNull(node, "Parse node is expected for valid expression");
             Assert.IsEmpty(errors, "No syntax errors should be reported for a simple expression");
 
-
             Assert.AreEqual(ParseNodeType.InfixExpression, node.NodeType, "Root node should represent an infix expression");
             Assert.AreEqual(0, node.Pos, "Infix expression should start at the beginning of the expression");
             Assert.AreEqual(expText.Length, node.Length, "Infix expression span should cover the full expression text");

@@ -53,8 +53,11 @@ namespace funcscript.core
 
                 var operands = new List<ExpressionBlock>();
                 var operandNodes = new List<ParseNode>();
+                var operatorNodes = new List<ParseNode>();
                 operands.Add(prog);
                 operandNodes.Add(parseNode);
+                if (operatorNode != null)
+                    operatorNodes.Add(operatorNode);
                 while (true)
                 {
                     ExpressionBlock nextOperand;
@@ -72,6 +75,8 @@ namespace funcscript.core
                     i2 = GetLiteralMatch(exp, i, symbol);
                     if (i2 == i)
                         break;
+                    if (i2 > i)
+                        operatorNodes.Add(new ParseNode(ParseNodeType.Operator, i, i2 - i));
                     i = SkipSpace(exp, i2);
                 }
 
@@ -105,8 +110,42 @@ namespace funcscript.core
                             Pos = prog.Pos,
                             Length = operands[^1].Pos + operands[^1].Length - prog.Length
                         };
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
-                            operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
+                    }
+
+                    var infixChildren = new List<ParseNode>();
+                    ParseNode firstChild = null;
+                    ParseNode lastChild = null;
+
+                    for (int childIndex = 0; childIndex < operandNodes.Count; childIndex++)
+                    {
+                        var operandNode = operandNodes[childIndex];
+                        if (operandNode != null)
+                        {
+                            infixChildren.Add(operandNode);
+                            if (firstChild == null)
+                                firstChild = operandNode;
+                            lastChild = operandNode;
+                        }
+
+                        if (childIndex < operatorNodes.Count)
+                        {
+                            var opNode = operatorNodes[childIndex];
+                            if (opNode != null)
+                            {
+                                infixChildren.Add(opNode);
+                                lastChild = opNode;
+                            }
+                        }
+                    }
+
+                    if (firstChild != null && lastChild != null)
+                    {
+                        var startPos = firstChild.Pos;
+                        var endPos = lastChild.Pos + lastChild.Length;
+                        var length = endPos - startPos;
+                        if (length < 0)
+                            length = 0;
+                        parseNode = new ParseNode(ParseNodeType.InfixExpression, startPos, length, infixChildren);
                     }
                 }
             }
