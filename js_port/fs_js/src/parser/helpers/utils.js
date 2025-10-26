@@ -1,6 +1,9 @@
 const { makeValue, typedNull } = require('../../core/value');
 const { FSDataType } = require('../../core/fstypes');
 
+const MAX_INT_LITERAL = 9223372036854775807n;
+const MIN_INT_LITERAL = -9223372036854775808n;
+
 const OPERATOR_SYMBOLS = [
   ['^'],
   ['*', '/', '%'],
@@ -163,6 +166,17 @@ function getNumber(exp, index, errors) {
   }
 
   const literal = exp.substring(index, i);
+  if (hasLong) {
+    const withoutSuffix = literal.slice(0, -1);
+    try {
+      const value = parseLongLiteral(withoutSuffix);
+      return { next: i, value: makeValue(FSDataType.BigInteger, value) };
+    } catch (err) {
+      errors.push({ position: index, message: err.message });
+      return { next: index, value: null };
+    }
+  }
+
   if (hasDecimal || hasExp) {
     const value = Number(literal);
     if (Number.isNaN(value)) {
@@ -172,23 +186,52 @@ function getNumber(exp, index, errors) {
     return { next: i, value: makeValue(FSDataType.Float, value) };
   }
 
-  if (hasLong) {
-    try {
-      const value = BigInt(literal.slice(0, -1));
-      return { next: i, value: makeValue(FSDataType.BigInteger, value) };
-    } catch (err) {
-      errors.push({ position: index, message: err.message });
+  try {
+    const big = BigInt(literal);
+    if (big > MAX_INT_LITERAL || big < MIN_INT_LITERAL) {
+      errors.push({ position: index, message: `Invalid number '${literal}'` });
       return { next: index, value: null };
     }
-  }
-
-  const intValue = Number(literal);
-  if (!Number.isNaN(intValue) && Number.isInteger(intValue)) {
-    return { next: i, value: makeValue(FSDataType.Integer, intValue) };
+    const intValue = Number(big);
+    if (!Number.isNaN(intValue) && Number.isInteger(intValue)) {
+      return { next: i, value: makeValue(FSDataType.Integer, intValue) };
+    }
+  } catch (err) {
+    errors.push({ position: index, message: err.message });
+    return { next: index, value: null };
   }
 
   errors.push({ position: index, message: `Invalid number '${literal}'` });
   return { next: index, value: null };
+}
+
+function parseLongLiteral(literal) {
+  const text = literal.trim();
+  if (!text) {
+    throw new Error(`Invalid number '${literal}l'`);
+  }
+  if (text.includes('.')) {
+    throw new Error(`Invalid number '${literal}l'`);
+  }
+  const match = text.match(/^([+-]?)(\d+)(?:[eE]([+-]?\d+))?$/);
+  if (!match) {
+    throw new Error(`Invalid number '${literal}l'`);
+  }
+  const sign = match[1] === '-' ? -1n : 1n;
+  let magnitude = BigInt(match[2]);
+  const exponentPart = match[3];
+  if (exponentPart) {
+    const exponentNum = Number(exponentPart);
+    if (!Number.isInteger(exponentNum)) {
+      throw new Error(`Invalid exponent '${exponentPart}' in '${literal}l'`);
+    }
+    if (exponentNum < 0) {
+      throw new Error(`Invalid exponent '${exponentPart}' in '${literal}l'`);
+    }
+    const power = BigInt(exponentNum);
+    magnitude *= 10n ** power;
+  }
+  return sign < 0 ? -magnitude : magnitude;
 }
 
 function getSimpleString(exp, index, errors) {
@@ -208,10 +251,24 @@ function getSimpleString(exp, index, errors) {
     }
     if (exp[i] === '\\') {
       const nextChar = exp[i + 1];
-      if (nextChar === 'n') result += '\n';
-      else if (nextChar === 't') result += '\t';
-      else result += nextChar;
-      i += 2;
+      if (nextChar === 'n') {
+        result += '\n';
+        i += 2;
+      } else if (nextChar === 't') {
+        result += '\t';
+        i += 2;
+      } else if (nextChar === 'u') {
+        const hex = exp.substring(i + 2, i + 6);
+        if (hex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(hex)) {
+          errors.push({ position: i, message: 'Invalid unicode escape' });
+          return { next: index, value: null };
+        }
+        result += String.fromCharCode(parseInt(hex, 16));
+        i += 6;
+      } else {
+        result += nextChar;
+        i += 2;
+      }
       continue;
     }
     result += exp[i];

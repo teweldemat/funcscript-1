@@ -1,6 +1,6 @@
 module.exports = function createInfixParser(env) {
   const { LiteralBlock } = env;
-  const { skipSpace, getLiteralMatch, OPERATOR_SYMBOLS } = env.utils;
+  const { skipSpace, getLiteralMatch, OPERATOR_SYMBOLS, getIdentifier } = env.utils;
 
   function getOperator(context, candidates, exp, index) {
     for (const op of candidates) {
@@ -85,6 +85,10 @@ module.exports = function createInfixParser(env) {
     if (prefix.block) {
       return prefix;
     }
+    const general = getGeneralInfixFunctionCall(context, exp, index, errors);
+    if (general.block) {
+      return general;
+    }
     return env.getCallAndMemberAccess(context, exp, index, errors);
   }
 
@@ -99,9 +103,80 @@ module.exports = function createInfixParser(env) {
     );
   }
 
+  function getGeneralInfixFunctionCall(context, exp, index, errors) {
+    let i = skipSpace(exp, index);
+    const firstRes = env.getCallAndMemberAccess(context, exp, i, errors);
+    if (!firstRes.block) {
+      return { next: index, block: null };
+    }
+
+    let currentIndex = skipSpace(exp, firstRes.next);
+
+    const idRes = getIdentifier(exp, currentIndex);
+    if (idRes.next === currentIndex) {
+      return { next: index, block: null };
+    }
+
+    const fnTyped = context.get(idRes.identifierLower || idRes.identifier);
+    if (!fnTyped) {
+      errors.push({ position: currentIndex, message: 'A function expected' });
+      return { next: index, block: null };
+    }
+
+    const funcValue = env.ensureTyped(fnTyped);
+    if (env.typeOf(funcValue) !== env.FSDataType.Function) {
+      errors.push({ position: currentIndex, message: 'A function expected' });
+      return { next: index, block: null };
+    }
+
+    const funcObject = env.valueOf(funcValue);
+    if (funcObject.callType !== env.CallType.Dual) {
+      return { next: index, block: null };
+    }
+
+    const operands = [firstRes.block];
+    currentIndex = skipSpace(exp, idRes.next);
+
+    const secondRes = env.getCallAndMemberAccess(context, exp, currentIndex, errors);
+    if (!secondRes.block) {
+      errors.push({ position: currentIndex, message: `Right side operand expected for ${idRes.identifier}` });
+      return { next: index, block: null };
+    }
+
+    operands.push(secondRes.block);
+    currentIndex = skipSpace(exp, secondRes.next);
+
+    while (true) {
+      const nextTilde = getLiteralMatch(exp, currentIndex, '~');
+      if (nextTilde === currentIndex) {
+        break;
+      }
+      currentIndex = skipSpace(exp, nextTilde);
+      const moreRes = env.getInfixExpression(context, exp, currentIndex, errors);
+      if (!moreRes.block) {
+        break;
+      }
+      operands.push(moreRes.block);
+      currentIndex = skipSpace(exp, moreRes.next);
+    }
+
+    if (operands.length < 2) {
+      return { next: index, block: null };
+    }
+
+    const literalFunc = new LiteralBlock(env.makeValue(env.FSDataType.Function, funcObject));
+    const call = new env.FunctionCallExpression(literalFunc, operands);
+    call.Pos = operands[0].Pos;
+    const last = operands[operands.length - 1];
+    call.Length = (last.Pos + last.Length) - call.Pos;
+
+    return { next: currentIndex, block: call };
+  }
+
   return {
     getInfixExpression,
     getInfixExpressionSingleLevel,
-    getPrefixOrCall
+    getPrefixOrCall,
+    getGeneralInfixFunctionCall
   };
 };

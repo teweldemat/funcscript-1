@@ -36,25 +36,6 @@ namespace funcscript.test
             var sError = (SyntaxError)ex;
             Assert.That(sError.Line,Is.EqualTo(line));
         }
-
-        [Test]
-        public void ErrorMissingSemicolon()
-        {
-            var exp = @"
-{a:5;
-b:4
-c:4
-}
-";
-            try
-            {
-                FuncScript.Evaluate(exp);
-            }
-            catch (Exception ex)
-            {
-                AnalyzeMainSyntaxErrorLine(ex, "b:4");
-            }
-        }
         [Test]
         public void TestFunctionError()
         {

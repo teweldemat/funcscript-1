@@ -15,9 +15,11 @@ class ReduceListFunction extends BaseFunction {
   }
 
   evaluate(provider, parameters) {
-    const error = helpers.expectParamCount(this.symbol, parameters, this.maxParameters);
-    if (error) {
-      return error;
+    if (parameters.count !== 2 && parameters.count !== 3) {
+      return helpers.makeError(
+        helpers.FsError.ERROR_PARAMETER_COUNT_MISMATCH,
+        `${this.symbol}: expected 2 or 3 got ${parameters.count}`
+      );
     }
 
     const list = helpers.ensureList(parameters.getParameter(provider, 0));
@@ -36,8 +38,20 @@ class ReduceListFunction extends BaseFunction {
       );
     }
 
-    let total = parameters.getParameter(provider, 2);
-    for (let i = 0; i < list.length; i += 1) {
+    let total;
+    let indexStart = 0;
+
+    if (parameters.count === 3) {
+      total = parameters.getParameter(provider, 2);
+    } else {
+      if (list.length === 0) {
+        return helpers.typedNull();
+      }
+      total = list.get(0);
+      indexStart = 1;
+    }
+
+    for (let i = indexStart; i < list.length; i += 1) {
       const args = new helpers.ArrayParameterList([
         total,
         list.get(i),

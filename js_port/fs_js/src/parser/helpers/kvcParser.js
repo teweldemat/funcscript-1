@@ -1,14 +1,47 @@
 module.exports = function createKvcParser(env) {
   const { KvcExpression, KeyValueExpression } = env;
-  const { skipSpace, getLiteralMatch, getIdentifier } = env.utils;
+  const { skipSpace, getLiteralMatch, getIdentifier, getSimpleString } = env.utils;
 
-  return function getKvcExpression(context, exp, index, errors) {
-    let i = skipSpace(exp, index);
-    const open = getLiteralMatch(exp, i, '{');
-    if (open === i) {
-      return { next: index, block: null };
+  function parseKey(exp, index, errors) {
+    const probeErrors = [];
+    const strRes = getSimpleString(exp, index, probeErrors);
+    if (probeErrors.length) {
+      errors.push(...probeErrors);
+      return null;
     }
-    i = skipSpace(exp, open);
+    if (strRes.next > index) {
+      return { key: env.valueOf(strRes.value), next: strRes.next };
+    }
+    const idRes = getIdentifier(exp, index);
+    if (idRes.next === index) {
+      return null;
+    }
+    return { key: idRes.identifier, next: idRes.next };
+  }
+
+  function buildKvc(entries, returnExpression, startIndex, endIndex, errors) {
+    if (!entries.length && !returnExpression) {
+      return null;
+    }
+    const kvc = new KvcExpression();
+    const error = kvc.SetKeyValues(entries, returnExpression);
+    if (error) {
+      errors.push({ position: startIndex, message: error });
+      return null;
+    }
+    kvc.Pos = startIndex;
+    kvc.Length = endIndex - startIndex;
+    return kvc;
+  }
+
+  function parseEntries(
+    context,
+    exp,
+    index,
+    errors,
+    { requireClosing = true, start: startOverride = index } = {}
+  ) {
+    let i = skipSpace(exp, index);
 
     const entries = [];
     let returnExpression = null;
@@ -28,58 +61,79 @@ module.exports = function createKvcParser(env) {
       if (maybeReturn > i) {
         if (returnExpression) {
           errors.push({ position: i, message: 'Duplicate return statement' });
-          return { next: index, block: null };
+          return null;
         }
         i = skipSpace(exp, maybeReturn);
         const expressionRes = env.getExpression(context, exp, i, errors);
         if (!expressionRes.block) {
           errors.push({ position: i, message: 'Expression expected after return' });
-          return { next: index, block: null };
+          return null;
         }
         returnExpression = expressionRes.block;
         i = skipSpace(exp, expressionRes.next);
         continue;
       }
 
-      const idRes = getIdentifier(exp, i);
-      if (idRes.next === i) {
+      const keyRes = parseKey(exp, i, errors);
+      if (!keyRes) {
         break;
       }
-      i = skipSpace(exp, idRes.next);
+
+      i = skipSpace(exp, keyRes.next);
       const colon = getLiteralMatch(exp, i, ':');
       if (colon === i) {
         errors.push({ position: i, message: "':' expected" });
-        return { next: index, block: null };
+        return null;
       }
       i = skipSpace(exp, colon);
 
       const valueRes = env.getExpression(context, exp, i, errors);
       if (!valueRes.block) {
         errors.push({ position: i, message: 'Expression expected for key value' });
-        return { next: index, block: null };
+        return null;
       }
       const kv = new KeyValueExpression();
-      kv.Key = idRes.identifier;
+      kv.Key = keyRes.key;
       kv.ValueExpression = valueRes.block;
       entries.push(kv);
       i = skipSpace(exp, valueRes.next);
     }
 
-    const close = getLiteralMatch(exp, i, '}');
-    if (close === i) {
-      errors.push({ position: i, message: "'}' expected" });
-      return { next: index, block: null };
+    if (requireClosing) {
+      const close = getLiteralMatch(exp, i, '}');
+      if (close === i) {
+        errors.push({ position: i, message: "'}' expected" });
+        return null;
+      }
+      const block = buildKvc(entries, returnExpression, startOverride, close, errors);
+      if (!block) {
+        return null;
+      }
+      return { next: skipSpace(exp, close), block };
     }
-    i = skipSpace(exp, close);
 
-    const kvc = new KvcExpression();
-    const error = kvc.SetKeyValues(entries, returnExpression);
-    if (error) {
-      errors.push({ position: index, message: error });
+    const block = buildKvc(entries, returnExpression, startOverride, i, errors);
+    if (!block) {
+      return null;
+    }
+    return { next: skipSpace(exp, i), block };
+  }
+
+  return function getKvcExpression(context, exp, index, errors) {
+    let i = skipSpace(exp, index);
+    const open = getLiteralMatch(exp, i, '{');
+    if (open === i) {
+      const naked = parseEntries(context, exp, index, errors, { requireClosing: false, start: index });
+      if (naked) {
+        return naked;
+      }
       return { next: index, block: null };
     }
-    kvc.Pos = index;
-    kvc.Length = i - index;
-    return { next: i, block: kvc };
+    i = skipSpace(exp, open);
+    const withBraces = parseEntries(context, exp, i, errors, { start: index });
+    if (!withBraces) {
+      return { next: index, block: null };
+    }
+    return withBraces;
   };
 };

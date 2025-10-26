@@ -1,20 +1,7 @@
 const { BaseFunction, CallType } = require('../../core/functionBase');
 const { ensureTyped, typeOf, valueOf, makeValue } = require('../../core/value');
 const { FSDataType } = require('../../core/fstypes');
-
-function toBoolean(typed) {
-  switch (typeOf(typed)) {
-    case FSDataType.Boolean:
-      return valueOf(typed);
-    case FSDataType.Null:
-      return false;
-    case FSDataType.Integer:
-    case FSDataType.Float:
-      return valueOf(typed) !== 0;
-    default:
-      return !!valueOf(typed);
-  }
-}
+const { FsError } = require('../../model/FsError');
 
 class PrefixBooleanFunction extends BaseFunction {
   constructor(symbol, implementation) {
@@ -30,12 +17,17 @@ class PrefixBooleanFunction extends BaseFunction {
 
   evaluate(provider, parameters) {
     const operand = ensureTyped(parameters.getParameter(provider, 0));
-    const result = this.implementation(toBoolean(operand));
+    if (typeOf(operand) !== FSDataType.Boolean) {
+      return makeValue(
+        FSDataType.Error,
+        new FsError(FsError.ERROR_TYPE_MISMATCH, `${this.symbol} expects a boolean operand`)
+      );
+    }
+    const result = this.implementation(valueOf(operand));
     return makeValue(FSDataType.Boolean, result);
   }
 }
 
 module.exports = {
-  PrefixBooleanFunction,
-  toBoolean
+  PrefixBooleanFunction
 };
