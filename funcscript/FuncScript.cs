@@ -707,16 +707,16 @@ namespace funcscript
                 return new[] { node };
             }
             var first = node.Childs.First();
-            if (first.Pos > node.Pos)
-                ret.Add(new ParseNode(node.NodeType, node.Pos, first.Pos - node.Pos));
+            var i = node.Pos;
             foreach (var ch in node.Childs)
             {
+                if (ch.Pos > i)
+                    ret.Add(new ParseNode(node.NodeType, i, ch.Pos - i));
                 ret.AddRange(ColorParseTree(ch));
+                i = ch.Pos + ch.Length;
             }
-
-            var last = node.Childs.Last();
-            if (last.Pos+last.Length < node.Pos+node.Length)
-                ret.Add(new ParseNode(node.NodeType, last.Pos+last.Length , (node.Pos+node.Length)-(last.Pos+last.Length)));
+            if (i < node.Pos+node.Length)
+                ret.Add(new ParseNode(node.NodeType, i , (node.Pos+node.Length)-(i)));
 
             return ret;
         }
