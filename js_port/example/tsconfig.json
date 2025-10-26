@@ -15,7 +15,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "funcscript/parser": ["../fs_js/src/parser/FuncScriptParser"]
+    }
   },
   "include": ["src"]
 }
