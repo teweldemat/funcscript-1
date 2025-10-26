@@ -11,8 +11,15 @@ module.exports = function createKvcParser(env) {
     }
     if (strRes.next > index) {
       const key = env.valueOf(strRes.value);
-      return { key, keyLower: key.toLowerCase(), next: strRes.next, start: index };
+      return {
+        key,
+        keyLower: key.toLowerCase(),
+        next: strRes.next,
+        start: index,
+        node: strRes.node
+      };
     }
+
     const idRes = getIdentifier(exp, index);
     if (idRes.next === index) {
       return null;
@@ -21,11 +28,12 @@ module.exports = function createKvcParser(env) {
       key: idRes.identifier,
       keyLower: idRes.identifierLower || idRes.identifier.toLowerCase(),
       next: idRes.next,
-      start: index
+      start: index,
+      node: idRes.node
     };
   }
 
-  function buildKvc(entries, returnExpression, startIndex, endIndex, errors) {
+  function buildKvc(entries, returnExpression, entryNodes, startIndex, endIndex, errors) {
     if (!entries.length && !returnExpression) {
       return null;
     }
@@ -37,7 +45,20 @@ module.exports = function createKvcParser(env) {
     }
     kvc.Pos = startIndex;
     kvc.Length = endIndex - startIndex;
-    return kvc;
+    const node = new env.ParseNode(
+      env.ParseNodeType.KeyValueCollection,
+      startIndex,
+      endIndex - startIndex,
+      entryNodes
+    );
+    return { block: kvc, node };
+  }
+
+  function createImplicitReference(keyRes) {
+    const reference = new env.ReferenceBlock(keyRes.key);
+    reference.Pos = keyRes.start;
+    reference.Length = keyRes.next - keyRes.start;
+    return reference;
   }
 
   function parseEntries(
@@ -50,6 +71,7 @@ module.exports = function createKvcParser(env) {
     let i = skipSpace(exp, index);
 
     const entries = [];
+    const entryNodes = [];
     let returnExpression = null;
     let firstItem = true;
 
@@ -69,6 +91,7 @@ module.exports = function createKvcParser(env) {
           errors.push({ position: i, message: 'Duplicate return statement' });
           return null;
         }
+        const keywordNode = new env.ParseNode(env.ParseNodeType.KeyWord, i, maybeReturn - i);
         i = skipSpace(exp, maybeReturn);
         const expressionRes = env.getExpression(context, exp, i, errors);
         if (!expressionRes.block) {
@@ -76,6 +99,13 @@ module.exports = function createKvcParser(env) {
           return null;
         }
         returnExpression = expressionRes.block;
+        const returnNode = new env.ParseNode(
+          env.ParseNodeType.ExpressionInBrace,
+          keywordNode.Pos,
+          expressionRes.next - keywordNode.Pos,
+          [keywordNode, expressionRes.node]
+        );
+        entryNodes.push(returnNode);
         i = skipSpace(exp, expressionRes.next);
         continue;
       }
@@ -95,27 +125,43 @@ module.exports = function createKvcParser(env) {
         const kv = new KeyValueExpression();
         kv.Key = keyRes.key;
         kv.KeyLower = keyRes.keyLower;
-        kv.ValueExpression = new env.ReferenceBlock(
-          keyRes.key,
-          keyRes.start,
-          keyRes.next - keyRes.start,
-          false
-        );
+        kv.ValueExpression = createImplicitReference(keyRes);
         entries.push(kv);
+        if (keyRes.node) {
+          entryNodes.push(keyRes.node);
+        }
         continue;
       }
-      i = skipSpace(exp, colon);
 
+      i = skipSpace(exp, colon);
       const valueRes = env.getExpression(context, exp, i, errors);
       if (!valueRes.block) {
         errors.push({ position: i, message: 'Expression expected for key value' });
         return null;
       }
+
       const kv = new KeyValueExpression();
       kv.Key = keyRes.key;
       kv.KeyLower = keyRes.keyLower;
       kv.ValueExpression = valueRes.block;
       entries.push(kv);
+
+      const keyLength = keyRes.node ? keyRes.node.Length : keyRes.next - keyRes.start;
+      const keyNode = new env.ParseNode(env.ParseNodeType.Key, keyRes.start, keyLength, keyRes.node?.Childs);
+      const children = [];
+      if (keyNode) {
+        children.push(keyNode);
+      }
+      if (valueRes.node) {
+        children.push(valueRes.node);
+      }
+      const pairNode = new env.ParseNode(
+        env.ParseNodeType.KeyValuePair,
+        keyRes.start,
+        valueRes.next - keyRes.start,
+        children
+      );
+      entryNodes.push(pairNode);
       i = skipSpace(exp, valueRes.next);
     }
 
@@ -125,18 +171,18 @@ module.exports = function createKvcParser(env) {
         errors.push({ position: i, message: "'}' expected" });
         return null;
       }
-      const block = buildKvc(entries, returnExpression, startOverride, close, errors);
-      if (!block) {
+      const result = buildKvc(entries, returnExpression, entryNodes, startOverride, close, errors);
+      if (!result) {
         return null;
       }
-      return { next: skipSpace(exp, close), block };
+      return { next: skipSpace(exp, close), block: result.block, node: result.node };
     }
 
-    const block = buildKvc(entries, returnExpression, startOverride, i, errors);
-    if (!block) {
+    const result = buildKvc(entries, returnExpression, entryNodes, startOverride, i, errors);
+    if (!result) {
       return null;
     }
-    return { next: skipSpace(exp, i), block };
+    return { next: skipSpace(exp, i), block: result.block, node: result.node };
   }
 
   return function getKvcExpression(context, exp, index, errors) {
@@ -151,7 +197,7 @@ module.exports = function createKvcParser(env) {
       if (naked) {
         return naked;
       }
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     i = skipSpace(exp, open);
     const withBraces = parseEntries(context, exp, i, errors, {
@@ -159,7 +205,7 @@ module.exports = function createKvcParser(env) {
       allowImplicit: true
     });
     if (!withBraces) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     return withBraces;
   };

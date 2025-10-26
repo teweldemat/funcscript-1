@@ -184,3 +184,5 @@ export declare function getTypeName(type: FSDataType): string;
 
 export type BuiltinFunctionMap = Record<string, BaseFunction>;
 export declare function buildBuiltinMap(): BuiltinFunctionMap;
+
+export { FuncScriptParser, ParseNodeType, ParseNode, ParseResult } from './parser/FuncScriptParser';

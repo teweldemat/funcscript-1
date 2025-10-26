@@ -10,6 +10,7 @@ const { FSDataType } = require('../core/fstypes');
 
 const utils = require('./helpers/utils');
 const { CallType } = require('../core/functionBase');
+const { ParseNode, ParseNodeType } = require('./ParseNode');
 const createListParser = require('./helpers/listParser');
 const createKvcParser = require('./helpers/kvcParser');
 const createUnitParser = require('./helpers/unitParser');
@@ -37,7 +38,9 @@ const env = {
   typeOf,
   valueOf,
   FSDataType,
-  CallType
+  CallType,
+  ParseNode,
+  ParseNodeType
 };
 
 const getListExpression = createListParser(env);
@@ -82,15 +85,12 @@ env.getGeneralInfixFunctionCall = getGeneralInfixFunctionCall;
 
 function getRootExpression(context, exp, index, errors) {
   const kvcRes = getKvcExpression(context, exp, index, errors);
-  if (!kvcRes.block) {
-    return getExpression(context, exp, index, errors);
+  if (kvcRes.block) {
+    const end = utils.skipSpace(exp, kvcRes.next);
+    if (end === exp.length) {
+      return kvcRes;
+    }
   }
-
-  const end = utils.skipSpace(exp, kvcRes.next);
-  if (end === exp.length) {
-    return kvcRes;
-  }
-
   return getExpression(context, exp, index, errors);
 }
 
@@ -109,10 +109,12 @@ class FuncScriptParser {
       throw new Error('Unexpected characters after expression');
     }
 
-    return result.block;
+    return { block: result.block, parseNode: result.node };
   }
 }
 
 module.exports = {
-  FuncScriptParser
+  FuncScriptParser,
+  ParseNodeType,
+  ParseNode
 };

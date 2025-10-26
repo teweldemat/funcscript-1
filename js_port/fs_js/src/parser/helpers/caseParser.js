@@ -5,19 +5,25 @@ module.exports = function createCaseParser(env) {
     let i = skipSpace(exp, index);
     const keyword = getLiteralMatch(exp, i, 'case');
     if (keyword === i) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
+    const keywordNode = new env.ParseNode(env.ParseNodeType.KeyWord, i, keyword - i);
     i = skipSpace(exp, keyword);
 
     const parameters = [];
+    const parameterNodes = [];
+
     while (true) {
       if (parameters.length === 0) {
         const conditionRes = env.getExpression(context, exp, i, errors);
         if (!conditionRes.block) {
           errors.push({ position: i, message: 'Case condition expected' });
-          return { next: index, block: null };
+          return { next: index, block: null, node: null };
         }
         parameters.push(conditionRes.block);
+        if (conditionRes.node) {
+          parameterNodes.push(conditionRes.node);
+        }
         i = skipSpace(exp, conditionRes.next);
       } else {
         const separator = getLiteralMatch(exp, i, ',', ';');
@@ -30,6 +36,9 @@ module.exports = function createCaseParser(env) {
           break;
         }
         parameters.push(conditionRes.block);
+        if (conditionRes.node) {
+          parameterNodes.push(conditionRes.node);
+        }
         i = skipSpace(exp, conditionRes.next);
       }
 
@@ -42,9 +51,12 @@ module.exports = function createCaseParser(env) {
       const valueRes = env.getExpression(context, exp, i, errors);
       if (!valueRes.block) {
         errors.push({ position: i, message: 'Case value expected' });
-        return { next: index, block: null };
+        return { next: index, block: null, node: null };
       }
       parameters.push(valueRes.block);
+      if (valueRes.node) {
+        parameterNodes.push(valueRes.node);
+      }
       i = skipSpace(exp, valueRes.next);
     }
 
@@ -52,15 +64,16 @@ module.exports = function createCaseParser(env) {
     const typed = env.ensureTyped(caseFunc);
     if (env.typeOf(typed) !== env.FSDataType.Function) {
       errors.push({ position: index, message: 'Case function not defined' });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
-    const call = new env.FunctionCallExpression(
-      new env.LiteralBlock(typed),
-      parameters
-    );
+    const call = new env.FunctionCallExpression(new env.LiteralBlock(typed), parameters);
     call.Pos = index;
     call.Length = i - index;
-    return { next: i, block: call };
+
+    const children = [keywordNode, ...parameterNodes.filter(Boolean)].filter(Boolean);
+    const caseNode = new env.ParseNode(env.ParseNodeType.Case, index, i - index, children);
+
+    return { next: i, block: call, node: caseNode };
   };
 };

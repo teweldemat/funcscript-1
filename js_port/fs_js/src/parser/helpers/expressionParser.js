@@ -14,7 +14,7 @@ module.exports = function createExpressionParser(env) {
       return prefix;
     }
 
-    return { next: index, block: null };
+    return { next: index, block: null, node: null };
   }
 
   return {

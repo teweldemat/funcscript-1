@@ -17,28 +17,33 @@ module.exports = function createUnitParser(env) {
       delimiter = '\'';
     }
     if (i === start) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
     const parts = [];
+    const nodeParts = [];
     let textBuffer = '';
+    let segmentStart = i;
+    let current = i;
 
     function flushText() {
       if (!textBuffer) {
         return;
       }
       const literal = new LiteralBlock(env.makeValue(env.FSDataType.String, textBuffer));
+      literal.Pos = segmentStart;
+      literal.Length = current - segmentStart;
       parts.push(literal);
+      nodeParts.push(new env.ParseNode(env.ParseNodeType.LiteralString, segmentStart, current - segmentStart));
       textBuffer = '';
     }
 
-    let current = i;
     while (current < exp.length) {
       const ch = exp[current];
       if (ch === '\\') {
         if (current + 1 >= exp.length) {
           errors.push({ position: current, message: 'Unterminated string literal' });
-          return { next: index, block: null };
+          return { next: index, block: null, node: null };
         }
         const nextChar = exp[current + 1];
         if (nextChar === 'n') textBuffer += '\n';
@@ -52,22 +57,31 @@ module.exports = function createUnitParser(env) {
       }
 
       if (ch === '{') {
+        if (current + 1 < exp.length && exp[current + 1] === '{') {
+          textBuffer += '{';
+          current += 2;
+          continue;
+        }
         flushText();
         current += 1;
         current = skipSpace(exp, current);
         const exprRes = env.getExpression(context, exp, current, errors);
         if (!exprRes.block) {
           errors.push({ position: current, message: 'expression expected' });
-          return { next: index, block: null };
+          return { next: index, block: null, node: null };
         }
         parts.push(exprRes.block);
+        if (exprRes.node) {
+          nodeParts.push(exprRes.node);
+        }
         current = skipSpace(exp, exprRes.next);
         const close = env.utils.getLiteralMatch(exp, current, '}');
         if (close === current) {
           errors.push({ position: current, message: "'}' expected" });
-          return { next: index, block: null };
+          return { next: index, block: null, node: null };
         }
         current = close;
+        segmentStart = current;
         continue;
       }
 
@@ -83,53 +97,64 @@ module.exports = function createUnitParser(env) {
 
     if (current >= exp.length) {
       errors.push({ position: current, message: `"${delimiter}" expected` });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
     const closeDelim = env.utils.getLiteralMatch(exp, current, delimiter);
     if (closeDelim === current) {
       errors.push({ position: current, message: `"${delimiter}" expected` });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
     let block;
+    let node;
     if (parts.length === 0) {
       block = new LiteralBlock(env.makeValue(env.FSDataType.String, ''));
+      node = new env.ParseNode(env.ParseNodeType.LiteralString, index, closeDelim - index);
     } else if (parts.length === 1) {
-      block = parts[0];
+      [block] = parts;
+      [node] = nodeParts;
+      if (!node) {
+        node = new env.ParseNode(env.ParseNodeType.LiteralString, index, closeDelim - index);
+      }
     } else {
       const fn = new ReferenceBlock('_templatemerge');
       block = new FunctionCallExpression(fn, parts);
+      node = new env.ParseNode(env.ParseNodeType.StringTemplate, index, closeDelim - index, nodeParts);
     }
 
     block.Pos = index;
     block.Length = closeDelim - index;
-    return { next: closeDelim, block };
+    return { next: closeDelim, block, node };
   }
 
   function getExpInParenthesis(context, exp, index, errors) {
     let i = skipSpace(exp, index);
     const open = env.utils.getLiteralMatch(exp, i, '(');
     if (open === i) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     i = skipSpace(exp, open);
     const exprRes = env.getExpression(context, exp, i, errors);
     let block = exprRes.block;
+    let childNode = exprRes.node;
     let nextIndex = exprRes.next;
     if (!block) {
       block = new LiteralBlock(env.typedNull());
+      childNode = null;
       nextIndex = i;
     }
     i = skipSpace(exp, nextIndex);
     const close = env.utils.getLiteralMatch(exp, i, ')');
     if (close === i) {
       errors.push({ position: i, message: "')' expected" });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     block.Pos = index;
     block.Length = close - index;
-    return { next: close, block };
+    const children = childNode ? [childNode] : [];
+    const node = new env.ParseNode(env.ParseNodeType.ExpressionInBrace, index, close - index, children);
+    return { next: close, block, node };
   }
 
   function getUnit(context, exp, index, errors) {
@@ -145,7 +170,7 @@ module.exports = function createUnitParser(env) {
       const block = new LiteralBlock(strRes.value);
       block.Pos = index;
       block.Length = strRes.next - index;
-      return { next: strRes.next, block };
+      return { next: strRes.next, block, node: strRes.node };
     }
 
     const numRes = getNumber(exp, i, errors);
@@ -153,39 +178,39 @@ module.exports = function createUnitParser(env) {
       const block = new LiteralBlock(numRes.value);
       block.Pos = index;
       block.Length = numRes.next - index;
-      return { next: numRes.next, block };
+      return { next: numRes.next, block, node: numRes.node };
     }
 
     const listRes = env.getListExpression(context, exp, i, errors);
-    if (listRes.next > i) {
+    if (listRes && listRes.next > i) {
       const block = listRes.block;
       block.Pos = index;
       block.Length = listRes.next - index;
-      return { next: listRes.next, block };
+      return { next: listRes.next, block, node: listRes.node };
     }
 
     const kvcRes = env.getKvcExpression(context, exp, i, errors);
-    if (kvcRes.next > i) {
+    if (kvcRes && kvcRes.next > i) {
       const block = kvcRes.block;
       block.Pos = index;
       block.Length = kvcRes.next - index;
-      return { next: kvcRes.next, block };
+      return { next: kvcRes.next, block, node: kvcRes.node };
     }
 
     const switchRes = env.getSwitchExpression(context, exp, i, errors);
-    if (switchRes.next > i) {
+    if (switchRes && switchRes.next > i) {
       const block = switchRes.block;
       block.Pos = index;
       block.Length = switchRes.next - index;
-      return { next: switchRes.next, block };
+      return { next: switchRes.next, block, node: switchRes.node };
     }
 
     const caseRes = env.getCaseExpression(context, exp, i, errors);
-    if (caseRes.next > i) {
+    if (caseRes && caseRes.next > i) {
       const block = caseRes.block;
       block.Pos = index;
       block.Length = caseRes.next - index;
-      return { next: caseRes.next, block };
+      return { next: caseRes.next, block, node: caseRes.node };
     }
 
     const lambdaRes = env.getLambdaExpression(context, exp, i, errors);
@@ -193,7 +218,7 @@ module.exports = function createUnitParser(env) {
       const lambdaBlock = new LiteralBlock(env.makeValue(env.FSDataType.Function, lambdaRes.func));
       lambdaBlock.Pos = index;
       lambdaBlock.Length = lambdaRes.next - index;
-      return { next: lambdaRes.next, block: lambdaBlock };
+      return { next: lambdaRes.next, block: lambdaBlock, node: lambdaRes.node };
     }
 
     const kwRes = getKeyWordLiteral(exp, i);
@@ -201,7 +226,7 @@ module.exports = function createUnitParser(env) {
       const block = new LiteralBlock(kwRes.value);
       block.Pos = index;
       block.Length = kwRes.next - index;
-      return { next: kwRes.next, block };
+      return { next: kwRes.next, block, node: kwRes.node };
     }
 
     const idRes = getIdentifier(exp, i);
@@ -209,18 +234,18 @@ module.exports = function createUnitParser(env) {
       const block = new ReferenceBlock(idRes.identifier);
       block.Pos = index;
       block.Length = idRes.next - index;
-      return { next: idRes.next, block };
+      return { next: idRes.next, block, node: idRes.node };
     }
 
     const parenRes = getExpInParenthesis(context, exp, i, errors);
-    if (parenRes.next > i) {
+    if (parenRes.block) {
       const block = parenRes.block;
       block.Pos = index;
       block.Length = parenRes.next - index;
-      return { next: parenRes.next, block };
+      return { next: parenRes.next, block, node: parenRes.node };
     }
 
-    return { next: index, block: null };
+    return { next: index, block: null, node: null };
   }
 
   return {

@@ -6,47 +6,64 @@ module.exports = function createCallAndMemberParser(env) {
     let i = skipSpace(exp, index);
     const open = getLiteralMatch(exp, i, openSymbol);
     if (open === i) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     i = skipSpace(exp, open);
 
     const parameters = [];
-    let hasParameters = true;
-    const immediateClose = getLiteralMatch(exp, i, closeSymbol);
-    if (immediateClose > i) {
-      hasParameters = false;
-      i = immediateClose;
-    } else {
-      while (true) {
-        const paramRes = env.getExpression(context, exp, i, errors);
-        if (!paramRes.block) {
-          errors.push({ position: i, message: 'Parameter expected' });
-          return { next: index, block: null };
-        }
-        parameters.push(paramRes.block);
-        i = skipSpace(exp, paramRes.next);
-        const separator = getLiteralMatch(exp, i, ',');
-        if (separator === i) {
-          break;
-        }
-        i = skipSpace(exp, separator);
+    const parameterNodes = [];
+    let hasParameters = false;
+
+    while (true) {
+      const paramRes = env.getExpression(context, exp, i, errors);
+      if (!paramRes.block) {
+        break;
       }
+      hasParameters = true;
+      parameters.push(paramRes.block);
+      if (paramRes.node) {
+        parameterNodes.push(paramRes.node);
+      }
+      i = skipSpace(exp, paramRes.next);
+      const separator = getLiteralMatch(exp, i, ',');
+      if (separator === i) {
+        break;
+      }
+      i = skipSpace(exp, separator);
     }
 
-    let closeIndex = i;
-    if (hasParameters) {
-      closeIndex = getLiteralMatch(exp, i, closeSymbol);
-      if (closeIndex === i) {
+    const closeIndex = skipSpace(exp, i);
+    const close = getLiteralMatch(exp, closeIndex, closeSymbol);
+    if (close === closeIndex) {
+      if (hasParameters) {
+        errors.push({ position: closeIndex, message: "'" + closeSymbol + "' expected" });
+        return { next: index, block: null, node: null };
+      }
+      // empty parameter list
+      const end = getLiteralMatch(exp, i, closeSymbol);
+      if (end === i) {
         errors.push({ position: i, message: "'" + closeSymbol + "' expected" });
-        return { next: index, block: null };
+        return { next: index, block: null, node: null };
       }
+      const nextIndex = skipSpace(exp, end);
+      const call = new FunctionCallExpression(current, []);
+      call.Pos = current.Pos;
+      call.Length = nextIndex - current.Pos;
+      const node = new env.ParseNode(env.ParseNodeType.FunctionParameterList, index, nextIndex - index, []);
+      return { next: nextIndex, block: call, node };
     }
 
+    const nextIndex = skipSpace(exp, close);
     const call = new FunctionCallExpression(current, parameters);
     call.Pos = current.Pos;
-    const nextIndex = skipSpace(exp, closeIndex);
     call.Length = nextIndex - current.Pos;
-    return { next: nextIndex, block: call };
+    const node = new env.ParseNode(
+      env.ParseNodeType.FunctionParameterList,
+      index,
+      nextIndex - index,
+      parameterNodes
+    );
+    return { next: nextIndex, block: call, node };
   }
 
   function getFunctionCallParametersList(context, current, exp, index, errors) {
@@ -68,68 +85,98 @@ module.exports = function createCallAndMemberParser(env) {
       if (next > i) {
         symbol = '?.';
       } else {
-        return { next: index, block: null };
+        return { next: index, block: null, node: null };
       }
     }
 
+    const operatorStart = i;
     i = skipSpace(exp, next);
     const idRes = env.utils.getIdentifier(exp, i);
     if (idRes.next === i) {
       errors.push({ position: i, message: 'member identifier expected' });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
     const funcTyped = context.get(symbol.toLowerCase());
     if (!funcTyped) {
       errors.push({ position: index, message: `Operator ${symbol} not defined` });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     const funcValue = env.ensureTyped(funcTyped);
     if (env.typeOf(funcValue) !== env.FSDataType.Function) {
       errors.push({ position: index, message: `Operator ${symbol} not callable` });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
-    const funcLiteral = new env.LiteralBlock(funcValue, current.Pos, 0);
-    const keyLiteral = new env.LiteralBlock(env.makeValue(env.FSDataType.String, idRes.identifier), i, 0);
-    const call = new env.FunctionCallExpression(funcLiteral, [current, keyLiteral], current.Pos, 0);
+    const funcLiteral = new env.LiteralBlock(funcValue, operatorStart, next - operatorStart);
+    const keyLiteral = new env.LiteralBlock(env.makeValue(env.FSDataType.String, idRes.identifier), i, idRes.next - i);
+    const call = new env.FunctionCallExpression(funcLiteral, [current, keyLiteral], current.Pos, idRes.next - current.Pos);
+    call.Pos = current.Pos;
     call.Length = idRes.next - current.Pos;
 
-    return { next: skipSpace(exp, idRes.next), block: call };
+    return { next: skipSpace(exp, idRes.next), block: call, node: idRes.node };
   }
 
   function getCallAndMemberAccess(context, exp, index, errors) {
     let i = skipSpace(exp, index);
     const unitRes = env.getUnit(context, exp, i, errors);
     if (!unitRes.block) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
-    let current = unitRes.block;
+    let currentBlock = unitRes.block;
+    let currentNode = unitRes.node;
     i = skipSpace(exp, unitRes.next);
 
     while (true) {
-      const callRes = getFunctionCallParametersList(context, current, exp, i, errors);
+      const callRes = getFunctionCallParametersList(context, currentBlock, exp, i, errors);
       if (callRes.next > i) {
-        current = callRes.block;
+        currentBlock = callRes.block;
+        const children = [];
+        if (currentNode) children.push(currentNode);
+        if (callRes.node) children.push(callRes.node);
+        currentNode = new env.ParseNode(
+          env.ParseNodeType.FunctionCall,
+          index,
+          callRes.next - index,
+          children
+        );
         i = skipSpace(exp, callRes.next);
         continue;
       }
 
-      const memberRes = parseMemberAccess(context, current, exp, i, errors);
+      const memberRes = parseMemberAccess(context, currentBlock, exp, i, errors);
       if (memberRes.next > i) {
-        current = memberRes.block;
+        currentBlock = memberRes.block;
+        const children = [];
+        if (currentNode) children.push(currentNode);
+        if (memberRes.node) children.push(memberRes.node);
+        currentNode = new env.ParseNode(
+          env.ParseNodeType.MemberAccess,
+          index,
+          memberRes.next - index,
+          children
+        );
         i = memberRes.next;
         continue;
       }
 
       const selectorRes = env.getKvcExpression(context, exp, i, errors);
-      if (selectorRes.next > i) {
+      if (selectorRes && selectorRes.next > i) {
         const selectorBlock = new env.SelectorExpression();
-        selectorBlock.Source = current;
+        selectorBlock.Source = currentBlock;
         selectorBlock.Selector = selectorRes.block;
-        selectorBlock.Pos = current.Pos;
-        selectorBlock.Length = selectorRes.block.Pos + selectorRes.block.Length - selectorBlock.Pos;
-        current = selectorBlock;
+        selectorBlock.Pos = currentBlock.Pos;
+        selectorBlock.Length = selectorRes.next - currentBlock.Pos;
+        currentBlock = selectorBlock;
+        const children = [];
+        if (currentNode) children.push(currentNode);
+        if (selectorRes.node) children.push(selectorRes.node);
+        currentNode = new env.ParseNode(
+          env.ParseNodeType.Selection,
+          index,
+          selectorRes.next - index,
+          children
+        );
         i = skipSpace(exp, selectorRes.next);
         continue;
       }
@@ -137,7 +184,7 @@ module.exports = function createCallAndMemberParser(env) {
       break;
     }
 
-    return { next: i, block: current };
+    return { next: i, block: currentBlock, node: currentNode };
   }
 
   return {

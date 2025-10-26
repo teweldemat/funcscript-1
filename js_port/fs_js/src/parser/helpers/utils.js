@@ -1,5 +1,6 @@
 const { makeValue, typedNull } = require('../../core/value');
 const { FSDataType } = require('../../core/fstypes');
+const { ParseNode, ParseNodeType } = require('../ParseNode');
 
 const MAX_INT_LITERAL = 9223372036854775807n;
 const MIN_INT_LITERAL = -9223372036854775808n;
@@ -72,7 +73,7 @@ function isIdentifierOtherChar(ch) {
 function getIdentifier(exp, index) {
   let i = index;
   if (i >= exp.length || !isIdentifierFirstChar(exp[i])) {
-    return { next: index, identifier: null, identifierLower: null };
+    return { next: index, identifier: null, identifierLower: null, node: null };
   }
   i += 1;
   while (i < exp.length && isIdentifierOtherChar(exp[i])) {
@@ -81,25 +82,38 @@ function getIdentifier(exp, index) {
   const identifier = exp.substring(index, i);
   const lower = identifier.toLowerCase();
   if (KEYWORDS.has(lower)) {
-    return { next: index, identifier: null, identifierLower: null };
+    return { next: index, identifier: null, identifierLower: null, node: null };
   }
-  return { next: i, identifier, identifierLower: lower };
+  const node = new ParseNode(ParseNodeType.Identifier, index, i - index);
+  return { next: i, identifier, identifierLower: lower, node };
 }
 
 function getKeyWordLiteral(exp, index) {
   let i = getLiteralMatch(exp, index, 'null');
   if (i > index) {
-    return { next: i, value: typedNull() };
+    return {
+      next: i,
+      value: typedNull(),
+      node: new ParseNode(ParseNodeType.KeyWord, index, i - index)
+    };
   }
   i = getLiteralMatch(exp, index, 'true');
   if (i > index) {
-    return { next: i, value: makeValue(FSDataType.Boolean, true) };
+    return {
+      next: i,
+      value: makeValue(FSDataType.Boolean, true),
+      node: new ParseNode(ParseNodeType.KeyWord, index, i - index)
+    };
   }
   i = getLiteralMatch(exp, index, 'false');
   if (i > index) {
-    return { next: i, value: makeValue(FSDataType.Boolean, false) };
+    return {
+      next: i,
+      value: makeValue(FSDataType.Boolean, false),
+      node: new ParseNode(ParseNodeType.KeyWord, index, i - index)
+    };
   }
-  return { next: index, value: null };
+  return { next: index, value: null, node: null };
 }
 
 function getInt(exp, allowNegative, index) {
@@ -128,9 +142,8 @@ function getNumber(exp, index, errors) {
 
   const intRes = getInt(exp, true, i);
   if (intRes.next === i) {
-    return { next: index, value: null };
+    return { next: index, value: null, node: null };
   }
-  let digits = intRes.value;
   i = intRes.next;
 
   let next = getLiteralMatch(exp, i, '.');
@@ -139,7 +152,6 @@ function getNumber(exp, index, errors) {
     i = next;
     const decRes = getInt(exp, false, i);
     i = decRes.next;
-    digits += decRes.value ? decRes.value.substring(1) : '';
   }
 
   next = getLiteralMatch(exp, i, 'e', 'E');
@@ -152,7 +164,7 @@ function getNumber(exp, index, errors) {
     const expRes = getInt(exp, false, i);
     if (expRes.next === i) {
       errors.push({ position: i, message: 'Invalid exponent' });
-      return { next: index, value: null };
+      return { next: index, value: null, node: null };
     }
     i = expRes.next;
   }
@@ -166,14 +178,19 @@ function getNumber(exp, index, errors) {
   }
 
   const literal = exp.substring(index, i);
+
   if (hasLong) {
     const withoutSuffix = literal.slice(0, -1);
     try {
       const value = parseLongLiteral(withoutSuffix);
-      return { next: i, value: makeValue(FSDataType.BigInteger, value) };
+      return {
+        next: i,
+        value: makeValue(FSDataType.BigInteger, value),
+        node: new ParseNode(ParseNodeType.LiteralLong, index, i - index)
+      };
     } catch (err) {
       errors.push({ position: index, message: err.message });
-      return { next: index, value: null };
+      return { next: index, value: null, node: null };
     }
   }
 
@@ -181,28 +198,36 @@ function getNumber(exp, index, errors) {
     const value = Number(literal);
     if (Number.isNaN(value)) {
       errors.push({ position: index, message: `Invalid number '${literal}'` });
-      return { next: index, value: null };
+      return { next: index, value: null, node: null };
     }
-    return { next: i, value: makeValue(FSDataType.Float, value) };
+    return {
+      next: i,
+      value: makeValue(FSDataType.Float, value),
+      node: new ParseNode(ParseNodeType.LiteralDouble, index, i - index)
+    };
   }
 
   try {
     const big = BigInt(literal);
     if (big > MAX_INT_LITERAL || big < MIN_INT_LITERAL) {
       errors.push({ position: index, message: `Invalid number '${literal}'` });
-      return { next: index, value: null };
+      return { next: index, value: null, node: null };
     }
     const intValue = Number(big);
     if (!Number.isNaN(intValue) && Number.isInteger(intValue)) {
-      return { next: i, value: makeValue(FSDataType.Integer, intValue) };
+      return {
+        next: i,
+        value: makeValue(FSDataType.Integer, intValue),
+        node: new ParseNode(ParseNodeType.LiteralInteger, index, i - index)
+      };
     }
   } catch (err) {
     errors.push({ position: index, message: err.message });
-    return { next: index, value: null };
+    return { next: index, value: null, node: null };
   }
 
   errors.push({ position: index, message: `Invalid number '${literal}'` });
-  return { next: index, value: null };
+  return { next: index, value: null, node: null };
 }
 
 function parseLongLiteral(literal) {
@@ -239,7 +264,7 @@ function getSimpleString(exp, index, errors) {
   if (i === index) {
     i = getLiteralMatch(exp, index, '\'');
     if (i === index) {
-      return { next: index, value: null };
+      return { next: index, value: null, node: null };
     }
   }
   const delimiter = exp[index];
@@ -247,7 +272,11 @@ function getSimpleString(exp, index, errors) {
   while (i < exp.length) {
     if (exp[i] === delimiter) {
       i += 1;
-      return { next: i, value: makeValue(FSDataType.String, result) };
+      return {
+        next: i,
+        value: makeValue(FSDataType.String, result),
+        node: new ParseNode(ParseNodeType.LiteralString, index, i - index)
+      };
     }
     if (exp[i] === '\\') {
       const nextChar = exp[i + 1];
@@ -261,7 +290,7 @@ function getSimpleString(exp, index, errors) {
         const hex = exp.substring(i + 2, i + 6);
         if (hex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(hex)) {
           errors.push({ position: i, message: 'Invalid unicode escape' });
-          return { next: index, value: null };
+          return { next: index, value: null, node: null };
         }
         result += String.fromCharCode(parseInt(hex, 16));
         i += 6;
@@ -275,7 +304,7 @@ function getSimpleString(exp, index, errors) {
     i += 1;
   }
   errors.push({ position: index, message: 'Unterminated string literal' });
-  return { next: index, value: null };
+  return { next: index, value: null, node: null };
 }
 
 module.exports = {
@@ -288,5 +317,7 @@ module.exports = {
   getKeyWordLiteral,
   getInt,
   getNumber,
-  getSimpleString
+  getSimpleString,
+  ParseNode,
+  ParseNodeType
 };

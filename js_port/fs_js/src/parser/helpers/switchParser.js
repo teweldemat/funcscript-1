@@ -5,17 +5,22 @@ module.exports = function createSwitchParser(env) {
     let i = skipSpace(exp, index);
     const keyword = getLiteralMatch(exp, i, 'switch');
     if (keyword === i) {
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     i = skipSpace(exp, keyword);
 
     const parameters = [];
+    const parameterNodes = [];
+
     const selectorRes = env.getExpression(context, exp, i, errors);
     if (!selectorRes.block) {
       errors.push({ position: i, message: 'Switch selector expected' });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
     parameters.push(selectorRes.block);
+    if (selectorRes.node) {
+      parameterNodes.push(selectorRes.node);
+    }
     i = skipSpace(exp, selectorRes.next);
 
     while (true) {
@@ -33,8 +38,10 @@ module.exports = function createSwitchParser(env) {
 
       const colon = getLiteralMatch(exp, i, ':');
       if (colon === i) {
-        // treat as default value without colon
         parameters.push(keyRes.block);
+        if (keyRes.node) {
+          parameterNodes.push(keyRes.node);
+        }
         break;
       }
       i = skipSpace(exp, colon);
@@ -42,28 +49,37 @@ module.exports = function createSwitchParser(env) {
       const valueRes = env.getExpression(context, exp, i, errors);
       if (!valueRes.block) {
         errors.push({ position: i, message: 'Switch value expected' });
-        return { next: index, block: null };
+        return { next: index, block: null, node: null };
       }
       parameters.push(keyRes.block);
       parameters.push(valueRes.block);
+      if (keyRes.node) {
+        parameterNodes.push(keyRes.node);
+      }
+      if (valueRes.node) {
+        parameterNodes.push(valueRes.node);
+      }
       i = skipSpace(exp, valueRes.next);
     }
 
     if (parameters.length === 1) {
       errors.push({ position: i, message: 'Switch requires at least one case' });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
     const switchFunc = context.get('switch');
     const typed = env.ensureTyped(switchFunc);
     if (env.typeOf(typed) !== env.FSDataType.Function) {
       errors.push({ position: index, message: 'Switch function not defined' });
-      return { next: index, block: null };
+      return { next: index, block: null, node: null };
     }
 
     const call = new env.FunctionCallExpression(new env.LiteralBlock(typed), parameters);
     call.Pos = index;
     call.Length = i - index;
-    return { next: i, block: call };
+
+    const switchNode = new env.ParseNode(env.ParseNodeType.Case, index, i - index, parameterNodes.filter(Boolean));
+
+    return { next: i, block: call, node: switchNode };
   };
 };

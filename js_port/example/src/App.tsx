@@ -255,6 +255,22 @@ const describeNode = (node: any): { label: string; detail?: string } => {
 };
 
 const buildParseNodeTree = (node: any, expression: string, path = '0'): ParseTreeNode => {
+  if (node && typeof node === 'object' && typeof node.NodeType === 'string') {
+    const range = getNodeRange(node);
+    const childrenSource = Array.isArray(node.Childs) ? node.Childs : [];
+    const children = childrenSource
+      .filter(Boolean)
+      .map((child: any, index: number) => buildParseNodeTree(child, expression, `${path}.${index}`));
+    const detail = range ? expression.slice(range.start, range.end).trim() || undefined : undefined;
+    return {
+      id: path,
+      label: `Parse: ${node.NodeType}`,
+      detail,
+      range,
+      children
+    };
+  }
+
   if (!node || typeof node !== 'object') {
     return {
       id: path,
@@ -585,12 +601,14 @@ function App() {
   const handleEvaluate = () => {
     setIsEvaluating(true);
     try {
-      const block = FuncScriptParser.parse(provider, expression);
+      const { block, parseNode } = FuncScriptParser.parse(provider, expression);
       const typed = ensureTyped(block.evaluate(provider));
       const plain = convertTypedValue(typed);
       const typeName = getTypeName(typed[0]);
       const evaluationTree = buildEvaluationTree(block, expression);
-      const parseTree = buildParseNodeTree(block, expression);
+      const parseTree = parseNode
+        ? buildParseNodeTree(parseNode, expression)
+        : buildParseNodeTree(block, expression);
       setState({
         status: 'success',
         typed,

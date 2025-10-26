@@ -21,7 +21,7 @@ class DefaultFsDataProvider extends MapDataProvider {
 }
 
 function evaluate(expression, provider = new DefaultFsDataProvider()) {
-  const block = FuncScriptParser.parse(provider, expression);
+  const { block } = FuncScriptParser.parse(provider, expression);
   if (!block) {
     throw new Error('Failed to parse expression');
   }
