@@ -93,11 +93,11 @@ function App(): JSX.Element {
                         <Chip
                           key={nodeType}
                           label={nodeType}
+                          variant="outlined"
                           sx={{
-                            bgcolor: `${color}30`,
-                            border: `1px solid ${color}88`,
-                            color: 'text.primary',
-                            fontWeight: 500
+                            borderColor: color,
+                            color,
+                            fontWeight: 600
                           }}
                         />
                       ))}

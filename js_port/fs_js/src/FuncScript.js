@@ -40,24 +40,24 @@ function colorParseTree(node) {
   }
 
   const result = [];
-  const first = childs[0];
-  const nodePos = typeof node.Pos === 'number' ? node.Pos : 0;
+  const nodePos = typeof node.Pos === 'number' ? node.Pos : Number(node.Pos ?? 0) || 0;
+  const nodeEnd = nodePos + node.Length;
 
-  if (first && typeof first.Pos === 'number' && first.Pos > nodePos) {
-    result.push(new ParseNode(node.NodeType, nodePos, first.Pos - nodePos));
-  }
-
+  let cursor = nodePos;
   for (const child of childs) {
+    if (!child || typeof child.Pos !== 'number' || typeof child.Length !== 'number') {
+      continue;
+    }
+    const childPos = child.Pos;
+    if (childPos > cursor) {
+      result.push(new ParseNode(node.NodeType, cursor, childPos - cursor));
+    }
     result.push(...colorParseTree(child));
+    cursor = childPos + child.Length;
   }
 
-  const last = childs[childs.length - 1];
-  if (last && typeof last.Pos === 'number' && typeof last.Length === 'number') {
-    const lastEnd = last.Pos + last.Length;
-    const nodeEnd = nodePos + node.Length;
-    if (lastEnd < nodeEnd) {
-      result.push(new ParseNode(node.NodeType, lastEnd, nodeEnd - lastEnd));
-    }
+  if (cursor < nodeEnd) {
+    result.push(new ParseNode(node.NodeType, cursor, nodeEnd - cursor));
   }
 
   return result;

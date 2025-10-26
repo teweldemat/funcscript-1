@@ -80,12 +80,12 @@ const createHighlightExtension = (
       if (!segment.color) {
         continue;
       }
-      const background = `${segment.color}30`;
-      const border = `${segment.color}66`;
+
+      const style = `color:${segment.color};font-weight:600;text-shadow:0 0 0.6px rgba(0,0,0,0.25);`;
       decorations.push(
         Decoration.mark({
           attributes: {
-            style: `background-color:${background};border-bottom:1px solid ${border};border-radius:4px;`
+            style
           }
         }).range(segment.start, segment.end)
       );

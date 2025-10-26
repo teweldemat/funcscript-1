@@ -146,6 +146,54 @@ function run() {
     assert.strictEqual(p, expression.length, 'Segments should cover the full expression');
   });
 
+  runCase(suite, 'ColorParseTreeLambdaSegments', () => {
+    const provider = new DefaultFsDataProvider();
+    const expression = '(x)=>45';
+
+    const { parseNode } = FuncScriptParser.parse(provider, expression);
+
+    assert.ok(parseNode, 'Expected parse node for lambda expression');
+    assertTreeSpanConsistency(parseNode);
+
+    const segments = colorParseTree(parseNode);
+    assert.strictEqual(segments.length, 5);
+
+    let p = 0;
+    let index = 0;
+
+    let seg = segments[index++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.IdentiferList);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    seg = segments[index++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.Identifier);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    seg = segments[index++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.IdentiferList);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    seg = segments[index++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.LambdaExpression);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 2);
+    p += 2;
+
+    seg = segments[index++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.LiteralInteger);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 2);
+    p += 2;
+
+    assert.strictEqual(p, expression.length, 'Segments should cover full lambda expression');
+  });
+
   finalizeSuite('ParseTreeTests', suite);
 }
 

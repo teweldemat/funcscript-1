@@ -17,18 +17,18 @@ export type ColoredSegment = {
 };
 
 export const parseNodePalette = [
-  '#1E88E5',
-  '#D81B60',
-  '#43A047',
-  '#FB8C00',
-  '#8E24AA',
-  '#00ACC1',
-  '#FDD835',
-  '#5E35B1',
-  '#6D4C41',
-  '#00897B',
-  '#E53935',
-  '#7CB342'
+  '#1565C0',
+  '#C2185B',
+  '#2E7D32',
+  '#EF6C00',
+  '#6A1B9A',
+  '#00838F',
+  '#FF8F00',
+  '#4527A0',
+  '#5D4037',
+  '#00695C',
+  '#C62828',
+  '#558B2F'
 ];
 
 const sanitizeRange = (start: number, end: number, length: number) => {
