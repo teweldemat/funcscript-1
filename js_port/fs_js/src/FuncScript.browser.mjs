@@ -2,6 +2,7 @@ import * as funcscript from './FuncScript.browser.js';
 
 const {
   evaluate,
+  colorParseTree,
   DefaultFsDataProvider,
   FsDataProvider,
   MapDataProvider,
@@ -31,6 +32,7 @@ const {
 
 export {
   evaluate,
+  colorParseTree,
   DefaultFsDataProvider,
   FsDataProvider,
   MapDataProvider,

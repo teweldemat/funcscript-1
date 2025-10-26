@@ -1,5 +1,6 @@
 const { assert, runCase, finalizeSuite, DefaultFsDataProvider } = require('./common');
 const { FuncScriptParser, ParseNodeType } = require('../../fs_js/src/parser/FuncScriptParser');
+const { colorParseTree } = require('../../fs_js/src/FuncScript');
 
 function flattenSingleChild(node) {
   let current = node;
@@ -11,6 +12,25 @@ function flattenSingleChild(node) {
 
 function run() {
   const suite = {};
+
+  function assertTreeSpanConsistency(node) {
+    if (!node || !Array.isArray(node.Childs) || node.Childs.length === 0) {
+      return;
+    }
+
+    let left = node.Pos;
+    const nodeEnd = node.Pos + node.Length;
+
+    for (const child of node.Childs) {
+      assert.ok(child.Pos >= left, 'Child nodes must appear in order');
+      assertTreeSpanConsistency(child);
+      left = child.Pos + child.Length;
+      assert.ok(
+        left <= nodeEnd,
+        `Child node ${child.NodeType} spans beyond parent ${node.NodeType}`
+      );
+    }
+  }
 
   runCase(suite, 'ParseKvcProducesParseNode', () => {
     const provider = new DefaultFsDataProvider();
@@ -70,6 +90,60 @@ function run() {
     assert.strictEqual(leftBlock.Length, 1);
     assert.strictEqual(rightBlock.Pos, 2);
     assert.strictEqual(rightBlock.Length, 1);
+  });
+
+  runCase(suite, 'ColorParseTreeSegments', () => {
+    const provider = new DefaultFsDataProvider();
+    const expression = '1+sin(45)';
+
+    const { parseNode } = FuncScriptParser.parse(provider, expression);
+
+    assert.ok(parseNode, 'Expected parse node for expression');
+    assertTreeSpanConsistency(parseNode);
+
+    const segments = colorParseTree(parseNode);
+    assert.strictEqual(segments.length, 6);
+
+    let p = 0;
+    let i = 0;
+
+    let seg = segments[i++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.LiteralInteger);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    seg = segments[i++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.Operator);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    seg = segments[i++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.Identifier);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 3);
+    p += 3;
+
+    seg = segments[i++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.FunctionParameterList);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    seg = segments[i++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.LiteralInteger);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 2);
+    p += 2;
+
+    seg = segments[i++];
+    assert.strictEqual(seg.NodeType, ParseNodeType.FunctionParameterList);
+    assert.strictEqual(seg.Pos, p);
+    assert.strictEqual(seg.Length, 1);
+    p += 1;
+
+    assert.strictEqual(p, expression.length, 'Segments should cover the full expression');
   });
 
   finalizeSuite('ParseTreeTests', suite);

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
+import { alpha } from '@mui/material/styles';
 import {
   Alert,
   Box,
@@ -22,7 +23,8 @@ import {
   ensureTyped,
   getTypeName,
   type TypedValue,
-  valueOf
+  valueOf,
+  colorParseTree
 } from 'funcscript';
 // funcscript parser is provided as CommonJS without type definitions
 import * as parserModule from 'funcscript/parser';
@@ -41,9 +43,32 @@ const theme = createTheme({
   }
 });
 
+const highlightAccent = '#ffb300';
+const parseNodePalette = [
+  '#1E88E5',
+  '#D81B60',
+  '#43A047',
+  '#FB8C00',
+  '#8E24AA',
+  '#00ACC1',
+  '#FDD835',
+  '#5E35B1',
+  '#6D4C41',
+  '#00897B',
+  '#E53935',
+  '#7CB342'
+];
+
 type TextRange = {
   start: number;
   end: number;
+};
+
+type ColoredSegment = {
+  start: number;
+  end: number;
+  nodeType: string;
+  color: string | null;
 };
 
 type ParseTreeNode = {
@@ -66,6 +91,7 @@ type EvaluationState =
       evaluationTree: ParseTreeNode | null;
       parseTree: ParseTreeNode | null;
       expressionText: string;
+      colorSegments: ColoredSegment[];
     }
   | {
       status: 'error';
@@ -430,6 +456,107 @@ const sanitizeRange = (range: TextRange | null | undefined, length: number): Tex
   return { start, end };
 };
 
+const computeColorSegments = (node: unknown, expression: string): ColoredSegment[] => {
+  const length = expression.length;
+  if (!node || length === 0) {
+    return length
+      ? [
+          {
+            start: 0,
+            end: length,
+            nodeType: 'Expression',
+            color: null
+          }
+        ]
+      : [];
+  }
+
+  const rawSegments = colorParseTree(node as any);
+  const normalized = Array.isArray(rawSegments)
+    ? rawSegments
+        .map((segment) => {
+          const pos = typeof segment?.Pos === 'number' ? segment.Pos : Number(segment?.Pos ?? 0);
+          const len = typeof segment?.Length === 'number' ? segment.Length : Number(segment?.Length ?? 0);
+          const nodeType = typeof segment?.NodeType === 'string'
+            ? segment.NodeType
+            : String(segment?.NodeType ?? 'Node');
+          const start = Number.isFinite(pos) ? pos : 0;
+          const end = Number.isFinite(len) ? start + len : start;
+          const safe = sanitizeRange({ start, end }, length);
+          if (!safe || safe.start === safe.end) {
+            return null;
+          }
+          return {
+            start: safe.start,
+            end: safe.end,
+            nodeType
+          };
+        })
+        .filter((segment): segment is { start: number; end: number; nodeType: string } => Boolean(segment))
+        .sort((a, b) => (a.start === b.start ? a.end - b.end : a.start - b.start))
+    : [];
+
+  const colorMap = new Map<string, string>();
+  let paletteIndex = 0;
+  const getColor = (nodeType: string) => {
+    if (colorMap.has(nodeType)) {
+      return colorMap.get(nodeType)!;
+    }
+    const color = parseNodePalette[paletteIndex % parseNodePalette.length];
+    paletteIndex += 1;
+    colorMap.set(nodeType, color);
+    return color;
+  };
+
+  const segments: ColoredSegment[] = [];
+  let cursor = 0;
+
+  for (const segment of normalized) {
+    const start = Math.max(cursor, segment.start);
+    const end = Math.max(start, segment.end);
+
+    if (start > cursor) {
+      segments.push({
+        start: cursor,
+        end: start,
+        nodeType: 'Whitespace',
+        color: null
+      });
+    }
+
+    if (end > start) {
+      segments.push({
+        start,
+        end,
+        nodeType: segment.nodeType,
+        color: getColor(segment.nodeType)
+      });
+    }
+
+    cursor = end;
+  }
+
+  if (cursor < length) {
+    segments.push({
+      start: cursor,
+      end: length,
+      nodeType: 'Whitespace',
+      color: null
+    });
+  }
+
+  if (segments.length === 0 && length > 0) {
+    segments.push({
+      start: 0,
+      end: length,
+      nodeType: 'Expression',
+      color: null
+    });
+  }
+
+  return segments;
+};
+
 type ParseTreeNodeViewProps = {
   node: ParseTreeNode;
   depth?: number;
@@ -512,35 +639,121 @@ const ParseTreeNodeView = ({ node, depth = 0, onSelect, selectedId }: ParseTreeN
 type HighlightProps = {
   expression: string;
   highlight: TextRange | null;
+  segments?: ColoredSegment[];
 };
 
-const HighlightedExpression = ({ expression, highlight }: HighlightProps) => {
-  const safeRange = sanitizeRange(highlight, expression.length);
-  if (!safeRange) {
-    return (
-      <Box
-        component="pre"
-        sx={{
-          bgcolor: 'background.default',
-          borderRadius: 1,
-          border: '1px solid',
-          borderColor: 'divider',
-          p: 2,
-          whiteSpace: 'pre-wrap',
-          fontFamily: 'Roboto Mono, monospace',
-          fontSize: 14,
-          minHeight: '3rem'
-        }}
-      >
-        {expression}
-      </Box>
-    );
+const HighlightedExpression = ({ expression, highlight, segments = [] }: HighlightProps) => {
+  const length = expression.length;
+  const safeHighlight = sanitizeRange(highlight, length);
+
+  const prepared = (segments.length
+    ? segments
+    : length
+    ? [{ start: 0, end: length, nodeType: 'Expression', color: null }]
+    : [])
+    .map((segment) => {
+      const safe = sanitizeRange({ start: segment.start, end: segment.end }, length);
+      if (!safe || safe.start === safe.end) {
+        return null;
+      }
+      return {
+        ...segment,
+        start: safe.start,
+        end: safe.end
+      };
+    })
+    .filter((segment): segment is ColoredSegment => Boolean(segment))
+    .sort((a, b) => (a.start === b.start ? a.end - b.end : a.start - b.start));
+
+  const filled: ColoredSegment[] = [];
+  let cursor = 0;
+  for (const segment of prepared) {
+    const start = Math.max(cursor, segment.start);
+    const end = Math.max(start, segment.end);
+    if (start > cursor) {
+      filled.push({ start: cursor, end: start, nodeType: 'Expression', color: null });
+    }
+    if (end > start) {
+      filled.push({ ...segment, start, end });
+    }
+    cursor = end;
+  }
+  if (cursor < length) {
+    filled.push({ start: cursor, end: length, nodeType: 'Expression', color: null });
   }
 
-  const { start, end } = safeRange;
-  const before = expression.slice(0, start);
-  const middle = expression.slice(start, end);
-  const after = expression.slice(end);
+  const parts: JSX.Element[] = [];
+  let keyCounter = 0;
+
+  const pushPart = (
+    partStart: number,
+    partEnd: number,
+    color: string | null,
+    isHighlight: boolean,
+    nodeType: string
+  ) => {
+    if (partEnd <= partStart) {
+      return;
+    }
+    const text = expression.slice(partStart, partEnd);
+    const content = text.length ? text : ' ';
+
+    const isColored = Boolean(color);
+    const backgroundColor = isColored
+      ? alpha(color!, isHighlight ? 0.45 : 0.18)
+      : isHighlight
+      ? alpha(highlightAccent, 0.3)
+      : 'transparent';
+    const borderTone = isColored
+      ? alpha(color!, isHighlight ? 0.9 : 0.6)
+      : isHighlight
+      ? highlightAccent
+      : 'transparent';
+    const boxShadow = isHighlight
+      ? `0 0 0 1px ${alpha(color ?? highlightAccent, 0.6)}`
+      : undefined;
+
+    parts.push(
+      <Box
+        component="span"
+        key={`expr-${++keyCounter}`}
+        sx={{
+          display: 'inline',
+          backgroundColor,
+          color: 'inherit',
+          borderRadius: isColored || isHighlight ? 0.5 : 0,
+          px: isColored || isHighlight ? 0.35 : 0,
+          py: isColored || isHighlight ? 0.1 : 0,
+          borderBottom: isHighlight ? `2px solid ${borderTone}` : `1px solid ${borderTone}`,
+          boxShadow,
+          transition: 'all 0.12s ease-in-out',
+          position: 'relative'
+        }}
+        title={`${nodeType}${isHighlight ? ' (selected)' : ''}`}
+      >
+        {content}
+      </Box>
+    );
+  };
+
+  for (const segment of filled) {
+    if (!safeHighlight || safeHighlight.start >= segment.end || safeHighlight.end <= segment.start) {
+      pushPart(segment.start, segment.end, segment.color, false, segment.nodeType);
+      continue;
+    }
+
+    if (segment.start < safeHighlight.start) {
+      pushPart(segment.start, Math.min(safeHighlight.start, segment.end), segment.color, false, segment.nodeType);
+    }
+
+    const highlightStart = Math.max(segment.start, safeHighlight.start);
+    const highlightEnd = Math.min(segment.end, safeHighlight.end);
+    pushPart(highlightStart, highlightEnd, segment.color, true, segment.nodeType);
+
+    if (safeHighlight.end < segment.end) {
+      pushPart(Math.max(safeHighlight.end, segment.start), segment.end, segment.color, false, segment.nodeType);
+    }
+  }
 
   return (
     <Box
@@ -553,37 +766,11 @@ const HighlightedExpression = ({ expression, highlight }: HighlightProps) => {
         p: 2,
         whiteSpace: 'pre-wrap',
         fontFamily: 'Roboto Mono, monospace',
-        fontSize: 14
+        fontSize: 14,
+        minHeight: '3rem'
       }}
     >
-      <Box component="span">{before}</Box>
-      {start === end ? (
-        <Box
-          component="span"
-          sx={{
-            display: 'inline-block',
-            borderLeft: '2px solid',
-            borderColor: 'warning.main',
-            height: '1.1em',
-            verticalAlign: 'text-bottom',
-            mx: 0.25
-          }}
-        />
-      ) : (
-        <Box
-          component="span"
-          sx={{
-            bgcolor: 'warning.light',
-            color: 'inherit',
-            borderRadius: 0.5,
-            px: 0.5,
-            py: 0.25
-          }}
-        >
-          {middle || ' '}
-        </Box>
-      )}
-      <Box component="span">{after}</Box>
+      {parts.length > 0 ? parts : expression || ' '}
     </Box>
   );
 };
@@ -609,6 +796,7 @@ function App() {
       const parseTree = parseNode
         ? buildParseNodeTree(parseNode, expression)
         : buildParseNodeTree(block, expression);
+      const colorSegments = computeColorSegments(parseNode, expression);
       setState({
         status: 'success',
         typed,
@@ -616,7 +804,8 @@ function App() {
         plain,
         evaluationTree,
         parseTree,
-        expressionText: expression
+        expressionText: expression,
+        colorSegments
       });
       setSelectedEvaluationNodeId(evaluationTree?.id ?? null);
       setSelectedParseNodeId(parseTree?.id ?? null);
@@ -770,6 +959,7 @@ function App() {
                       <HighlightedExpression
                         expression={state.expressionText}
                         highlight={highlightRange}
+                        segments={state.colorSegments}
                       />
                     </Box>
                   </Stack>

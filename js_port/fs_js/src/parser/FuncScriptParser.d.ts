@@ -46,5 +46,3 @@ export const ParseNodeType: { readonly [K in ParseNodeType]: K };
 export class FuncScriptParser {
   static parse(context: unknown, exp: string): ParseResult;
 }
-
-export { ParseNode };

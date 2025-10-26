@@ -185,4 +185,8 @@ export declare function getTypeName(type: FSDataType): string;
 export type BuiltinFunctionMap = Record<string, BaseFunction>;
 export declare function buildBuiltinMap(): BuiltinFunctionMap;
 
+export declare function colorParseTree(
+  node: import('./parser/FuncScriptParser').ParseNode | null | undefined
+): import('./parser/FuncScriptParser').ParseNode[];
+
 export { FuncScriptParser, ParseNodeType, ParseNode, ParseResult } from './parser/FuncScriptParser';

@@ -7,6 +7,7 @@ const { ExpressionFunction } = require('./core/ExpressionFunction');
 const { FsList, ArrayFsList } = require('./model/FsList');
 const { KeyValueCollection, SimpleKeyValueCollection } = require('./model/KeyValueCollection');
 const { FsError } = require('./model/FsError');
+const { ParseNode } = require('./parser/ParseNode');
 const buildBrowserBuiltinMap = require('./funcs/index.browser');
 
 const { MapDataProvider, FsDataProvider, KvcProvider } = dataProviders;
@@ -38,7 +39,42 @@ function evaluate(expression, provider = new DefaultFsDataProvider()) {
   return ensureTyped(block.evaluate(provider));
 }
 
+function colorParseTree(node) {
+  if (!node || typeof node.Length !== 'number' || node.Length <= 0) {
+    return [];
+  }
+
+  const childs = Array.isArray(node.Childs) ? node.Childs : [];
+  if (childs.length === 0) {
+    return [node];
+  }
+
+  const result = [];
+  const first = childs[0];
+  const nodePos = typeof node.Pos === 'number' ? node.Pos : 0;
+
+  if (first && typeof first.Pos === 'number' && first.Pos > nodePos) {
+    result.push(new ParseNode(node.NodeType, nodePos, first.Pos - nodePos));
+  }
+
+  for (const child of childs) {
+    result.push(...colorParseTree(child));
+  }
+
+  const last = childs[childs.length - 1];
+  if (last && typeof last.Pos === 'number' && typeof last.Length === 'number') {
+    const lastEnd = last.Pos + last.Length;
+    const nodeEnd = nodePos + node.Length;
+    if (lastEnd < nodeEnd) {
+      result.push(new ParseNode(node.NodeType, lastEnd, nodeEnd - lastEnd));
+    }
+  }
+
+  return result;
+}
+
 exports.evaluate = evaluate;
+exports.colorParseTree = colorParseTree;
 exports.DefaultFsDataProvider = DefaultFsDataProvider;
 exports.FsDataProvider = FsDataProvider;
 exports.MapDataProvider = MapDataProvider;
