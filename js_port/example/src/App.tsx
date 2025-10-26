@@ -63,6 +63,7 @@ type EvaluationState =
       typed: TypedValue;
       typeName: string;
       plain: unknown;
+      evaluationTree: ParseTreeNode | null;
       parseTree: ParseTreeNode | null;
       expressionText: string;
     }
@@ -253,7 +254,7 @@ const describeNode = (node: any): { label: string; detail?: string } => {
   }
 };
 
-const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNode => {
+const buildParseNodeTree = (node: any, expression: string, path = '0'): ParseTreeNode => {
   if (!node || typeof node !== 'object') {
     return {
       id: path,
@@ -272,7 +273,7 @@ const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNod
         ? node._keyValues
         : [];
     const children: ParseTreeNode[] = entries.map((kv: any, index: number) => {
-      const childNode = buildParseTree(kv?.ValueExpression, expression, `${path}.${index}`);
+      const childNode = buildParseNodeTree(kv?.ValueExpression, expression, `${path}.${index}`);
       const keyLabel = typeof kv?.Key === 'string' ? kv.Key : `entry ${index + 1}`;
       return {
         ...childNode,
@@ -281,7 +282,7 @@ const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNod
     });
 
     if (node?.singleReturn) {
-      const returnNode = buildParseTree(node.singleReturn, expression, `${path}.${children.length}`);
+      const returnNode = buildParseNodeTree(node.singleReturn, expression, `${path}.${children.length}`);
       children.push({
         ...returnNode,
         label: 'Return'
@@ -311,11 +312,11 @@ const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNod
     const operatorSymbol = typeof fnValue?.symbol === 'string' && fnValue.symbol.trim().length ? fnValue.symbol : null;
 
     if (isInfixCall && params.length >= 2) {
-      const operandNodes = params
+      const operandNodes: Array<{ raw: Record<string, unknown>; tree: ParseTreeNode }> = params
         .filter((child: any): child is Record<string, unknown> => Boolean(child))
-        .map((child: any, index: number) => ({
+        .map((child: Record<string, unknown>, index: number) => ({
           raw: child,
-          tree: buildParseTree(child, expression, `${path}.${index * 2}`)
+          tree: buildParseNodeTree(child, expression, `${path}.${index * 2}`)
         }));
 
       const operatorNodes: ParseTreeNode[] = [];
@@ -342,14 +343,13 @@ const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNod
         });
       }
 
-      const children: ParseTreeNode[] = [];
-      for (let idx = 0; idx < operandNodes.length; idx += 1) {
-        const operand = operandNodes[idx];
-        children.push(operand.tree);
+      const children: ParseTreeNode[] = operandNodes.flatMap((operand, idx): ParseTreeNode[] => {
+        const nodes: ParseTreeNode[] = [operand.tree];
         if (idx < operatorNodes.length) {
-          children.push(operatorNodes[idx]);
+          nodes.push(operatorNodes[idx]);
         }
-      }
+        return nodes;
+      });
 
       return {
         id: path,
@@ -365,7 +365,35 @@ const buildParseTree = (node: any, expression: string, path = '0'): ParseTreeNod
   const children = Array.isArray(rawChildren)
     ? rawChildren
         .filter((child): child is Record<string, unknown> => Boolean(child))
-        .map((child, index) => buildParseTree(child, expression, `${path}.${index}`))
+        .map((child, index) => buildParseNodeTree(child, expression, `${path}.${index}`))
+    : [];
+
+  return {
+    id: path,
+    label: baseInfo.label,
+    detail: baseInfo.detail,
+    range,
+    children
+  };
+};
+
+const buildEvaluationTree = (node: any, expression: string, path = '0'): ParseTreeNode => {
+  if (!node || typeof node !== 'object') {
+    return {
+      id: path,
+      label: 'Unknown',
+      children: []
+    };
+  }
+
+  const baseInfo = describeNode(node);
+  const range = getNodeRange(node);
+
+  const childrenSource = typeof node.getChilds === 'function' ? node.getChilds() : [];
+  const children = Array.isArray(childrenSource)
+    ? childrenSource
+        .filter((child): child is Record<string, unknown> => Boolean(child))
+        .map((child, index) => buildEvaluationTree(child, expression, `${path}.${index}`))
     : [];
 
   return {
@@ -548,7 +576,8 @@ function App() {
   const [expression, setExpression] = useState('1 + 2');
   const [state, setState] = useState<EvaluationState>({ status: 'idle' });
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEvaluationNodeId, setSelectedEvaluationNodeId] = useState<string | null>(null);
+  const [selectedParseNodeId, setSelectedParseNodeId] = useState<string | null>(null);
   const [highlightRange, setHighlightRange] = useState<TextRange | null>(null);
 
   const provider = useMemo(() => new DefaultFsDataProvider(), []);
@@ -560,29 +589,38 @@ function App() {
       const typed = ensureTyped(block.evaluate(provider));
       const plain = convertTypedValue(typed);
       const typeName = getTypeName(typed[0]);
-      const parseTree = buildParseTree(block, expression);
+      const evaluationTree = buildEvaluationTree(block, expression);
+      const parseTree = buildParseNodeTree(block, expression);
       setState({
         status: 'success',
         typed,
         typeName,
         plain,
+        evaluationTree,
         parseTree,
         expressionText: expression
       });
-      setSelectedNodeId(parseTree.id);
-      setHighlightRange(parseTree.range ?? null);
+      setSelectedEvaluationNodeId(evaluationTree?.id ?? null);
+      setSelectedParseNodeId(parseTree?.id ?? null);
+      setHighlightRange(parseTree?.range ?? evaluationTree?.range ?? null);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setState({ status: 'error', message });
-      setSelectedNodeId(null);
+      setSelectedEvaluationNodeId(null);
+      setSelectedParseNodeId(null);
       setHighlightRange(null);
     } finally {
       setIsEvaluating(false);
     }
   };
 
-  const handleNodeSelect = useCallback((node: ParseTreeNode) => {
-    setSelectedNodeId(node.id);
+  const handleEvaluationSelect = useCallback((node: ParseTreeNode) => {
+    setSelectedEvaluationNodeId(node.id);
+    setHighlightRange(node.range ?? null);
+  }, []);
+
+  const handleParseSelect = useCallback((node: ParseTreeNode) => {
+    setSelectedParseNodeId(node.id);
     setHighlightRange(node.range ?? null);
   }, []);
 
@@ -663,39 +701,60 @@ function App() {
                 <Divider />
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    Parse Tree
+                    Expression Structure
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Click a node to highlight the matching part of the evaluated expression.
+                    Explore the evaluation tree (runtime expression blocks) and the parse node tree (source syntax nodes). Clicking any node highlights the corresponding portion of the expression.
                   </Typography>
-                  {state.parseTree ? (
+                  <Stack spacing={2.5}>
                     <Stack
                       direction={{ xs: 'column', md: 'row' }}
                       spacing={2.5}
                       alignItems="stretch"
                     >
                       <Box flex={1} minWidth={0}>
-                        <ParseTreeNodeView
-                          node={state.parseTree}
-                          onSelect={handleNodeSelect}
-                          selectedId={selectedNodeId}
-                        />
+                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                          Evaluation Tree
+                        </Typography>
+                        {state.evaluationTree ? (
+                          <ParseTreeNodeView
+                            node={state.evaluationTree}
+                            onSelect={handleEvaluationSelect}
+                            selectedId={selectedEvaluationNodeId}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Evaluation tree is unavailable.
+                          </Typography>
+                        )}
                       </Box>
                       <Box flex={1} minWidth={0}>
                         <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                          Expression Highlight
+                          Parse Node Tree
                         </Typography>
-                        <HighlightedExpression
-                          expression={state.expressionText}
-                          highlight={highlightRange}
-                        />
+                        {state.parseTree ? (
+                          <ParseTreeNodeView
+                            node={state.parseTree}
+                            onSelect={handleParseSelect}
+                            selectedId={selectedParseNodeId}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Parse node tree is unavailable.
+                          </Typography>
+                        )}
                       </Box>
                     </Stack>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Parse details are unavailable for this expression.
-                    </Typography>
-                  )}
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                        Expression Highlight
+                      </Typography>
+                      <HighlightedExpression
+                        expression={state.expressionText}
+                        highlight={highlightRange}
+                      />
+                    </Box>
+                  </Stack>
                 </Box>
               </Stack>
             </Paper>
