@@ -2,8 +2,10 @@
 using funcscript.core;
 using funcscript.model;
 using NUnit.Framework;
+using NUnit.Framework.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static funcscript.core.FuncScriptParser;
 
 namespace funcscript.test
@@ -90,6 +92,77 @@ namespace funcscript.test
             Assert.That(rightExp.CodeLocation.Length, Is.EqualTo(1));
 
 
+        }
+        void AssertTreeSpanConsitency(ParseNode node)
+        {
+            var left = node.Pos;
+            foreach (var ch in node.Childs)
+            {
+                if (ch.Pos < left)
+                    throw new AssertionException("Node ordering and position inconsitence.");
+                AssertTreeSpanConsitency(ch);
+                left = ch.Pos + ch.Length;
+                if(left>node.Pos+node.Length)
+                    throw new AssertionException($"Child node {node.NodeType} span overflow the span of its parent {node.NodeType}");
+            }
+        }
+        [Test]
+        public void TestColoring()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expText = "1+sin(45)";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            var block = funcscript.core.FuncScriptParser.Parse(provider, expText, out var node, errors);
+            Assert.IsNotNull(block);
+            Assert.IsNotNull(node);
+            Assert.IsEmpty(errors);
+            AssertTreeSpanConsitency(node);
+            var color = FuncScript.ColorParseTree(node).ToArray();
+            Assert.That(color, Has.Length.EqualTo(6));
+
+            var p = 0;
+            var i = 0;
+            var c = color[i];
+            Assert.That(c.NodeType, Is.EqualTo(ParseNodeType.LiteralInteger));
+            Assert.That(c.Pos, Is.EqualTo(p));
+            Assert.That(c.Length, Is.EqualTo(1));
+            p++;
+            i++;
+
+            c = color[i];
+            Assert.That(c.NodeType, Is.EqualTo(ParseNodeType.Operator));
+            Assert.That(c.Pos, Is.EqualTo(p));
+            Assert.That(c.Length, Is.EqualTo(1));
+            p += 1;
+            i++;
+            
+            c = color[i];
+            Assert.That(c.NodeType, Is.EqualTo(ParseNodeType.Identifier));
+            Assert.That(c.Pos, Is.EqualTo(p));
+            Assert.That(c.Length, Is.EqualTo(3));
+            p += 3;
+            i++;
+
+            c = color[i];
+            Assert.That(c.NodeType, Is.EqualTo(ParseNodeType.FunctionParameterList));
+            Assert.That(c.Pos, Is.EqualTo(p));
+            Assert.That(c.Length, Is.EqualTo(1));
+            p++;
+            i++;
+
+            c = color[i];
+            Assert.That(c.NodeType, Is.EqualTo(ParseNodeType.LiteralInteger));
+            Assert.That(c.Pos, Is.EqualTo(p));
+            Assert.That(c.Length, Is.EqualTo(2));
+            p += 2;
+            i++;
+            
+            c = color[i];
+            Assert.That(c.NodeType, Is.EqualTo(ParseNodeType.FunctionParameterList));
+            Assert.That(c.Pos, Is.EqualTo(p));
+            Assert.That(c.Length, Is.EqualTo(1));
+            p++;
+            i++;
         }
     }
 }

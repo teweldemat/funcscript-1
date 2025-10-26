@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Xml.XPath;
 using funcscript.block;
 using Newtonsoft.Json.Serialization;
+using static funcscript.core.FuncScriptParser;
+using System.Diagnostics.Tracing;
 
 namespace funcscript
 {
@@ -694,8 +696,29 @@ namespace funcscript
             }
         }
 
-        
-    
-        
+        public static IEnumerable<ParseNode> ColorParseTree(ParseNode node)
+        {
+            if (node == null || node.Length==0)
+                return Array.Empty<ParseNode>();
+            var ret = new List<ParseNode>();
+
+            if (node.Childs.Count == 0)
+            {
+                return new[] { node };
+            }
+            var first = node.Childs.First();
+            if (first.Pos > node.Pos)
+                ret.Add(new ParseNode(node.NodeType, node.Pos, first.Pos - node.Pos));
+            foreach (var ch in node.Childs)
+            {
+                ret.AddRange(ColorParseTree(ch));
+            }
+
+            var last = node.Childs.Last();
+            if (last.Pos+last.Length < node.Pos+node.Length)
+                ret.Add(new ParseNode(node.NodeType, last.Pos+last.Length , (node.Pos+node.Length)-(last.Pos+last.Length)));
+
+            return ret;
+        }
     }
 }
