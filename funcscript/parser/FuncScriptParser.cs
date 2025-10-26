@@ -1,4 +1,5 @@
-﻿using funcscript.block;
+﻿using System;
+using funcscript.block;
 using funcscript.funcs.math;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -1995,9 +1996,6 @@ namespace funcscript.core
                             Pos = prog.Pos,
                             Length = operands[^1].Pos + operands[^1].Length - prog.Length
                         };
-
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
-                            operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
                     }
                     else if (func is SigSequenceFunction)
                     {
@@ -2014,8 +2012,6 @@ namespace funcscript.core
                             Pos = prog.Pos,
                             Length = operands[^1].Pos + operands[^1].Length - prog.Length
                         };
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
-                            operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
                     }
                     else
                     {
@@ -2026,8 +2022,33 @@ namespace funcscript.core
                             Pos = prog.Pos,
                             Length = operands[^1].Pos + operands[^1].Length - prog.Length
                         };
-                        parseNode = new ParseNode(ParseNodeType.InfixExpression, parseNode!.Pos,
-                            operandNodes[^1].Pos + operandNodes[^1].Length - parseNode.Length);
+                    }
+
+                    ParseNode firstOperandNode = null;
+                    ParseNode lastOperandNode = null;
+                    var childNodes = new List<ParseNode>(operandNodes.Count);
+                    foreach (var operandNode in operandNodes)
+                    {
+                        if (operandNode == null)
+                        {
+                            continue;
+                        }
+
+                        if (firstOperandNode == null)
+                        {
+                            firstOperandNode = operandNode;
+                        }
+
+                        childNodes.Add(operandNode);
+                        lastOperandNode = operandNode;
+                    }
+
+                    if (firstOperandNode != null && lastOperandNode != null)
+                    {
+                        var startPos = firstOperandNode.Pos;
+                        var endPos = lastOperandNode.Pos + lastOperandNode.Length;
+                        var length = Math.Max(0, endPos - startPos);
+                        parseNode = new ParseNode(ParseNodeType.InfixExpression, startPos, length, childNodes);
                     }
                 }
             }
