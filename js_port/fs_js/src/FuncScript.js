@@ -1,7 +1,16 @@
 const { FuncScriptParser } = require('./parser/FuncScriptParser');
-const { MapDataProvider } = require('./core/dataProvider');
-const { ensureTyped } = require('./core/value');
+const dataProviders = require('./core/dataProvider');
+const valueModule = require('./core/value');
+const { FSDataType, getTypeName } = require('./core/fstypes');
+const { CallType, BaseFunction, ParameterList } = require('./core/functionBase');
+const { ExpressionFunction } = require('./core/ExpressionFunction');
+const { FsList, ArrayFsList } = require('./model/FsList');
+const { KeyValueCollection, SimpleKeyValueCollection } = require('./model/KeyValueCollection');
+const { FsError } = require('./model/FsError');
 const buildBuiltinMap = require('./funcs');
+
+const { MapDataProvider } = dataProviders;
+const { ensureTyped } = valueModule;
 
 const builtinProvider = new MapDataProvider(buildBuiltinMap());
 
@@ -21,5 +30,29 @@ function evaluate(expression, provider = new DefaultFsDataProvider()) {
 
 module.exports = {
   evaluate,
-  DefaultFsDataProvider
+  DefaultFsDataProvider,
+  FsDataProvider: dataProviders.FsDataProvider,
+  MapDataProvider: dataProviders.MapDataProvider,
+  KvcProvider: dataProviders.KvcProvider,
+  ensureTyped: valueModule.ensureTyped,
+  normalize: valueModule.normalize,
+  makeValue: valueModule.makeValue,
+  typeOf: valueModule.typeOf,
+  valueOf: valueModule.valueOf,
+  typedNull: valueModule.typedNull,
+  isTyped: valueModule.isTyped,
+  expectType: valueModule.expectType,
+  convertToCommonNumericType: valueModule.convertToCommonNumericType,
+  FSDataType,
+  getTypeName,
+  CallType,
+  BaseFunction,
+  ParameterList,
+  ExpressionFunction,
+  FsList,
+  ArrayFsList,
+  KeyValueCollection,
+  SimpleKeyValueCollection,
+  FsError,
+  buildBuiltinMap
 };
