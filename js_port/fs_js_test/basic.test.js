@@ -40,6 +40,10 @@ function run() {
   assert.strictEqual(collection.get('x')[1], 5);
   assert.strictEqual(collection.get('y')[1], 6);
 
+  result = evaluate('{a:5}.a', provider);
+  assert.strictEqual(result[0], FSDataType.Integer);
+  assert.strictEqual(result[1], 5);
+
   result = evaluate('{value:[10,20,30]; return value(2);}', provider);
   assert.strictEqual(result[0], FSDataType.Integer);
   assert.strictEqual(result[1], 30);

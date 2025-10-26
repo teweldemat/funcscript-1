@@ -126,6 +126,65 @@ function run() {
     () => expectEvaluation('Reduce(Map([1,2,4],(x)=>x*x),(c,p)=>p+c)', 21)
   );
 
+  const intExpressions = [
+    { exp: '(()=>())()+1', expected: 1 },
+    { exp: '(()=>5)()', expected: 5 },
+    { exp: '-1', expected: -1 },
+    { exp: '2--1', expected: 3 },
+    { exp: '2-1', expected: 1 },
+    { exp: '1/2', expected: 0 },
+    { exp: 'If(1=0,10,5-1)', expected: 4 },
+    { exp: '((a)=>a*a)(3)', expected: 9 },
+    {
+      exp: `{
+    x:3;
+    return x*x+{return 2;};
+}`,
+      expected: 11
+    },
+    {
+      exp: `{
+    x:(a)=>a*a;
+    return x(3);
+}`,
+      expected: 9
+    },
+    {
+      exp: `{
+    j:{"age":30,"name":20,"parts":{"x":23, "y":10}};
+    return j.parts.x;
+}`,
+      expected: 23
+    },
+    {
+      exp: `{
+    j:(a)=>a*a;
+return j;
+}(4)` ,
+      expected: 16
+    },
+    {
+      exp: `{
+  b:{"x":(a)=>a*a};
+  return (b.x)(2);
+}`,
+      expected: 4
+    },
+    {
+      exp: '{return (x)=>3;}(3)',
+      expected: 3
+    },
+    { exp: '1+{return 2;}', expected: 3 },
+    { exp: '{return 2;}', expected: 2 }
+  ];
+
+  intExpressions.forEach(({ exp, expected }) => {
+    runCase(suite, `IntExpression ${exp}`, () => expectEvaluation(exp, expected));
+  });
+
+  runCase(suite, 'MapNull null map', () => expectNull('null map (x)=>x'));
+  runCase(suite, 'MapNull undefined', () => expectNull('y map (x)=>x'));
+
   // Remaining tests in BasicTests.cs are kept as TODO markers for parity tracking
   markTodo(suite, 'ExtendedScenarios', 'Remaining BasicTests.cs coverage pending port');
 

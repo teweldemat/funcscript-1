@@ -23,6 +23,8 @@
   [ ] GetLiteralMatch stress coverage
   [ ] KvcTests advanced scenarios (selection, merging, delegates, JSON parity)
   [ ] ParseTree parse-node exposure
+  [x] DotNetExperiment parity
+  [x] TestCommons utilities
   [ ] Syntax2 language constructs
     [x] String interpolation literals (`f'…'`)
     [x] Null-safe operators (`?.`, `?!`)

@@ -22,7 +22,11 @@ class AddFunction extends BaseFunction {
       const currentType = typeOf(typed);
       const currentValue = valueOf(typed);
 
-      if (resultType === null) {
+      if (currentType === FSDataType.Null) {
+        continue;
+      }
+
+      if (resultType === null || resultType === FSDataType.Null) {
         resultType = currentType;
         resultValue = currentValue;
         continue;

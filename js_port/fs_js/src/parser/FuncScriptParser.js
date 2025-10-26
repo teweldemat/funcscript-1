@@ -83,7 +83,10 @@ env.getGeneralInfixFunctionCall = getGeneralInfixFunctionCall;
 function getRootExpression(context, exp, index, errors) {
   const kvcRes = getKvcExpression(context, exp, index, errors);
   if (kvcRes.block) {
-    return kvcRes;
+    const end = utils.skipSpace(exp, kvcRes.next);
+    if (end === exp.length) {
+      return kvcRes;
+    }
   }
   return getExpression(context, exp, index, errors);
 }

@@ -20,11 +20,16 @@ class MapListFunction extends BaseFunction {
       return error;
     }
 
-    const list = helpers.ensureList(parameters.getParameter(provider, 0));
+    const first = helpers.ensureTyped(parameters.getParameter(provider, 0));
+    if (helpers.typeOf(first) === helpers.FSDataType.Null) {
+      return helpers.typedNull();
+    }
+
+    const list = helpers.typeOf(first) === helpers.FSDataType.List ? helpers.valueOf(first) : null;
     if (!list) {
       return helpers.makeError(
         helpers.FsError.ERROR_TYPE_MISMATCH,
-        `${this.symbol} function: The first parameter should be ${this.ParName(0)}`
+        `${this.symbol} function: The first parameter should be ${this.parName(0)}`
       );
     }
 
@@ -32,7 +37,7 @@ class MapListFunction extends BaseFunction {
     if (!fn) {
       return helpers.makeError(
         helpers.FsError.ERROR_TYPE_MISMATCH,
-        `${this.symbol} function: The second parameter should be ${this.ParName(1)}`
+        `${this.symbol} function: The second parameter should be ${this.parName(1)}`
       );
     }
 

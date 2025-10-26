@@ -36,12 +36,11 @@ module.exports = function createLambdaParser(env) {
       return { next: index, func: null };
     }
     let i = skipSpace(exp, listRes.next);
-    if (i + 1 >= exp.length || getLiteralMatch(exp, i, '=>') === i) {
-      errors.push({ position: i, message: "'=>' expected" });
+    const arrow = getLiteralMatch(exp, i, '=>');
+    if (arrow === i) {
       return { next: index, func: null };
     }
-    i += 2;
-    i = skipSpace(exp, i);
+    i = skipSpace(exp, arrow);
 
     const exprRes = env.getExpression(context, exp, i, errors);
     if (!exprRes.block) {

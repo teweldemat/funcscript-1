@@ -115,16 +115,21 @@ module.exports = function createUnitParser(env) {
     }
     i = skipSpace(exp, open);
     const exprRes = env.getExpression(context, exp, i, errors);
-    if (!exprRes.block) {
-      return { next: index, block: null };
+    let block = exprRes.block;
+    let nextIndex = exprRes.next;
+    if (!block) {
+      block = new LiteralBlock(env.typedNull());
+      nextIndex = i;
     }
-    i = skipSpace(exp, exprRes.next);
+    i = skipSpace(exp, nextIndex);
     const close = env.utils.getLiteralMatch(exp, i, ')');
     if (close === i) {
       errors.push({ position: i, message: "')' expected" });
       return { next: index, block: null };
     }
-    return { next: close, block: exprRes.block };
+    block.Pos = index;
+    block.Length = close - index;
+    return { next: close, block };
   }
 
   function getUnit(context, exp, index, errors) {
