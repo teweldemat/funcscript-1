@@ -3,8 +3,8 @@ import { useEffect, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, keymap, drawSelection, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { Engine } from '@tewelde/walya';
-import { computeColoredSegments } from './walyaColoring';
+import { Engine } from '@tewelde/walya/browser';
+import { computeColoredSegments } from './walyaColoring.js';
 // walya parser exposed via CommonJS build without type declarations
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 import * as parserModule from '@tewelde/walya/parser';

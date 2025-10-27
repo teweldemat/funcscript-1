@@ -17,7 +17,7 @@ import {
   WalyaEditor,
   type ColoredSegment,
   parseNodePalette
-} from 'walya-editor';
+} from '@tewelde/walya-editor';
 import { theme } from './theme';
 
 const defaultExpression = 'If(1 = 1, 100 * sin(45), 0)';

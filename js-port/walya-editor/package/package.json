@@ -1,6 +1,6 @@
 {
   "name": "walya-editor",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",

@@ -11,10 +11,10 @@ import {
   highlightActiveLine
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { Engine } from '@tewelde/walya';
-import type { DefaultFsDataProvider } from '@tewelde/walya';
-import type { ColoredSegment } from './walyaColoring';
-import { computeColoredSegments } from './walyaColoring';
+import { Engine } from '@tewelde/walya/browser';
+import type { DefaultFsDataProvider } from '@tewelde/walya/browser';
+import type { ColoredSegment } from './walyaColoring.js';
+import { computeColoredSegments } from './walyaColoring.js';
 
 // walya parser exposed via CommonJS build without type declarations
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

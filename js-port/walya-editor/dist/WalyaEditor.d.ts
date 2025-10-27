@@ -1,4 +1,4 @@
-import type { ColoredSegment } from './walyaColoring';
+import type { ColoredSegment } from './walyaColoring.js';
 export type WalyaEditorProps = {
     value: string;
     onChange: (value: string) => void;

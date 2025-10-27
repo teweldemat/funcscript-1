@@ -1,2 +1,2 @@
-export { default as WalyaEditor } from './WalyaEditor';
-export { computeColoredSegments, parseNodePalette } from './walyaColoring';
+export { default as WalyaEditor } from './WalyaEditor.js';
+export { computeColoredSegments, parseNodePalette } from './walyaColoring.js';
