@@ -1,8 +1,8 @@
-using funcscript.core;
+using FuncScript.Core;
 using System;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class IfConditionFunction : IFsFunction
     {
@@ -12,12 +12,12 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "If";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count < MaxParsCount)
-                throw new error.TypeMismatchError("IfConditionFunction requires three parameters: condition, trueResult, and falseResult.");
+                throw new Error.TypeMismatchError("IfConditionFunction requires three parameters: condition, trueResult, and falseResult.");
 
             var condition = pars.GetParameter(parent, 0);
 

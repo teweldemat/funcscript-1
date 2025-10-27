@@ -1,8 +1,8 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
 using System.IO;
 
-namespace funcscript.funcs.os
+namespace FuncScript.Functions.OS
 {
     internal class IsFileFunction : IFsFunction
     {
@@ -12,16 +12,16 @@ namespace funcscript.funcs.os
 
         public string Symbol => "isfile";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
+                throw new Error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
             if (par0 == null || !(par0 is string))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. Invalid parameter type, expected a string");
+                throw new Error.TypeMismatchError($"Function {this.Symbol}. Invalid parameter type, expected a string");
 
             var path = (string)par0;
             return File.Exists(path) && !Directory.Exists(path);

@@ -7,33 +7,34 @@ using System.Threading.Tasks;
 
 namespace FuncScript.Functions.Logic
 {
-    public class CaseFunction : IFsFunction
+    public class SwitchFunction : IFsFunction
     {
         public int MaxParsCount => -1;
 
         public CallType CallType => CallType.Prefix;
 
-        public string Symbol => "Case";
+        public string Symbol => "switch";
 
         public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
-            int count = pars.Count;
+            var selector = pars.GetParameter(parent, 0);
 
-            for (int i = 0; i < count / 2; i++)
+            for (var i = 1; i < pars.Count - 1; i += 2)
             {
-                var cond = pars.GetParameter(parent, 2 * i);
+                var val = pars.GetParameter(parent, i);
 
-                if (cond is bool && (bool)cond)
+                if ((val == null && selector == null) ||
+                    (val != null && selector != null && selector.Equals(val)))
                 {
-                    return pars.GetParameter(parent, 2 * i + 1);
+                    return pars.GetParameter(parent, i + 1);
                 }
             }
 
-            if (count % 2 == 1)
+            if (pars.Count % 2 == 0)
             {
-                return pars.GetParameter(parent, count - 1);
+                return pars.GetParameter(parent, pars.Count - 1);
             }
 
             return null;

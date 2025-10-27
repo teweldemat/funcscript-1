@@ -1,12 +1,12 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     [FunctionAlias("!")]
     public class NotFunction : IFsFunction
@@ -18,7 +18,7 @@ namespace funcscript.funcs.logic
 
         public string Symbol => SYMBOL;
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

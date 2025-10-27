@@ -1,6 +1,6 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Text
 {
     public class IsBlankFunction : IFsFunction
     {
@@ -11,18 +11,18 @@ namespace funcscript.funcs.math
 
         public string Symbol => SYMBOL;
 
-        public int Precidence => 100;
+        public int Precedence => 100;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count < 1)
-                throw new error.TypeMismatchError($"{this.Symbol}: argument expected");
+                throw new Error.TypeMismatchError($"{this.Symbol}: argument expected");
 
             if (pars.GetParameter(parent, 0) == null)
                 return true;
 
             if (pars.GetParameter(parent, 0) is not string str)
-                throw new error.TypeMismatchError($"{this.Symbol}: string expected");
+                throw new Error.TypeMismatchError($"{this.Symbol}: string expected");
 
             return string.IsNullOrEmpty(str.Trim());
         }

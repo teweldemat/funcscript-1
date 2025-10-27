@@ -1,8 +1,8 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using global::FuncScript.Core;
+using global::FuncScript.Model;
 using Npgsql;
 
-namespace funcscript.sql.core
+namespace FuncScript.Sql.Core
 {
     public class PgSqlFunction : IFsFunction
     {
@@ -12,7 +12,7 @@ namespace funcscript.sql.core
 
         public string Symbol => "pgsql";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
@@ -46,7 +46,7 @@ namespace funcscript.sql.core
                 results.Add(new SimpleKeyValueCollection(null,row.ToArray()));
             }
 
-            var normalizedResults = FuncScript.NormalizeDataType(results);
+            var normalizedResults = FuncScriptRuntime.NormalizeDataType(results);
             return normalizedResults ?? "null";
         }
 

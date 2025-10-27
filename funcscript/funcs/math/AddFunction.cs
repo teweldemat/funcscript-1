@@ -1,5 +1,5 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Math
 {
     public class SumList : FsList
     {
@@ -54,7 +54,7 @@ namespace funcscript.funcs.math
 
         public string Symbol => "+";
 
-        public int Precidence => 100;
+        public int Precedence => 100;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
@@ -179,7 +179,7 @@ namespace funcscript.funcs.math
 
                     else if (d is KeyValueCollection)
                     {
-                        throw new error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
+                        throw new Error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
                     }
 
                 }
@@ -212,7 +212,7 @@ namespace funcscript.funcs.math
 
                     else if (d is KeyValueCollection)
                     {
-                        throw new error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
+                        throw new Error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
                     }
                 }
                 if (isString)
@@ -247,14 +247,14 @@ namespace funcscript.funcs.math
                     }
                     else if (d is KeyValueCollection)
                     {
-                        throw new error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
+                        throw new Error.TypeMismatchError($"{this.Symbol}: Keyvalue collection not expected");
                     }
                 }
                 if(isKv)
                 {
                     var kv = d as KeyValueCollection;
                     if(kv==null)
-                        throw new error.TypeMismatchError("Keyvalue collection expected");
+                        throw new Error.TypeMismatchError("Keyvalue collection expected");
                     if (kvTotal == null)
                         kvTotal = kv;
                     else

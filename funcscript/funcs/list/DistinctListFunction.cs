@@ -1,7 +1,7 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 
-namespace funcscript.funcs.list
+namespace FuncScript.Functions.List
 {
     public class DistinctListFunction : IFsFunction
     {
@@ -11,7 +11,7 @@ namespace funcscript.funcs.list
 
         public string Symbol => "Distinct";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         class DistinctListFuncPar : IParameterList
         {
@@ -32,7 +32,7 @@ namespace funcscript.funcs.list
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+                throw new Error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
 
@@ -40,7 +40,7 @@ namespace funcscript.funcs.list
                 return null;
 
             if (!(par0 is FsList))
-                throw new error.TypeMismatchError($"{this.Symbol} function: The parameter should be {this.ParName(0)}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: The parameter should be {this.ParName(0)}");
 
             var lst = (FsList)par0;
 

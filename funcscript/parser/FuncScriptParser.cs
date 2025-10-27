@@ -1,13 +1,11 @@
 ﻿using System;
-using funcscript.block;
-using funcscript.funcs.math;
+using FuncScript.Block;
+using FuncScript.Functions.Math;
 using System.Text;
 using System.Text.RegularExpressions;
-using funcscript.funcs.logic;
-using funcscript.model;
-using funcscript.nodes;
-
-namespace funcscript.core
+using FuncScript.Functions.Logic;
+using FuncScript.Model;
+namespace FuncScript.Core
 {
     public partial class FuncScriptParser
     {

@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace funcscript.error
+namespace FuncScript.Error
 {
     [Serializable]
     public class TypeMismatchError : Exception

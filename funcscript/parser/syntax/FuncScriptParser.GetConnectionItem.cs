@@ -1,8 +1,8 @@
-using funcscript.model;
+using FuncScript.Model;
 using System.Collections.Generic;
-using funcscript.block;
+using FuncScript.Block;
 
-namespace funcscript.core
+namespace FuncScript.Core
 {
     public partial class FuncScriptParser
     {

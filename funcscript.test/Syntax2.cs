@@ -1,5 +1,5 @@
-﻿using funcscript.error;
-using funcscript.model;
+﻿using global::FuncScript.Error;
+using global::FuncScript.Model;
 using Microsoft.VisualBasic;
 using NuGet.Frameworks;
 using NUnit.Framework;
@@ -11,7 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.test
+namespace FuncScript.Test
 {
     public class Syntax2
     {
@@ -21,7 +21,7 @@ namespace funcscript.test
         {
             var p = new KvcProvider(new ObjectKvc(new{x = 100}),
                 new DefaultFsDataProvider());
-            var res = FuncScript.Evaluate(p, @"f'y={x+2}'");
+            var res = FuncScriptRuntime.Evaluate(p, @"f'y={x+2}'");
             Assert.AreEqual("y=102", res);
         }
 
@@ -31,7 +31,7 @@ namespace funcscript.test
         {
             var p = new KvcProvider(new ObjectKvc(new { x = 100 }),
                 new DefaultFsDataProvider());
-            var res = FuncScript.Evaluate(p, @"f'y=\{x+2}'");
+            var res = FuncScriptRuntime.Evaluate(p, @"f'y=\{x+2}'");
             Assert.AreEqual(@"y={x+2}", res);
         }
 
@@ -41,7 +41,7 @@ namespace funcscript.test
             var exp = @"'test\'\''";
             var p = new KvcProvider(new ObjectKvc(new { x = 100 }),
                 new DefaultFsDataProvider());
-            var res = FuncScript.Evaluate(p, exp);
+            var res = FuncScriptRuntime.Evaluate(p, exp);
             Assert.That(res,Is.EqualTo("test''"));
         }
 
@@ -49,14 +49,14 @@ namespace funcscript.test
         public void ParseUnicodeString()
         {
             var exp = @"'test\u0020'";
-            var res = FuncScript.Evaluate(exp);
+            var res = FuncScriptRuntime.Evaluate(exp);
             Assert.That(res,Is.EqualTo("test "));
         }
         [Test]
         public void NullSafeGetMemberNullValue()
         {
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, @"x?.y");
+            var res = FuncScriptRuntime.Evaluate(p, @"x?.y");
             Assert.AreEqual(null, res);
         }
 
@@ -64,7 +64,7 @@ namespace funcscript.test
         public void NullSafeGetMemberNoneNullValue()
         {
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, @"{ x:{y:5}; return x?.y}");
+            var res = FuncScriptRuntime.Evaluate(p, @"{ x:{y:5}; return x?.y}");
             Assert.AreEqual(5, res);
         }
 
@@ -72,7 +72,7 @@ namespace funcscript.test
         public void NullSafeExpressionNullValue()
         {
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, @"x?!(x*200)");
+            var res = FuncScriptRuntime.Evaluate(p, @"x?!(x*200)");
             Assert.AreEqual(null, res);
         }
 
@@ -83,7 +83,7 @@ namespace funcscript.test
         public void NullSafeExpressionNoneNullValue()
         {
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, @"{ x:5; return x?!(x*200)}");
+            var res = FuncScriptRuntime.Evaluate(p, @"{ x:5; return x?!(x*200)}");
             Assert.AreEqual(1000, res);
         }
 
@@ -91,7 +91,7 @@ namespace funcscript.test
         public void SquareBraceIndexLiteral()
         {
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, @"[4,5,6][1]");
+            var res = FuncScriptRuntime.Evaluate(p, @"[4,5,6][1]");
             Assert.AreEqual(5, res);
         }
         [Test]
@@ -99,7 +99,7 @@ namespace funcscript.test
         {
             var exp = @"{y:()=>5;return y()}";
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, exp);
+            var res = FuncScriptRuntime.Evaluate(p, exp);
             Assert.AreEqual(5, res);
         }
 
@@ -107,7 +107,7 @@ namespace funcscript.test
         public void SquareBraceIndexVariable()
         {
             var p = new DefaultFsDataProvider();
-            var res = FuncScript.Evaluate(p, @"{x:[4,5,6];return x[1]}");
+            var res = FuncScriptRuntime.Evaluate(p, @"{x:[4,5,6];return x[1]}");
             Assert.AreEqual(5, res);
         }
 
@@ -116,7 +116,7 @@ namespace funcscript.test
         {
             var template = "abc";
             var expeced = "abc";
-            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            var res = FuncScriptRuntime.Evaluate(template, new DefaultFsDataProvider(), null, FuncScriptRuntime.ParseMode.FsTemplate);
             Assert.That(res, Is.EqualTo(expeced));
         }
 
@@ -125,7 +125,7 @@ namespace funcscript.test
         {
             var template = "abc${'1'}";
             var expeced = "abc1";
-            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            var res = FuncScriptRuntime.Evaluate(template, new DefaultFsDataProvider(), null, FuncScriptRuntime.ParseMode.FsTemplate);
             Assert.That(res, Is.EqualTo(expeced));
         }
         [Test]
@@ -133,7 +133,7 @@ namespace funcscript.test
         {
             var template = "abc${['d',1,['e',2]]}f";
             var expeced = "abcd1e2f";
-            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            var res = FuncScriptRuntime.Evaluate(template, new DefaultFsDataProvider(), null, FuncScriptRuntime.ParseMode.FsTemplate);
             Assert.That(res, Is.EqualTo(expeced));
         }
         [Test]
@@ -142,14 +142,14 @@ namespace funcscript.test
 
             var template = "abc${['d',1] map (x)=>'>'+x}f";
             var expeced = "abc>d>1f";
-            var res = FuncScript.Evaluate(template, new DefaultFsDataProvider(), null, FuncScript.ParseMode.FsTemplate);
+            var res = FuncScriptRuntime.Evaluate(template, new DefaultFsDataProvider(), null, FuncScriptRuntime.ParseMode.FsTemplate);
             Assert.That(res, Is.EqualTo(expeced));
         }
         //[Test]
         //public void ListParsingBug_23_6_17()
         //{
         //    var expr = "[[1][2]]";
-        //    Assert.Throws<SyntaxError>(()=>FuncScript.Evaluate(expr));
+        //    Assert.Throws<SyntaxError>(()=>FuncScriptRuntime.Evaluate(expr));
 
         //}
 
@@ -161,7 +161,7 @@ namespace funcscript.test
         [TestCase("(case 1>2:[1], [10])[0]", 10)]
         public void CaseExpression(string exp,object expected)
         {
-            Assert.AreEqual(expected, FuncScript.Evaluate(exp));
+            Assert.AreEqual(expected, FuncScriptRuntime.Evaluate(exp));
         }
 
         [Test]
@@ -169,9 +169,9 @@ namespace funcscript.test
         [TestCase("switch 4, 1:'a', 2:'b', 4:'c'", "c")]
         [TestCase("switch 4, 1:'a', 2:'b', 3:'c'", null)]
         [TestCase("switch 4, 1:'a', 2:'b', 3:'c','that'", "that")]
-        public void SwtichExpression(string exp, object expected)
+        public void SwitchExpression(string exp, object expected)
         {
-            Assert.AreEqual(expected, FuncScript.Evaluate(exp));
+            Assert.AreEqual(expected, FuncScriptRuntime.Evaluate(exp));
         }
     }
 }

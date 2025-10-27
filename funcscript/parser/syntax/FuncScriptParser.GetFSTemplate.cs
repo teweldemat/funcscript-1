@@ -1,10 +1,10 @@
 using System.Text;
-using funcscript.model;
+using FuncScript.Model;
 using System.Collections.Generic;
-using funcscript.block;
-using funcscript.funcs.math;
+using FuncScript.Block;
+using FuncScript.Functions.Text;
 
-namespace funcscript.core
+namespace FuncScript.Core
 {
     public partial class FuncScriptParser
     {

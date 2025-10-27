@@ -1,8 +1,8 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 
-namespace funcscript.funcs.keyvalue
+namespace FuncScript.Functions.KeyValue
 {
     public class KvcNoneNullMemberFunction : IFsFunction
     {
@@ -12,18 +12,18 @@ namespace funcscript.funcs.keyvalue
 
         public string Symbol => "?.";
 
-        public int Precidence => 200;
+        public int Precedence => 200;
 
         private object EvaluateInternal(object target, object key)
         {
             if (!(key is string))
-                throw new error.TypeMismatchError($"{Symbol} function: The second parameter should be a string (Member key).");
+                throw new Error.TypeMismatchError($"{Symbol} function: The second parameter should be a string (Member key).");
 
             if (target == null)
                 return null;
 
             if (!(target is KeyValueCollection))
-                throw new error.TypeMismatchError($"{Symbol} function: Cannot access member '{key}' on non-KeyValueCollection type '{FuncScript.GetFsDataType(target)}'.");
+                throw new Error.TypeMismatchError($"{Symbol} function: Cannot access member '{key}' on non-KeyValueCollection type '{FuncScript.GetFsDataType(target)}'.");
 
             return ((KeyValueCollection)target).Get(((string)key).ToLower());
         }
@@ -31,7 +31,7 @@ namespace funcscript.funcs.keyvalue
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{Symbol} function: Expected {MaxParsCount} parameters, received {pars.Count}.");
+                throw new Error.TypeMismatchError($"{Symbol} function: Expected {MaxParsCount} parameters, received {pars.Count}.");
 
             
             var key = pars.GetParameter(parent,1);

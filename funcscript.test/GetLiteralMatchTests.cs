@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
-using funcscript.core;
+using global::FuncScript.Core;
 using NUnit.Framework;
 
-namespace funcscript.test
+namespace FuncScript.Test
 {
     [TestFixture]
     public class TestGetLiteralMatch

@@ -1,12 +1,12 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.misc
+namespace FuncScript.Functions.Misc
 {
     public abstract class Fslogger
     {
@@ -42,12 +42,12 @@ namespace funcscript.funcs.misc
 
         public string Symbol => "log";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count == 0)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: {this.ParName(0)} expected");
+                throw new Error.EvaluationTimeException($"{this.Symbol} function: {this.ParName(0)} expected");
 
             var tag = pars.Count > 1 ? $"({pars.GetParameter(parent, 1).ToString()})" : "";
             var output = pars.Count > 2 ? (pars.GetParameter(parent, 2) is bool ? (bool)pars.GetParameter(parent, 2) : false) : true;

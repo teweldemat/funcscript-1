@@ -1,5 +1,5 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Text
 {
     public class TemplateMergeMergeFunction : IFsFunction
     {
@@ -19,7 +19,7 @@ namespace funcscript.funcs.math
 
         public string Symbol => SYMBOL;
 
-        public int Precidence => 100;
+        public int Precedence => 100;
 
         void MergeList(StringBuilder sb,FsList list) 
         {

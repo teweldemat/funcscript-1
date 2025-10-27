@@ -1,5 +1,5 @@
-﻿using funcscript.core;
-using funcscript.error;
+﻿using global::FuncScript.Core;
+using global::FuncScript.Error;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -8,13 +8,13 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.test
+namespace FuncScript.Test
 {
     public class TestErrorReporting
     {
         void AnalyzeError(Exception ex, String exp, int expectedPos, int expecctedLen)
         {
-            Assert.AreEqual(typeof(error.EvaluationException), ex.GetType());
+            Assert.AreEqual(typeof(Error.EvaluationException), ex.GetType());
             var evalError = (EvaluationException)ex;
             Console.WriteLine(evalError.Message);
             if (evalError.InnerException != null)
@@ -24,7 +24,7 @@ namespace funcscript.test
         }
         void AnalyzeSyntaxError(Exception ex, String exp)
         {
-            Assert.AreEqual(typeof(error.SyntaxError), ex.GetType());
+            Assert.AreEqual(typeof(Error.SyntaxError), ex.GetType());
             var sError = (SyntaxError)ex;
             Console.WriteLine(sError.Message);
             if (sError.InnerException != null)
@@ -32,7 +32,7 @@ namespace funcscript.test
         }
         void AnalyzeMainSyntaxErrorLine(Exception ex,string line)
         {
-            Assert.AreEqual(typeof(error.SyntaxError), ex.GetType());
+            Assert.AreEqual(typeof(Error.SyntaxError), ex.GetType());
             var sError = (SyntaxError)ex;
             Assert.That(sError.Line,Is.EqualTo(line));
         }
@@ -42,7 +42,7 @@ namespace funcscript.test
             var exp = $"length(a)";
             try
             {
-                FuncScript.Evaluate(exp);
+                FuncScriptRuntime.Evaluate(exp);
             }
             catch (Exception ex)
             {
@@ -58,7 +58,7 @@ namespace funcscript.test
             var exp = $"10+{error_exp}";
             try
             {
-                FuncScript.Evaluate(exp);
+                FuncScriptRuntime.Evaluate(exp);
             }
             catch (Exception ex)
             {
@@ -72,13 +72,13 @@ namespace funcscript.test
             var exp = $"10+{error_exp}";
             try
             {
-                FuncScript.Evaluate(exp);
+                FuncScriptRuntime.Evaluate(exp);
                 throw new Exception("No error");
             }
             catch (Exception ex)
             {
                 AnalyzeError(ex, exp, exp.IndexOf(error_exp), error_exp.Length);
-                Assert.AreEqual(typeof(error.TypeMismatchError), ex.InnerException.GetType());
+                Assert.AreEqual(typeof(Error.TypeMismatchError), ex.InnerException.GetType());
             }
         }
         [Test]
@@ -88,13 +88,13 @@ namespace funcscript.test
             var exp = $"10+{error_exp}";
             try
             {
-                FuncScript.Evaluate(exp);
+                FuncScriptRuntime.Evaluate(exp);
                 throw new Exception("No error");
             }
             catch (Exception ex)
             {
                 AnalyzeError(ex, exp, exp.IndexOf(error_exp), error_exp.Length);
-                Assert.AreEqual(typeof(error.TypeMismatchError), ex.InnerException.GetType());
+                Assert.AreEqual(typeof(Error.TypeMismatchError), ex.InnerException.GetType());
             }
         }
         [Test]
@@ -104,13 +104,13 @@ namespace funcscript.test
             var exp = $"10+{error_exp}";
             try
             {
-                FuncScript.Evaluate(exp);
+                FuncScriptRuntime.Evaluate(exp);
                 throw new Exception("No error");
             }
             catch (Exception ex)
             {
                 AnalyzeError(ex, exp, exp.IndexOf(error_exp), error_exp.Length);
-                Assert.AreEqual(typeof(error.TypeMismatchError), ex.InnerException.GetType());
+                Assert.AreEqual(typeof(Error.TypeMismatchError), ex.InnerException.GetType());
             }
 
         }
@@ -123,8 +123,8 @@ namespace funcscript.test
             var msg = Guid.NewGuid().ToString();
             try
             {
-                //FuncScript.Evaluate(exp, new { f = new Func<int, int>((x) => { throw new Exception("internal"); }) });
-                FuncScript.EvaluateWithVars(exp, new
+                //FuncScriptRuntime.Evaluate(exp, new { f = new Func<int, int>((x) => { throw new Exception("internal"); }) });
+                FuncScriptRuntime.EvaluateWithVars(exp, new
                 {
                     f = new Func<int, int>((x) =>
                     {
@@ -145,8 +145,8 @@ namespace funcscript.test
             var msg = Guid.NewGuid().ToString();
             try
             {
-                //FuncScript.Evaluate(exp, new { f = new Func<int, int>((x) => { throw new Exception("internal"); }) });
-                FuncScript.EvaluateWithVars(exp, new
+                //FuncScriptRuntime.Evaluate(exp, new { f = new Func<int, int>((x) => { throw new Exception("internal"); }) });
+                FuncScriptRuntime.EvaluateWithVars(exp, new
                 {
                     f = new Func<int, int>((x) =>
                     {
@@ -168,8 +168,8 @@ namespace funcscript.test
             var msg = Guid.NewGuid().ToString();
             try
             {
-                //FuncScript.Evaluate(exp, new { f = new Func<int, int>((x) => { throw new Exception("internal"); }) });
-                FuncScript.EvaluateWithVars(exp, new { f = new Func<int, int>((x) =>
+                //FuncScriptRuntime.Evaluate(exp, new { f = new Func<int, int>((x) => { throw new Exception("internal"); }) });
+                FuncScriptRuntime.EvaluateWithVars(exp, new { f = new Func<int, int>((x) =>
                 {
                     throw new Exception(msg);
                 })});

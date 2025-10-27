@@ -1,4 +1,4 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
 
     public class GuidFunction : IFsFunction
@@ -17,12 +17,12 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "guid";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException(
+                throw new Error.EvaluationTimeException(
                     $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
@@ -31,13 +31,13 @@ namespace funcscript.funcs.logic
                 return null;
 
             if (!(par0 is string))
-                throw new error.TypeMismatchError(
+                throw new Error.TypeMismatchError(
                     $"Function {this.Symbol}: Type mismatch. Expected a string.");
 
             var str = (string)par0;
 
             if (!Guid.TryParse(str, out var guid))
-                throw new error.TypeMismatchError(
+                throw new Error.TypeMismatchError(
                     $"Function {this.Symbol}: String '{par0}' is not a valid GUID.");
 
             return guid;

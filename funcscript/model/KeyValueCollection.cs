@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Specialized;
-using funcscript.core;
+using FuncScript.Core;
 
-namespace funcscript.model
+namespace FuncScript.Model
 {
 
     /// <summary>
@@ -120,7 +120,7 @@ namespace funcscript.model
             }
 
             if (col1.ParentProvider != col2.ParentProvider)
-                throw new error.EvaluationTimeException(
+                throw new Error.EvaluationTimeException(
                     "Key value collections from different contexts can't be merged");
             return new SimpleKeyValueCollection(col1.ParentProvider,kvs);
         }

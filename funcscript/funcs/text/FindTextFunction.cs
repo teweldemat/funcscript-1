@@ -1,7 +1,7 @@
-using funcscript.core;
-using funcscript.model;
+using FuncScript.Core;
+using FuncScript.Model;
 
-namespace funcscript.funcs.text
+namespace FuncScript.Functions.Text
 {
     public class FindTextFunction : IFsFunction
     {
@@ -12,19 +12,19 @@ namespace funcscript.funcs.text
 
         public string Symbol => SYMBOL;
 
-        public int Precidence => 100;
+        public int Precedence => 100;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count < 2 || pars.Count > MaxParsCount)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: Two or three parameters expected");
+                throw new Error.TypeMismatchError($"{this.Symbol}: Two or three parameters expected");
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
             var par2 = pars.Count > 2 ? pars.GetParameter(parent, 2) : null;
 
             if (par0 == null || par1 == null)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: Two strings and optionally an index expected as parameters");
+                throw new Error.TypeMismatchError($"{this.Symbol}: Two strings and optionally an index expected as parameters");
 
             if (!(par0 is string text))
                 return new FsError(FsError.ERROR_TYPE_MISMATCH, $"{this.Symbol}: first parameter should be string");

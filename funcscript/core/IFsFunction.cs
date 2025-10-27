@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace funcscript.core
+namespace FuncScript.Core
 {
     public interface IFsFunction
     {
@@ -9,7 +9,7 @@ namespace funcscript.core
         int MaxParsCount { get; }
         CallType CallType { get; }
         String Symbol { get; }
-        int Precidence { get; }
+        int Precedence { get; }
     }
 
     public class FunctionAliasAttribute : Attribute

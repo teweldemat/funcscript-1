@@ -1,7 +1,7 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class LessThanOrEqualFunction : IFsFunction
     {
@@ -11,12 +11,12 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "<=";
 
-        public int Precidence => 200;
+        public int Precedence => 200;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException(
+                throw new Error.EvaluationTimeException(
                     $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);

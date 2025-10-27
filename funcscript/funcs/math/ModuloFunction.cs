@@ -1,6 +1,6 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Math
 {
     public class ModuloFunction : IFsFunction
     {
@@ -10,7 +10,7 @@ namespace funcscript.funcs.math
 
         public string Symbol => "%";
 
-        public int Precidence => 50;
+        public int Precedence => 50;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

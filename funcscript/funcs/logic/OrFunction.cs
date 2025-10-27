@@ -1,7 +1,7 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class OrFunction : IFsFunction
     {
@@ -11,7 +11,7 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "or";
 
-        public int Precidence => 400;
+        public int Precedence => 400;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

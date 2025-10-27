@@ -1,9 +1,9 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace funcscript.funcs.list
+namespace FuncScript.Functions.List
 {
     public class SortListFunction : IFsFunction
     {
@@ -13,12 +13,12 @@ namespace funcscript.funcs.list
 
         public string Symbol => "Sort";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent,0);
             var par1 = pars.GetParameter(parent,1);
@@ -32,10 +32,10 @@ namespace funcscript.funcs.list
                 return null;
 
             if (!(par0 is FsList))
-                throw new error.TypeMismatchError($"{this.Symbol} function: The first parameter should be {this.ParName(0)}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: The first parameter should be {this.ParName(0)}");
 
             if (!(par1 is IFsFunction))
-                throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter should be {this.ParName(1)}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: The second parameter should be {this.ParName(1)}");
 
             var func = (IFsFunction)par1;
             var lst = (FsList)par0;
@@ -47,7 +47,7 @@ namespace funcscript.funcs.list
                 var result = func.Evaluate(parent, sortParamList);
 
                 if (!(result is int))
-                    throw new error.EvaluationTimeException($"{this.Symbol} function: The sorting function must return an integer");
+                    throw new Error.EvaluationTimeException($"{this.Symbol} function: The sorting function must return an integer");
 
                 return (int)result;
             });

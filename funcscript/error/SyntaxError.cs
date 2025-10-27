@@ -1,10 +1,10 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System.Runtime.Serialization;
 using System.Text;
 using Microsoft.VisualBasic;
-using funcscript.core;
+using FuncScript.Core;
 
-namespace funcscript.error
+namespace FuncScript.Error
 {
     public class EvaluationTimeException : Exception
     {

@@ -1,12 +1,12 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
 
     public class AndFunction : IFsFunction
@@ -17,7 +17,7 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "and";
 
-        public int Precidence => 400;
+        public int Precedence => 400;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

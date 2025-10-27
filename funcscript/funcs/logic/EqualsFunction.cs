@@ -1,8 +1,8 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class EqualsFunction : IFsFunction
     {
@@ -12,7 +12,7 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "=";
 
-        public int Precidence => 200;
+        public int Precedence => 200;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

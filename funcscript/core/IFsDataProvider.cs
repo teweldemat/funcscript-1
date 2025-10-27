@@ -1,4 +1,4 @@
-﻿namespace funcscript.core
+﻿namespace FuncScript.Core
 {
     public interface IFsDataProvider        
     {

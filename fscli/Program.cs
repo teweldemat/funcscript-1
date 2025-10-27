@@ -1,6 +1,7 @@
 using System.Text;
-using funcscript;
-using funcscript.error;
+using global::FuncScript;
+using global::FuncScript.Error;
+using FuncScriptRuntime = global::FuncScript.FuncScript;
 
 if (args.Length == 0)
 {
@@ -12,9 +13,9 @@ var expression = string.Join(" ", args);
 
 try
 {
-    var result = FuncScript.Evaluate(expression);
+    var result = FuncScriptRuntime.Evaluate(expression);
     var buffer = new StringBuilder();
-    FuncScript.Format(buffer, result);
+    FuncScriptRuntime.Format(buffer, result);
     Console.WriteLine(buffer.ToString());
     return 0;
 }
@@ -34,28 +35,28 @@ catch (Exception unexpected)
     return 1;
 }
 
-static void WriteSyntaxError(SyntaxError error)
+static void WriteSyntaxError(SyntaxError syntaxError)
 {
-    if (!string.IsNullOrWhiteSpace(error.Message))
+    if (!string.IsNullOrWhiteSpace(syntaxError.Message))
     {
-        Console.Error.WriteLine(error.Message);
+        Console.Error.WriteLine(syntaxError.Message);
     }
 
-    if (!string.IsNullOrWhiteSpace(error.Line))
+    if (!string.IsNullOrWhiteSpace(syntaxError.Line))
     {
-        Console.Error.WriteLine(error.Line);
+        Console.Error.WriteLine(syntaxError.Line);
     }
 }
 
-static void WriteEvaluationError(EvaluationException error)
+static void WriteEvaluationError(EvaluationException evaluationError)
 {
-    if (!string.IsNullOrWhiteSpace(error.Message))
+    if (!string.IsNullOrWhiteSpace(evaluationError.Message))
     {
-        Console.Error.WriteLine(error.Message);
+        Console.Error.WriteLine(evaluationError.Message);
     }
 
-    if (error.InnerException != null && !string.IsNullOrWhiteSpace(error.InnerException.Message))
+    if (evaluationError.InnerException != null && !string.IsNullOrWhiteSpace(evaluationError.InnerException.Message))
     {
-        Console.Error.WriteLine(error.InnerException.Message);
+        Console.Error.WriteLine(evaluationError.InnerException.Message);
     }
 }

@@ -1,6 +1,7 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
+using System;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Math
 {
     public class SineFunction : IFsFunction
     {
@@ -10,7 +11,7 @@ namespace funcscript.funcs.math
 
         public string Symbol => "Sin";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
@@ -18,20 +19,20 @@ namespace funcscript.funcs.math
 
             if (val is int)
             {
-                return Math.Sin((double)(int)val);
+                return System.Math.Sin((double)(int)val);
             }
 
             if (val is double)
             {
-                return Math.Sin((double)val);
+                return System.Math.Sin((double)val);
             }
 
             if (val is long)
             {
-                return Math.Sin((double)(long)val);
+                return System.Math.Sin((double)(long)val);
             }
 
-            throw new error.TypeMismatchError($"{this.Symbol}: A number was expected.");
+            throw new Error.TypeMismatchError($"{this.Symbol}: A number was expected.");
         }
 
         public string ParName(int index)
@@ -48,24 +49,24 @@ namespace funcscript.funcs.math
 
         public string Symbol => "Cos";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             var val = pars.GetParameter(parent,0);
             if (val is int)
             {
-                return Math.Cos((double)(int)val);
+                return System.Math.Cos((double)(int)val);
             }
             if (val is double)
             {
-                return Math.Cos((double)val);
+                return System.Math.Cos((double)val);
             }
             if (val is long)
             {
-                return Math.Cos((long)val);
+                return System.Math.Cos((long)val);
             }
-            throw new error.TypeMismatchError($"{this.Symbol}: number expected");
+            throw new Error.TypeMismatchError($"{this.Symbol}: number expected");
         }
 
         public string ParName(int index)

@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using funcscript.core;
+using FuncScript.Core;
 
-namespace funcscript.model
+namespace FuncScript.Model
 {
     public class SimpleKeyValueCollection: KeyValueCollection
     {

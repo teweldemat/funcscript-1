@@ -1,9 +1,9 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System.Text;
 using Newtonsoft.Json.Serialization;
 
-namespace funcscript.block
+namespace FuncScript.Block
 {
     public class ListExpression:ExpressionBlock
     {

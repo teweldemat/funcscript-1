@@ -1,8 +1,8 @@
 using System;
-using funcscript.model;
+using global::FuncScript.Model;
 using NUnit.Framework;
 
-namespace funcscript.test;
+namespace FuncScript.Test;
 
 public class AdvancedSyntax
 {
@@ -10,9 +10,9 @@ public class AdvancedSyntax
     public void NakedKeyValuePair()
     {
         var exp = "a:4,b:5";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         var expected = new ObjectKvc(new { a = 4, b = 5 });
-        Assert.That(FuncScript.FormatToJson(res),Is.EqualTo(FuncScript.FormatToJson(expected)));
+        Assert.That(FuncScriptRuntime.FormatToJson(res),Is.EqualTo(FuncScriptRuntime.FormatToJson(expected)));
     }
     [Test]
     [TestCase("!true",false)]
@@ -20,7 +20,7 @@ public class AdvancedSyntax
     [TestCase("!(1=2)",true)]
     public void NotOperator(string exp,object expected)
     {
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res,Is.EqualTo(expected));
     }
     [Test]
@@ -32,7 +32,7 @@ public class AdvancedSyntax
     [TestCase("{x:-5;return 1+-x}",6)]
     public void NegOperator(string exp,object expected)
     {
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res,Is.EqualTo(expected));
     }
     
@@ -48,16 +48,16 @@ public class AdvancedSyntax
     [TestCase("{x:9; b:x?! [1,2,3] map(x) => 5; return b[1]}",5)]
     public void GeneralInfix(string exp,object expected)
     {
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res,Is.EqualTo(expected));
     }
     
     [Test]
     [TestCase("1+2*4",9)]
     [TestCase("1+4/2",3)]
-    public void Precidence(string exp,object expected)
+    public void Precedence(string exp,object expected)
     {
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res,Is.EqualTo(expected));
     }
     
@@ -65,7 +65,7 @@ public class AdvancedSyntax
     [TestCase("!null",FsError.ERROR_TYPE_MISMATCH)]
     public void ErrorResults(string exp,string type)
     {
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res, Is.TypeOf<FsError>());
         Assert.That(((FsError)res).ErrorType,Is.EqualTo(type));
     }

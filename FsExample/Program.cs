@@ -1,8 +1,10 @@
 ﻿// See https://aka.ms/new-console-template for more information
-using funcscript;
-using funcscript.core;
+using global::FuncScript;
+using global::FuncScript.Core;
+using global::FuncScript.Error;
+using FuncScriptRuntime = global::FuncScript.FuncScript;
 using System.Data;
-using static funcscript.core.FuncScriptParser;
+using static global::FuncScript.Core.FuncScriptParser;
 
 do
 {
@@ -10,11 +12,11 @@ do
     var exp = Console.ReadLine();
     try
     {
-        var res=FuncScript.Evaluate(exp);
+        var res=FuncScriptRuntime.Evaluate(exp);
         Console.WriteLine("result");
         Console.WriteLine(res.ToString());
     }
-    catch(funcscript.error.SyntaxError syntaxError)
+    catch(global::FuncScript.Error.SyntaxError syntaxError)
     {
         if (syntaxError.Message != null)
             Console.WriteLine(syntaxError.Message);

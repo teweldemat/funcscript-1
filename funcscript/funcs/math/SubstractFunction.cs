@@ -1,7 +1,7 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Math
 {
     public class SubstractFunction : IFsFunction
     {
@@ -11,7 +11,7 @@ namespace funcscript.funcs.math
 
         public string Symbol => "-";
 
-        public int Precidence => 100;
+        public int Precedence => 100;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

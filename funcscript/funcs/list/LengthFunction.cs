@@ -1,8 +1,8 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System.Collections.Generic;
 
-namespace funcscript.funcs.list
+namespace FuncScript.Functions.List
 {
     public class LengthFunction : IFsFunction
     {
@@ -12,12 +12,12 @@ namespace funcscript.funcs.list
 
         public string Symbol => "Len";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent,0);
             return EvaluateInternal(par0);
@@ -30,7 +30,7 @@ namespace funcscript.funcs.list
                 null => 0,
                 FsList list => list.Length,
                 string s => s.Length,
-                _ => throw new error.TypeMismatchError($"{this.Symbol} function doesn't apply to {par0.GetType()}")
+                _ => throw new Error.TypeMismatchError($"{this.Symbol} function doesn't apply to {par0.GetType()}")
             };
         }
 

@@ -1,10 +1,10 @@
-﻿using funcscript.core;
-using funcscript.error;
-using funcscript.model;
+﻿using global::FuncScript.Core;
+using global::FuncScript.Error;
+using global::FuncScript.Model;
 using NUnit.Framework;
 using System;
 
-namespace funcscript.test
+namespace FuncScript.Test
 {
     public class SyntaxLibrary
     {
@@ -183,7 +183,7 @@ namespace funcscript.test
 
         
         [TestCase("false or false or true",true)]
-        public void PrecidenceTests(string expr, object res,string errorType=null)
+        public void PrecedenceTests(string expr, object res,string errorType=null)
         {
             TestResult(expr,res,errorType:errorType);
         }
@@ -274,7 +274,7 @@ namespace funcscript.test
         [Test]
         public void TestSeriesFunction()
         {
-            var res = FuncScript.Evaluate("series(1,5)");
+            var res = FuncScriptRuntime.Evaluate("series(1,5)");
             var expected = new ArrayFsList(new object[] { 1, 2, 3, 4, 5 });
             Assert.AreEqual(expected, res);
         }
@@ -297,13 +297,13 @@ namespace funcscript.test
         [Test]
         public void TestFindFirst()
         {
-            var res = FuncScript.Evaluate("first([1,2,4,-5,3],(x)=>x<0)");
+            var res = FuncScriptRuntime.Evaluate("first([1,2,4,-5,3],(x)=>x<0)");
             Assert.AreEqual(-5, res);
         }
         [Test]
         public void TestFindFirst2()
         {
-            var res = FuncScript.Evaluate("first([1,2,4,5,3],(x)=>x<0)");
+            var res = FuncScriptRuntime.Evaluate("first([1,2,4,5,3],(x)=>x<0)");
             Assert.IsNull(res);
         }
         [Test]
@@ -311,7 +311,7 @@ namespace funcscript.test
         {
             Assert.Throws<EvaluationException>(() =>
             {
-                var res = FuncScript.Evaluate("x.a");
+                var res = FuncScriptRuntime.Evaluate("x.a");
             });
         }
     }

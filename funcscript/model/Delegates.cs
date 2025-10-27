@@ -3,5 +3,5 @@ using System.Data;
 using System.Reflection.Metadata;
 using System.Security.AccessControl;
 
-namespace funcscript.model;
+namespace FuncScript.Model;
 

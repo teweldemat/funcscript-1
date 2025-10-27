@@ -1,8 +1,8 @@
-using funcscript.model;
+using global::FuncScript.Model;
 using NUnit.Framework;
 using System.Collections.Generic;
 
-namespace funcscript.test;
+namespace FuncScript.Test;
 
 public class FsToDotNet
 {
@@ -55,7 +55,7 @@ public class FsToDotNet
     public void TestConversionModel1()
     {
         var exp = @"{ x:1+'5'; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel1>();
@@ -66,7 +66,7 @@ public class FsToDotNet
     public void TestConversionModel2()
     {
         var exp = @"{ y:3*2; z:5>3; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel2>();
@@ -78,7 +78,7 @@ public class FsToDotNet
     public void TestConversionModel3()
     {
         var exp = @"{ a:4.5/1.5; b:'Hello'+' '+'World'; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel3>();
@@ -90,7 +90,7 @@ public class FsToDotNet
     public void TestConversionModel4()
     {
         var exp = @"{ numbers:[1,2,3,4,5]; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel4>();
@@ -101,7 +101,7 @@ public class FsToDotNet
     public void TestConversionModel5()
     {
         var exp = @"{ dictionary:{ 'key1':'value1', 'key2':'value2' }; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel5>();
@@ -113,7 +113,7 @@ public class FsToDotNet
     public void TestConversionModel6()
     {
         var exp = @"{ x:5*3; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel1>();
@@ -124,7 +124,7 @@ public class FsToDotNet
     public void TestConversionModel7()
     {
         var exp = @"{ y:10/2; z:1<2; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel2>();
@@ -136,7 +136,7 @@ public class FsToDotNet
     public void TestConversionModel8()
     {
         var exp = @"{ a:2.2*3; b:'Func'+'Script'; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel3>();
@@ -148,7 +148,7 @@ public class FsToDotNet
     public void TestConversionModel9()
     {
         var exp = @"{ numbers:[10,20,30]; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel4>();
@@ -159,7 +159,7 @@ public class FsToDotNet
     public void TestConversionModel10()
     {
         var exp = @"{ dictionary:{ 'a':'apple', 'b':'banana' }; }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<TestModel5>();
@@ -177,7 +177,7 @@ public class FsToDotNet
                 age:10;
             }
         }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<ParentModel>();
@@ -202,7 +202,7 @@ public class FsToDotNet
                 { x:'item2'; }
             ]
         }";
-        var res = FuncScript.Evaluate(exp);
+        var res = FuncScriptRuntime.Evaluate(exp);
         Assert.That(res is KeyValueCollection);
         var kvc = (KeyValueCollection)res;
         var m = kvc.ConvertTo<ComplexModel>();

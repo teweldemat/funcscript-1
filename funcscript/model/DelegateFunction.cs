@@ -1,5 +1,5 @@
-﻿using funcscript.core;
-using funcscript.funcs.logic;
+﻿using FuncScript.Core;
+using FuncScript.Functions.Logic;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.model
+namespace FuncScript.Model
 {
     internal class ByteArray 
     {
@@ -23,12 +23,12 @@ namespace funcscript.model
             this.f = f;
             var m = f.Method;
             if (m.ReturnType == typeof(void))
-                throw new error.TypeMismatchError("Delegate with no return is not supported");
+                throw new Error.TypeMismatchError("Delegate with no return is not supported");
             _pars = m.GetParameters();
             foreach(var p in _pars)
             {
                 if(p.IsOut)
-                    throw new error.TypeMismatchError($"Delegate with output parameters not supported. Par:{p.Name}");
+                    throw new Error.TypeMismatchError($"Delegate with output parameters not supported. Par:{p.Name}");
             }
         }
 
@@ -38,7 +38,7 @@ namespace funcscript.model
 
         public string Symbol => throw new NotSupportedException();
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

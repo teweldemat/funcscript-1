@@ -1,19 +1,19 @@
-using funcscript.core;
-using funcscript.model;
+using FuncScript.Core;
+using FuncScript.Model;
 
-namespace funcscript.funcs.text
+namespace FuncScript.Functions.Text
 {
     public class SubStringFunction : IFsFunction
     {
         public int MaxParsCount => 3;
         public CallType CallType => CallType.Prefix;
         public string Symbol => "substring";
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count == 0)
-                throw new error.EvaluationTimeException($"{this.Symbol} requires at least one parameter.");
+                throw new Error.EvaluationTimeException($"{this.Symbol} requires at least one parameter.");
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.Count > 1 ? pars.GetParameter(parent, 1) : null;

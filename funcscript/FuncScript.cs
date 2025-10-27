@@ -1,16 +1,16 @@
-﻿using funcscript.core;
-using funcscript.error;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Error;
+using FuncScript.Model;
 using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Xml.XPath;
-using funcscript.block;
+using FuncScript.Block;
 using Newtonsoft.Json.Serialization;
-using static funcscript.core.FuncScriptParser;
+using static FuncScript.Core.FuncScriptParser;
 using System.Diagnostics.Tracing;
 
-namespace funcscript
+namespace FuncScript
 {
     public static class FuncScript
     {
@@ -155,11 +155,11 @@ namespace funcscript
             }
             if (value is JToken token)
             {
-                return collect(token);
+                return Collect(token);
             }
             if (value is JsonElement)
             {
-                return collect((JsonElement)value);
+                return Collect((JsonElement)value);
             }
             if (_useJson.Contains(value.GetType()))
             {
@@ -174,14 +174,14 @@ namespace funcscript
             
             return new ObjectKvc(value);
         }
-        static object collect(JsonElement el)
+        static object Collect(JsonElement el)
         {
             return el.ValueKind switch
             {
-                JsonValueKind.Array => new ArrayFsList(el.EnumerateArray().Select(x => collect(x)).ToArray()),
+                JsonValueKind.Array => new ArrayFsList(el.EnumerateArray().Select(x => Collect(x)).ToArray()),
                 JsonValueKind.String => el.GetString(),
                 JsonValueKind.Object => new SimpleKeyValueCollection(null,el.EnumerateObject().Select(x =>
-                                    new KeyValuePair<string, object>(x.Name, collect(x.Value))
+                                    new KeyValuePair<string, object>(x.Name, Collect(x.Value))
                                     ).ToArray()),
                 JsonValueKind.Number => el.GetDouble(),
                 JsonValueKind.Null => null,
@@ -191,7 +191,7 @@ namespace funcscript
                 _ => null,
             };
         }
-        static object collect(JToken obj)
+        static object Collect(JToken obj)
         {
             if (obj == null)
                 return null;
@@ -203,12 +203,12 @@ namespace funcscript
             if (obj is JProperty)
             {
                 var v = obj as JProperty;
-                return new KeyValuePair<string, object>(v.Name, collect(v.Value));
+                return new KeyValuePair<string, object>(v.Name, Collect(v.Value));
             }
             if (obj is JObject)
             {
                 var o = obj as JObject;
-                var arr = obj.Select(x => collect(x)).ToArray();
+                var arr = obj.Select(x => Collect(x)).ToArray();
                 var kv = true;
                 foreach (var k in arr)
                 {
@@ -225,7 +225,7 @@ namespace funcscript
             if (obj is JArray)
             {
                 var a = obj as JArray;
-                var arr = obj.Select(x => collect(x)).ToArray();
+                var arr = obj.Select(x => Collect(x)).ToArray();
                 return arr;
             }
             throw new InvalidOperationException($"Unsupported json object type {obj.GetType()}");
@@ -280,12 +280,12 @@ namespace funcscript
             bool asJsonLiteral, bool adaptiveLineBreak)
         {
 
-            if (val is FsError error)
+            if (val is FsError fsError)
             {
-                sb.Append($"Error: {error.ErrorMessage}");
-                sb.Append($"  type: {error.ErrorType}");
-                if(error.ErrorData!=null)
-                    sb.Append($"\nData:\n{error.ErrorData}");
+                sb.Append($"Error: {fsError.ErrorMessage}");
+                sb.Append($"  type: {fsError.ErrorType}");
+                if (fsError.ErrorData != null)
+                    sb.Append($"\nData:\n{fsError.ErrorData}");
             }
             if (val == null)
             {
@@ -506,7 +506,7 @@ namespace funcscript
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        /// <exception cref="error.UnsupportedUnderlyingType"></exception>
+        /// <exception cref="Error.UnsupportedUnderlyingType"></exception>
         public static FSDataType GetFsDataType(object value)
         {
             if (value == null)
@@ -533,7 +533,7 @@ namespace funcscript
                 return FSDataType.Function;
             if (value is FsError)
                 return FSDataType.Error;
-            throw new error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
+            throw new Error.UnsupportedUnderlyingType($"Unsupported .net type {value.GetType()}");
         }
         public static bool IsNumeric(object val)
         {
@@ -662,12 +662,12 @@ namespace funcscript
             switch (mode)
             {
                 case ParseMode.Standard:
-                    exp = core.FuncScriptParser.Parse(provider, expression, serrors);
+                    exp = FuncScriptParser.Parse(provider, expression, serrors);
                     break;
                 case ParseMode.SpaceSeparatedList:
-                    return core.FuncScriptParser.ParseSpaceSepratedList(provider, expression, serrors);
+                    return FuncScriptParser.ParseSpaceSepratedList(provider, expression, serrors);
                 case ParseMode.FsTemplate:
-                    exp = core.FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
+                    exp = FuncScriptParser.ParseFsTemplate(provider, expression, serrors);
                     break;
                 default:    
                     exp = null;
@@ -675,7 +675,7 @@ namespace funcscript
             }
 
             if (exp == null)
-                throw new error.SyntaxError(expression,serrors);
+                throw new Error.SyntaxError(expression,serrors);
             return Evaluate(exp, expression, provider, vars);
         }
         public static object Evaluate(ExpressionBlock exp, string expression, IFsDataProvider provider, object vars)
@@ -691,7 +691,7 @@ namespace funcscript
                 if (ex.Len + ex.Pos <= expression.Length && ex.Len > 0)
                     msg = $"Evaluation error at '{expression.Substring(ex.Pos, ex.Len)}'";
                 else
-                    msg = $"Evaluation error. Location information invalid"; ;
+                    msg = $"Evaluation Error. Location information invalid"; ;
                 throw new EvaluationException(msg, ex.Pos, ex.Len, ex.InnerException);
             }
         }

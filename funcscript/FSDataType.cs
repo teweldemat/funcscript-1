@@ -1,7 +1,7 @@
 ﻿using Microsoft.VisualBasic;
 using System.Security.Cryptography;
 
-namespace funcscript
+namespace FuncScript
 {
     /// <summary>
     /// FuncScript data types

@@ -1,5 +1,5 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.list
+namespace FuncScript.Functions.List
 {
     public class AnyMatchFunction : IFsFunction
     {
@@ -17,7 +17,7 @@ namespace funcscript.funcs.list
 
         public string Symbol => "Any";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
         class DoListFuncPar : IParameterList
         {
             public object X;
@@ -42,7 +42,7 @@ namespace funcscript.funcs.list
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+                throw new Error.EvaluationTimeException($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
@@ -51,15 +51,15 @@ namespace funcscript.funcs.list
                 return false;
 
             if (!(par0 is FsList))
-                throw new error.TypeMismatchError($"{this.Symbol} function: The first parameter should be {this.ParName(0)}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: The first parameter should be {this.ParName(0)}");
 
             if (!(par1 is IFsFunction))
-                throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter should be {this.ParName(1)}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: The second parameter should be {this.ParName(1)}");
 
             var func = par1 as IFsFunction;
 
             if (func == null)
-                throw new error.TypeMismatchError($"{this.Symbol} function: The second parameter didn't evaluate to a function");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: The second parameter didn't evaluate to a function");
 
             var lst = (FsList)par0;
 

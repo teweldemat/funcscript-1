@@ -1,4 +1,4 @@
-namespace funcscript.model;
+namespace FuncScript.Model;
 
 public class FsError
 {

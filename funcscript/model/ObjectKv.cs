@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
-using funcscript.core;
+using FuncScript.Core;
 
-namespace funcscript.model
+namespace FuncScript.Model
 {
     public class ObjectKvc:KeyValueCollection
     {

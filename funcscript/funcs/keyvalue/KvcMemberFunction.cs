@@ -1,5 +1,5 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.XPath;
 
-namespace funcscript.funcs.keyvalue
+namespace FuncScript.Functions.KeyValue
 {
 
     public class KvcMemberFunction : IFsFunction
@@ -18,18 +18,18 @@ namespace funcscript.funcs.keyvalue
 
         public string Symbol => ".";
 
-        public int Precidence => 200;
+        public int Precedence => 200;
 
         private object EvaluateInternal(object par0, object par1)
         {
             if (!(par1 is string))
-                throw new error.TypeMismatchError($"{Symbol} function: The second parameter should be {ParName(1)}");
+                throw new Error.TypeMismatchError($"{Symbol} function: The second parameter should be {ParName(1)}");
 
             if (par0 == null)
-                throw new error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from null data");
+                throw new Error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from null data");
 
             if (!(par0 is KeyValueCollection))
-                throw new error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {FuncScript.GetFsDataType(par0)}");
+                throw new Error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {FuncScript.GetFsDataType(par0)}");
 
             return ((KeyValueCollection)par0).Get(((string)par1).ToLower());
 
@@ -37,7 +37,7 @@ namespace funcscript.funcs.keyvalue
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
+                throw new Error.TypeMismatchError($"{Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
 
             
             var par1 =pars.GetParameter(parent,1);

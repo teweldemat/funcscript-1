@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics.SymbolStore;
 using System.Runtime.Serialization;
-using funcscript.core;
+using FuncScript.Core;
 using System.Text;
-using funcscript.error;
-using funcscript.model;
+using FuncScript.Error;
+using FuncScript.Model;
 
-namespace funcscript.core
+namespace FuncScript.Core
 {
     public class ExpressionFunction : IFsFunction
     {
@@ -58,12 +58,12 @@ namespace funcscript.core
 
         public string Symbol => null;
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (_context == null)
-                throw new error.EvaluationTimeException("Context not set to expression function");
+                throw new Error.EvaluationTimeException("Context not set to expression function");
             var ret= Expression.Evaluate(new ParameterDataProvider
             {
                 expressionFunction = this,

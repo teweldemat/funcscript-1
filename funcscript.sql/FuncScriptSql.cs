@@ -1,6 +1,6 @@
 ﻿using System.Data.SqlTypes;
 
-namespace funcscript.sql
+namespace FuncScript.Sql
 {
     public class FuncScriptSql
     {

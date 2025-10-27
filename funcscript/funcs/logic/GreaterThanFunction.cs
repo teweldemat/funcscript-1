@@ -1,8 +1,8 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class GreaterThanFunction : IFsFunction
     {
@@ -12,7 +12,7 @@ namespace funcscript.funcs.logic
 
         public string Symbol => ">";
 
-        public int Precidence => 200;
+        public int Precedence => 200;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

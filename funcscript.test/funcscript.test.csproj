@@ -5,6 +5,8 @@
     <Nullable>disable</Nullable>
 
     <IsPackable>false</IsPackable>
+    <AssemblyName>FuncScript.Test</AssemblyName>
+    <RootNamespace>FuncScript.Test</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

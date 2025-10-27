@@ -1,8 +1,8 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System.Text;
 
-namespace funcscript.funcs.text
+namespace FuncScript.Functions.Text
 {
     public class JoinTextFunction : IFsFunction
     {
@@ -13,18 +13,18 @@ namespace funcscript.funcs.text
 
         public string Symbol => SYMBOL;
 
-        public int Precidence => 100;
+        public int Precedence => 100;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: Two parameters expected");
+                throw new Error.TypeMismatchError($"{this.Symbol}: Two parameters expected");
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
 
             if (par0 == null || par1 == null)
-                throw new funcscript.error.TypeMismatchError($"{this.Symbol}: List and separator expected as parameters");
+                throw new Error.TypeMismatchError($"{this.Symbol}: List and separator expected as parameters");
             if(!(par0 is FsList list))
                throw new InvalidOperationException($"{this.Symbol}: first parameter should be list");
             if(!(par1 is string separator))

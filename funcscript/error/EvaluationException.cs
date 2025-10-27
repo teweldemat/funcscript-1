@@ -1,6 +1,6 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 
-namespace funcscript.error
+namespace FuncScript.Error
 {
     public class EvaluationException : Exception
     {

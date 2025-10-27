@@ -1,8 +1,8 @@
-using funcscript.core;
+using FuncScript.Core;
 using System;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class EvaluateIfNotNull : IFsFunction
     {
@@ -12,12 +12,12 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "?!";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{Symbol} function expects exactly two parameters.");
+                throw new Error.TypeMismatchError($"{Symbol} function expects exactly two parameters.");
 
             var val = pars.GetParameter(parent, 0);
 

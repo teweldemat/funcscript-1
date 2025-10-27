@@ -1,8 +1,8 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.strings
+namespace FuncScript.Functions.Text
 {
     internal class EndsWithFunction : IFsFunction
     {
@@ -12,12 +12,12 @@ namespace funcscript.funcs.strings
 
         public string Symbol => "endswith";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != MaxParsCount)
-                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);
@@ -31,7 +31,7 @@ namespace funcscript.funcs.strings
                 return false;
 
             if (!(par0 is string) || !(par1 is string))
-                throw new error.TypeMismatchError($"Function {this.Symbol}. Both parameters must be strings");
+                throw new Error.TypeMismatchError($"Function {this.Symbol}. Both parameters must be strings");
 
             var mainString = (string)par0;
             var ending = (string)par1;

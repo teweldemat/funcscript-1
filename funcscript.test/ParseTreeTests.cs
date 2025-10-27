@@ -1,14 +1,16 @@
-﻿using funcscript.block;
-using funcscript.core;
-using funcscript.model;
+﻿using global::FuncScript.Block;
+using global::FuncScript.Core;
+using global::FuncScript.Model;
+using FuncScriptParser = global::FuncScript.Core.FuncScriptParser;
+using ParseNode = global::FuncScript.Core.FuncScriptParser.ParseNode;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static funcscript.core.FuncScriptParser;
+using static global::FuncScript.Core.FuncScriptParser;
 
-namespace funcscript.test
+namespace FuncScript.Test
 {
     internal class ParseTreeTests
     {
@@ -32,7 +34,7 @@ namespace funcscript.test
             var g = new DefaultFsDataProvider();
             var expText = "{a,b,c}";
             var list = new List<FuncScriptParser.SyntaxErrorData>();
-            var exp= funcscript.core.FuncScriptParser.Parse(g, expText,out var node,list);
+            var exp= FuncScriptParser.Parse(g, expText,out var node,list);
             Assert.IsNotNull(exp);
             Assert.IsNotNull(node);
             node = Flatten(node);
@@ -46,7 +48,7 @@ namespace funcscript.test
             var provider = new DefaultFsDataProvider();
             var expText = "1+2";
             var errors = new List<FuncScriptParser.SyntaxErrorData>();
-            var block = funcscript.core.FuncScriptParser.Parse(provider, expText, out var node, errors);
+            var block = FuncScriptParser.Parse(provider, expText, out var node, errors);
 
             Assert.IsNotNull(block, "Expression should be parsed into a block instance");
             Assert.IsNotNull(node, "Parse node is expected for valid expression");
@@ -112,12 +114,12 @@ namespace funcscript.test
             var provider = new DefaultFsDataProvider();
             var expText = "1+sin(45)";
             var errors = new List<FuncScriptParser.SyntaxErrorData>();
-            var block = funcscript.core.FuncScriptParser.Parse(provider, expText, out var node, errors);
+            var block = FuncScriptParser.Parse(provider, expText, out var node, errors);
             Assert.IsNotNull(block);
             Assert.IsNotNull(node);
             Assert.IsEmpty(errors);
             AssertTreeSpanConsitency(node);
-            var color = FuncScript.ColorParseTree(node).ToArray();
+            var color = FuncScriptRuntime.ColorParseTree(node).ToArray();
             Assert.That(color, Has.Length.EqualTo(6));
 
             var p = 0;
@@ -171,12 +173,12 @@ namespace funcscript.test
             var provider = new DefaultFsDataProvider();
             var expText = "(x)=>45";
             var errors = new List<FuncScriptParser.SyntaxErrorData>();
-            var block = funcscript.core.FuncScriptParser.Parse(provider, expText, out var node, errors);
+            var block = FuncScriptParser.Parse(provider, expText, out var node, errors);
             Assert.IsNotNull(block);
             Assert.IsNotNull(node);
             Assert.IsEmpty(errors);
             AssertTreeSpanConsitency(node);
-            var color = FuncScript.ColorParseTree(node).ToArray();
+            var color = FuncScriptRuntime.ColorParseTree(node).ToArray();
             Assert.That(color, Has.Length.EqualTo(5));
 
             var p = 0;

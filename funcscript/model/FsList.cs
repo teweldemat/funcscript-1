@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 
-namespace funcscript.model
+namespace FuncScript.Model
 {
     public abstract class FsList:IEnumerable<object>
     {
@@ -82,7 +82,7 @@ namespace funcscript.model
         public ArrayFsList(object data)
         {
             if (data == null)
-                throw new error.TypeMismatchError("Null can't be converted to list");
+                throw new Error.TypeMismatchError("Null can't be converted to list");
             else
             {
                 var t = data.GetType();
@@ -103,7 +103,7 @@ namespace funcscript.model
                 }
                 else
                 {
-                    throw new error.TypeMismatchError($"{t} can't be used as list");
+                    throw new Error.TypeMismatchError($"{t} can't be used as list");
                 }
             }
         }

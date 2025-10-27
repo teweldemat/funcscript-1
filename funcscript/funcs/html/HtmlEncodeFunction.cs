@@ -1,4 +1,4 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.html
+namespace FuncScript.Functions.Html
 {
     internal class HtmlEncodeFunction : IFsFunction
     {
@@ -16,7 +16,7 @@ namespace funcscript.funcs.html
 
         public string Symbol => "HEncode";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {

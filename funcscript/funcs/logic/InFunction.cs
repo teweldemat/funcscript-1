@@ -1,12 +1,12 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     
 
@@ -18,12 +18,12 @@ namespace funcscript.funcs.logic
 
         public string Symbol => "in";
 
-        public int Precidence => 150;
+        public int Precedence => 150;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException(
+                throw new Error.EvaluationTimeException(
                     $"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
@@ -33,7 +33,7 @@ namespace funcscript.funcs.logic
                 return null;
 
             if (!(par1 is FsList))
-                throw new error.EvaluationTimeException(
+                throw new Error.EvaluationTimeException(
                     $"{this.Symbol} function: {this.ParName(1)} should be a list");
 
             bool par0Numeric = FuncScript.IsNumeric(par0);

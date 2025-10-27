@@ -4,6 +4,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>FuncScript.Sql</AssemblyName>
+    <RootNamespace>FuncScript.Sql</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

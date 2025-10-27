@@ -1,10 +1,10 @@
 ﻿using System.Runtime.InteropServices;
-using funcscript.core;
-using funcscript.error;
-using funcscript.model;
+using FuncScript.Core;
+using FuncScript.Error;
+using FuncScript.Model;
 using System.Text;
 
-namespace funcscript.block
+namespace FuncScript.Block
 {
     public class FunctionCallExpression : ExpressionBlock
     {
@@ -44,13 +44,13 @@ namespace funcscript.block
                     var ret = ((IFsFunction)func).Evaluate(provider, paramList);
                     return ret;
                 }
-                catch (error.EvaluationException)
+                catch (Error.EvaluationException)
                 {
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    throw new error.EvaluationException(this.Pos, this.Length, ex);
+                    throw new Error.EvaluationException(this.Pos, this.Length, ex);
                 }
 
             }

@@ -1,6 +1,6 @@
 using NUnit.Framework;
 
-namespace funcscript.test;
+namespace FuncScript.Test;
 
 public class DotNetExperiment
 {

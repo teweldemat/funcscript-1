@@ -1,12 +1,12 @@
 ﻿using System.ComponentModel.Design;
 using System.Data;
-using funcscript.core;
-using funcscript.model;
+using FuncScript.Core;
+using FuncScript.Model;
 using System.Security.Cryptography;
 using System.Text;
-using funcscript.error;
+using FuncScript.Error;
 
-namespace funcscript.block
+namespace FuncScript.Block
 {
     public class KvcExpression : ExpressionBlock
     {
@@ -75,7 +75,7 @@ namespace funcscript.block
 
             protected void ThrowInvalidConnectionError(string msg)
             {
-                throw new error.EvaluationException(location, new TypeMismatchError(msg));
+                throw new Error.EvaluationException(location, new TypeMismatchError(msg));
             }
         }
 

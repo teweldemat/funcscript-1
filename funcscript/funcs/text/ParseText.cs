@@ -1,9 +1,9 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 using System;
 using System.Globalization;
-using funcscript.model;
+using FuncScript.Model;
 
-namespace funcscript.funcs.text
+namespace FuncScript.Functions.Text
 {
     public class ParseText : IFsFunction, IFsDataProvider
     {
@@ -13,12 +13,12 @@ namespace funcscript.funcs.text
 
         public string Symbol => "parse";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count == 0)
-                throw new error.TypeMismatchError($"{this.Symbol} requires at least one parameter");
+                throw new Error.TypeMismatchError($"{this.Symbol} requires at least one parameter");
             var par0 = pars.GetParameter(parent, 0);
             
             if (par0 == null)

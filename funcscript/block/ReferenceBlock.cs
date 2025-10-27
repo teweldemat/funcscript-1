@@ -1,6 +1,6 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 
-namespace funcscript.block
+namespace FuncScript.Block
 {
     public class ReferenceBlock : ExpressionBlock
     {

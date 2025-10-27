@@ -1,7 +1,7 @@
-﻿using funcscript.core;
+﻿using global::FuncScript.Core;
 using NetTopologySuite.Geometries;
 
-namespace funcscript.sql.funcs.gis
+namespace FuncScript.Sql.funcs.gis
 {
     public class PointFunction : IFsFunction
     {
@@ -11,12 +11,12 @@ namespace funcscript.sql.funcs.gis
 
         public string Symbol => "point";
 
-        public int Precidence => 0;
+        public int Precedence => 0;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
+                throw new Error.EvaluationTimeException($"{this.Symbol} function: invalid parameter count. {this.MaxParsCount} expected, got {pars.Count}");
 
             var x = Convert.ToDouble(pars.GetParameter(parent, 0));
             var y = Convert.ToDouble(pars.GetParameter(parent, 1));

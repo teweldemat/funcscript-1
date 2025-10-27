@@ -1,8 +1,8 @@
-﻿using funcscript.core;
-using funcscript.model;
+﻿using FuncScript.Core;
+using FuncScript.Model;
 using System;
 
-namespace funcscript.funcs.logic
+namespace FuncScript.Functions.Logic
 {
     public class GreaterThanOrEqualFunction : IFsFunction
     {
@@ -12,12 +12,12 @@ namespace funcscript.funcs.logic
 
         public string Symbol => ">=";
 
-        public int Precidence => 200;
+        public int Precedence => 200;
 
         public object Evaluate(IFsDataProvider parent, IParameterList pars)
         {
             if (pars.Count != this.MaxParsCount)
-                throw new error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
+                throw new Error.TypeMismatchError($"{this.Symbol} function: Invalid parameter count. Expected {this.MaxParsCount}, but got {pars.Count}");
 
             var par0 = pars.GetParameter(parent, 0);
             var par1 = pars.GetParameter(parent, 1);

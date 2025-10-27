@@ -1,11 +1,11 @@
-﻿using funcscript.core;
+﻿using FuncScript.Core;
 
-namespace funcscript.funcs.math
+namespace FuncScript.Functions.Math
 {
     public class MultiplyFunction : IFsFunction
     {
         public int MaxParsCount => -1;
-        public int Precidence => 50;
+        public int Precedence => 50;
         public CallType CallType => CallType.Infix;
 
         public string Symbol => "*";
