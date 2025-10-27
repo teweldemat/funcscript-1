@@ -13,9 +13,11 @@ import {
   Typography
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
-import FuncscriptEditor from './components/FuncscriptEditor';
-import type { ColoredSegment } from './lib/funcscriptColoring';
-import { parseNodePalette } from './lib/funcscriptColoring';
+import {
+  FuncscriptEditor,
+  type ColoredSegment,
+  parseNodePalette
+} from 'funcscript-editor';
 import { theme } from './theme';
 
 const defaultExpression = 'If(1 = 1, 100 * sin(45), 0)';

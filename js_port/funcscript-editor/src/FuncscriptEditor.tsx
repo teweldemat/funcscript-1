@@ -12,8 +12,8 @@ import {
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { DefaultFsDataProvider } from 'funcscript';
-import type { ColoredSegment } from '../lib/funcscriptColoring';
-import { computeColoredSegments } from '../lib/funcscriptColoring';
+import type { ColoredSegment } from './funcscriptColoring';
+import { computeColoredSegments } from './funcscriptColoring';
 
 // funcscript parser exposed via CommonJS build without type declarations
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -21,7 +21,7 @@ import * as parserModule from 'funcscript/parser';
 
 const { FuncScriptParser } = parserModule as { FuncScriptParser: any };
 
-type FuncscriptEditorProps = {
+export type FuncscriptEditorProps = {
   value: string;
   onChange: (value: string) => void;
   onSegmentsChange?: (segments: ColoredSegment[]) => void;
@@ -81,7 +81,10 @@ const createHighlightExtension = (
         continue;
       }
 
-      const style = `color:${segment.color};font-weight:600;text-shadow:0 0 0.6px rgba(0,0,0,0.25);`;
+      const style =
+        'color:' +
+        segment.color +
+        ';font-weight:600;text-shadow:0 0 0.6px rgba(0,0,0,0.25);';
       decorations.push(
         Decoration.mark({
           attributes: {
