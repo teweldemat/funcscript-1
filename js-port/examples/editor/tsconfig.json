@@ -12,7 +12,7 @@
     "allowJs": false,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -21,12 +21,7 @@
     "types": [
       "vite/client"
     ],
-    "baseUrl": ".",
-    "paths": {
-      "@tewelde/walya/parser": [
-        "../../walya-js/src/parser/walya-parser"
-      ]
-    }
+    "baseUrl": "."
   },
   "include": [
     "src"

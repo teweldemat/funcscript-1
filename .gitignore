@@ -401,3 +401,4 @@ FodyWeavers.xsd
 orch.content/files/
 .DS_Store
 .idea/.idea.Walya/.idea
+*.tgz
