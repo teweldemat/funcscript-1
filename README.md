@@ -1,92 +1,110 @@
-# Function Script
+# FuncScript
 
+FuncScript is a .NET-first expression language and runtime that lets you embed concise, functional business logic inside your applications. It ships with a parser, evaluator, formatter, CLI, unit tests, and optional SQL/GIS helpers, making it straightforward to evaluate custom scripts, map data, or compute derived values at runtime.
 
+## Highlights
+- Expression-oriented language with blocks, lambdas, pattern-like switches, string templates, lists, and key-value collections.
+- Batteries-included standard library covering math, logic, text, list processing, OS helpers, HTML utilities, and JSON conversion.
+- Ergonomic .NET embedding via `FuncScript.FuncScript.Evaluate(...)`, strongly-typed error reporting, and deterministic formatting utilities.
+- Extensible through custom `IFsFunction` implementations or ad-hoc variables injected with `DefaultFsDataProvider`.
+- Extra packages for SQL Server and NetTopologySuite geometries, plus an experimental JavaScript interpreter port.
 
-## Getting started
+## Repository Layout
+- `FuncScript/` - core library targeting .NET 6.0; contains the parser, runtime, standard library, and data model.
+- `FsCli/` - minimal .NET 8 CLI (`fscli`) that evaluates expressions from the command line.
+- `FsExample/` - interactive console sample that demonstrates the REPL-style usage of the runtime.
+- `FuncScript.Sql/` - optional extension with SQL/geometry helpers and type normalization for ADO.NET results.
+- `FuncScript.Test/` - NUnit-based test suite covering parsing, evaluation, errors, and formatting.
+- `js-port/` - in-progress JavaScript port plus editor experiments and examples.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Quick Start
+### Prerequisites
+Install the .NET 8 SDK (includes the .NET 6 tooling required by the library projects).
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
+### Build Everything
+```bash
+dotnet restore FuncScript.sln
+dotnet build FuncScript.sln
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/bushmusi/function-script.git
-git branch -M main
-git push -uf origin main
+
+### Try the CLI
+```bash
+# Evaluate a simple expression
+dotnet run --project FsCli -- "(2 + 3) * 4"
+
+# Evaluate a block with variables and built-in helpers
+dotnet run --project FsCli -- "{ rate:0.13; net:(gross)=>gross*(1-rate); return net(12500); }"
 ```
 
-## Integrate with your tools
+### Embed in Your Application
+```csharp
+using System;
+using System.Collections.Generic;
+using FuncScript;
+using FuncScript.Model;
 
-- [ ] [Set up project integrations](https://gitlab.com/bushmusi/function-script/-/settings/integrations)
+var globals = new DefaultFsDataProvider(new List<KeyValuePair<string, object>>
+{
+    new KeyValuePair<string, object>("taxRate", 0.15),
+    new KeyValuePair<string, object>("format", (Func<object,string>)(value => string.Format("{0:#,#0.00}", value)))
+});
 
-## Collaborate with your team
+var expression = "{ net:(gross)=>gross*(1-taxRate); return format(net(gross)); }";
+var context = new ObjectKvc(new { gross = 5200 });
+var result = FuncScript.FuncScript.Evaluate(new KvcProvider(context, globals), expression);
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+var output = new StringBuilder();
+FuncScript.FuncScript.Format(output, result);
+Console.WriteLine(output);
+```
+The runtime normalizes .NET values so that primitive types, lists, key-value collections, GUIDs, byte arrays, and even delegates translate seamlessly to script data.
 
-## Test and Deploy
+## Language at a Glance
+Script files are case-insensitive and expression-oriented. Common constructs include:
+- **Blocks**: `{ items:[1,2,3]; return Sum(items); }`
+- **Lambdas**: `(x)=>x*x` or `(row, index)=>{ ... }`
+- **String templates**: `f"Hello {name}!"`
+- **Collections**: Lists `[1, 2, 3]` and records `{name:"Ada", skills:["math","logic"]}`
+- **Control**: `If`, `Switch`, `Case`, `fault` for structured errors
+- **Functions**: `Map`, `Reduce`, `Filter`, `Distinct`, `Take`, `JoinText`, `Format`, `TicksToDate`, `point`, and many more
 
-Use the built-in continuous integration in GitLab.
+A more elaborate example lives in `FuncScript/TestFormula.text`, where a payroll table is generated via mapping and HTML string templates.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## Extending the Runtime
+Custom functions are regular .NET classes implementing `IFsFunction`:
+```csharp
+public class HexFunction : IFsFunction
+{
+    public string Symbol => "hex";
+    public int MaxParsCount => 1;
+    public CallType CallType => CallType.Prefix;
+    public int Precedence => 0;
 
-***
+    public object Evaluate(IFsDataProvider context, IParameterList parameters)
+    {
+        var value = Convert.ToInt64(parameters.GetParameter(context, 0));
+        return $"0x{value:X}";
+    }
 
-# Editing this README
+    public string ParName(int index) => "value";
+}
+```
+Create a parameterless constructor, reference the assembly, and `DefaultFsDataProvider.LoadFromAssembly(...)` will auto-register the symbol (including optional aliases via `FunctionAliasAttribute`).
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## SQL & GIS Helpers
+`FuncScript.Sql` adds converters for `Sql*` types and NetTopologySuite geometries plus GIS helpers such as `point(x, y)`. Reference the project alongside the core library to normalize database values before exposing them to scripts.
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## JavaScript Port (Experimental)
+The `js-port/` folder contains a progressively feature-complete JavaScript interpreter that mirrors the .NET runtime. See `js-port/AGENTS.md` and `js-port/port-progress.md` for implementation notes and status.
 
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Testing
+Run the NUnit suite to ensure language changes remain backwards compatible:
+```bash
+dotnet test FuncScript.sln
+```
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Issues and pull requests are welcome. If you plan substantial language or runtime changes, open an issue first so we can align on approach.
 
 ## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+No explicit license file is included yet. Until one is published, all rights are reserved by the authors.
