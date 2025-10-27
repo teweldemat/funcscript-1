@@ -55,7 +55,7 @@ class ParseTextFunction extends BaseFunction {
       }
       case 'fs': {
         try {
-          const { evaluate } = require('../../walya');
+          const { evaluate } = require('../../walya.browser');
           const result = evaluate(text, provider);
           return result;
         } catch (error) {
