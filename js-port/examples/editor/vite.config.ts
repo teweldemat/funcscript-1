@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'funcscript/parser': path.resolve(__dirname, '../fs-js/src/parser/func-script-parser')
+      'funcscript/parser': path.resolve(__dirname, '../../fs-js/src/parser/func-script-parser')
     },
     dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/commands']
   },

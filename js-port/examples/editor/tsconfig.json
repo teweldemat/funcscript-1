@@ -17,7 +17,7 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "funcscript/parser": ["../fs-js/src/parser/func-script-parser"]
+      "funcscript/parser": ["../../fs-js/src/parser/func-script-parser"]
     }
   },
   "include": ["src"]

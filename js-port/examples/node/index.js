@@ -6,7 +6,7 @@ const {
   getTypeName,
   FSDataType,
   valueOf
-} = require('../../fs-js/src/func-script');
+} = require('funcscript');
 
 const provider = new DefaultFsDataProvider();
 
