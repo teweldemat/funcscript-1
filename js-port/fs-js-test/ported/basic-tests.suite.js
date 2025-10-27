@@ -3,7 +3,6 @@ const {
   expectNull,
   expectThrows,
   runCase,
-  markTodo,
   finalizeSuite
 } = require('./common');
 
@@ -185,8 +184,45 @@ return j;
   runCase(suite, 'MapNull null map', () => expectNull('null map (x)=>x'));
   runCase(suite, 'MapNull undefined', () => expectNull('y map (x)=>x'));
 
-  // Remaining tests in BasicTests.cs are kept as TODO markers for parity tracking
-  markTodo(suite, 'ExtendedScenarios', 'Remaining BasicTests.cs coverage pending port');
+  runCase(suite, 'InFunction null list', () => expectNull('3 in null'));
+  runCase(suite, 'InFunction match', () => expectEvaluation('3 in [2,3]', true));
+  runCase(suite, 'InFunction null candidate', () => expectEvaluation('null in [2,3]', false));
+  runCase(suite, 'InFunction null inside list', () => expectEvaluation('null in [2,null]', false));
+  runCase(suite, 'InFunction string match', () => expectEvaluation('"1" in ["1",1,2]', true));
+  runCase(suite, 'InFunction string mismatch', () => expectEvaluation('1 in ["1",2]', false));
+
+  runCase(
+    suite,
+    'NegativeOperatorBug',
+    () =>
+      expectEvaluation(
+        `{
+            x:-5;
+            return -x;
+            }`,
+        5
+      )
+  );
+
+  runCase(suite, 'LambdaFunctionCaseIssue', () => expectEvaluation("((X)=>X)('t')", 't'));
+
+  runCase(suite, 'EmptyKeyValueCollection', () => expectEvaluation('{}', {}));
+  runCase(suite, 'EmptyList', () => expectEvaluation('[]', []));
+
+  runCase(
+    suite,
+    'RecursiveCall',
+    () =>
+      expectEvaluation(
+        `{
+    fib:(x)=>if(x<2,1,fib(x-2)+fib(x-1));
+    return fib(3);
+}`,
+        3
+      )
+  );
+
+  runCase(suite, 'FormatAsJson', () => expectEvaluation("format({x:5,y:6}, 'json')", '{"x":5,"y":6}'));
 
   finalizeSuite('BasicTests', suite);
 }

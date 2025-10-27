@@ -11,7 +11,7 @@ const buildBuiltinMap = require('./funcs');
 const { ParseNode } = require('./parser/parse-node');
 
 const { MapDataProvider } = dataProviders;
-const { ensureTyped } = valueModule;
+const { ensureTyped, typeOf, valueOf } = valueModule;
 
 const builtinProvider = new MapDataProvider(buildBuiltinMap());
 
@@ -27,6 +27,142 @@ function evaluate(expression, provider = new DefaultFsDataProvider()) {
     throw new Error('Failed to parse expression');
   }
   return ensureTyped(block.evaluate(provider));
+}
+
+function appendTemplateValue(parts, value) {
+  const typed = ensureTyped(value);
+  switch (typeOf(typed)) {
+    case FSDataType.Null:
+      return;
+    case FSDataType.List: {
+      for (const item of valueOf(typed)) {
+        appendTemplateValue(parts, item);
+      }
+      return;
+    }
+    case FSDataType.KeyValueCollection: {
+      const entries = valueOf(typed).getAll();
+      const objParts = [];
+      for (const [key, val] of entries) {
+        const segment = [];
+        appendTemplateValue(segment, val);
+        objParts.push(`${key}:${segment.join('')}`);
+      }
+      parts.push(objParts.join(''));
+      return;
+    }
+    case FSDataType.Error: {
+      const err = valueOf(typed);
+      parts.push(err && err.errorMessage ? err.errorMessage : '');
+      return;
+    }
+    default: {
+      const inner = valueOf(typed);
+      parts.push(inner == null ? '' : String(inner));
+    }
+  }
+}
+
+function processTemplateLiteral(segment) {
+  let result = '';
+  for (let i = 0; i < segment.length; i += 1) {
+    const ch = segment[i];
+    if (ch === '\\' && i + 1 < segment.length) {
+      const next = segment[i + 1];
+      result += next;
+      i += 1;
+    } else {
+      result += ch;
+    }
+  }
+  return result;
+}
+
+function findTemplateExpression(template, start) {
+  for (let i = start; i < template.length - 1; i += 1) {
+    if (template[i] === '$' && template[i + 1] === '{') {
+      let slashCount = 0;
+      let back = i - 1;
+      while (back >= 0 && template[back] === '\\') {
+        slashCount += 1;
+        back -= 1;
+      }
+      if (slashCount % 2 === 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+function extractTemplateExpression(template, startIndex) {
+  let depth = 0;
+  let i = startIndex;
+  let inString = false;
+  let stringDelimiter = null;
+  while (i < template.length) {
+    const ch = template[i];
+    if (inString) {
+      if (ch === '\\') {
+        i += 2;
+        continue;
+      }
+      if (ch === stringDelimiter) {
+        inString = false;
+        stringDelimiter = null;
+      }
+      i += 1;
+      continue;
+    }
+    if (ch === '\'' || ch === '"') {
+      inString = true;
+      stringDelimiter = ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '{') {
+      depth += 1;
+      i += 1;
+      continue;
+    }
+    if (ch === '}') {
+      if (depth === 0) {
+        return { expression: template.slice(startIndex, i), endIndex: i };
+      }
+      depth -= 1;
+      i += 1;
+      continue;
+    }
+    i += 1;
+  }
+  throw new Error('Unterminated template expression');
+}
+
+function evaluateTemplate(template, provider = new DefaultFsDataProvider()) {
+  const text = template == null ? '' : String(template);
+  if (!text.includes('${')) {
+    return text.replace(/\\([\\${}])/g, '$1');
+  }
+
+  const parts = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    const exprStart = findTemplateExpression(text, cursor);
+    if (exprStart < 0) {
+      const literal = processTemplateLiteral(text.slice(cursor));
+      parts.push(literal);
+      break;
+    }
+
+    const literal = processTemplateLiteral(text.slice(cursor, exprStart));
+    parts.push(literal);
+    const { expression, endIndex } = extractTemplateExpression(text, exprStart + 2);
+    const result = evaluate(expression, provider);
+    appendTemplateValue(parts, result);
+    cursor = endIndex + 1;
+  }
+
+  return parts.join('');
 }
 
 function colorParseTree(node) {
@@ -65,6 +201,7 @@ function colorParseTree(node) {
 
 module.exports = {
   evaluate,
+  evaluateTemplate,
   colorParseTree,
   DefaultFsDataProvider,
   FsDataProvider: dataProviders.FsDataProvider,

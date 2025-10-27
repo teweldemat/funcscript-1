@@ -1,5 +1,5 @@
 const { BaseFunction, CallType } = require('../core/function-base');
-const { ensureTyped } = require('../core/value');
+const { ensureTyped, valueOf } = require('../core/value');
 
 class DelegateFunction extends BaseFunction {
   constructor(delegate) {
@@ -18,9 +18,10 @@ class DelegateFunction extends BaseFunction {
     const args = [];
     const count = parameters ? parameters.count : 0;
     for (let i = 0; i < count; i += 1) {
-      args.push(parameters.getParameter(provider, i));
+      args.push(ensureTyped(parameters.getParameter(provider, i)));
     }
-    const result = this.delegate(...args.map(ensureTyped));
+    const jsArgs = args.map((arg) => valueOf(arg));
+    const result = this.delegate(...jsArgs);
     return ensureTyped(result);
   }
 

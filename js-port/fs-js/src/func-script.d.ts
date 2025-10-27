@@ -163,6 +163,11 @@ export declare function evaluate(
   provider?: FsDataProvider
 ): TypedValue;
 
+export declare function evaluateTemplate(
+  template: string,
+  provider?: FsDataProvider
+): string;
+
 export declare function ensureTyped(value: FuncScriptInput): TypedValue;
 export declare function normalize(value: FuncScriptInput): TypedValue;
 export declare function makeValue(type: FSDataType, value: unknown): TypedValue;

@@ -33,4 +33,3 @@
     [x] Square bracket indexing on lists
   [ ] SyntaxLibrary comprehensive operator coverage
   [ ] TestErrorReporting diagnostics parity
-[ ] Port comprehensive FuncScript feature set

@@ -1,10 +1,10 @@
 import type { ColoredSegment } from './funcscriptColoring';
-export type FuncscriptEditorProps = {
+export type FuncScriptEditorProps = {
     value: string;
     onChange: (value: string) => void;
     onSegmentsChange?: (segments: ColoredSegment[]) => void;
     onError?: (message: string | null) => void;
     minHeight?: number;
 };
-declare const FuncscriptEditor: ({ value, onChange, onSegmentsChange, onError, minHeight }: FuncscriptEditorProps) => import("react/jsx-runtime").JSX.Element;
-export default FuncscriptEditor;
+declare const FuncScriptEditor: ({ value, onChange, onSegmentsChange, onError, minHeight }: FuncScriptEditorProps) => import("react/jsx-runtime").JSX.Element;
+export default FuncScriptEditor;

@@ -19,17 +19,26 @@ class InFunction extends BaseFunction {
       return error;
     }
 
-    const target = parameters.getParameter(provider, 0);
-    const list = helpers.ensureList(parameters.getParameter(provider, 1));
-    if (!list) {
-      return helpers.makeError(helpers.FsError.ERROR_TYPE_MISMATCH, `${this.symbol}: second parameter must be a list`);
+    const target = helpers.ensureTyped(parameters.getParameter(provider, 0));
+    const rawList = helpers.ensureTyped(parameters.getParameter(provider, 1));
+
+    if (helpers.typeOf(rawList) === helpers.FSDataType.Null) {
+      return helpers.typedNull();
     }
 
+    if (helpers.typeOf(rawList) !== helpers.FSDataType.List) {
+      return helpers.makeError(
+        helpers.FsError.ERROR_TYPE_MISMATCH,
+        `${this.symbol}: second parameter must be a list`
+      );
+    }
+
+    const list = helpers.valueOf(rawList);
     const targetNumeric = helpers.isNumeric(target);
 
     for (let i = 0; i < list.length; i += 1) {
-      let item = list.get(i);
-      if (!item) {
+      const item = list.get(i);
+      if (!item || helpers.typeOf(item) === helpers.FSDataType.Null) {
         continue;
       }
 
@@ -38,10 +47,6 @@ class InFunction extends BaseFunction {
 
       if (targetNumeric && helpers.isNumeric(item)) {
         [left, right] = helpers.convertToCommonNumericType(target, item);
-      }
-
-      if (helpers.typeOf(left) === helpers.FSDataType.Null && helpers.typeOf(right) === helpers.FSDataType.Null) {
-        return helpers.makeValue(helpers.FSDataType.Boolean, true);
       }
 
       if (helpers.typeOf(left) === helpers.FSDataType.Null || helpers.typeOf(right) === helpers.FSDataType.Null) {

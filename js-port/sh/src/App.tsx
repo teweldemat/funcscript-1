@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import {
-  FuncscriptEditor,
+  FuncScriptEditor,
   type ColoredSegment,
   parseNodePalette
 } from 'funcscript-editor';
@@ -66,7 +66,7 @@ function App(): JSX.Element {
                     shared <code>colorParseTree</code> helper.
                   </Typography>
                 </Box>
-                <FuncscriptEditor
+                <FuncScriptEditor
                   value={expression}
                   onChange={setExpression}
                   onSegmentsChange={setSegments}

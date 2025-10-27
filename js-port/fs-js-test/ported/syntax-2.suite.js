@@ -1,9 +1,4 @@
-const {
-  expectEvaluation,
-  expectNull,
-  markTodo,
-  finalizeSuite
-} = require('./common');
+const { assert, expectEvaluation, expectNull, runCase, finalizeSuite, evaluateTemplate, DefaultFsDataProvider } = require('./common');
 
 function run() {
   const suite = {};
@@ -25,7 +20,19 @@ function run() {
 
   expectEvaluation('{y:()=>5;return y()}', 5);
 
-  markTodo(suite, 'FsTemplateParseMode', 'FS template parse mode not yet exposed in JS port');
+  const expectTemplate = (name, template, expected, context) => {
+    runCase(suite, name, () => {
+      const provider = context ? new DefaultFsDataProvider(context) : undefined;
+      const result = evaluateTemplate(template, provider);
+      assert.strictEqual(result, expected);
+    });
+  };
+
+  expectTemplate('TemplatePlainString', 'abc', 'abc');
+  expectTemplate('TemplateEmbeddedExpression', "abc${'1'}", 'abc1');
+  expectTemplate('TemplateNestedList', "abc${['d',1,['e',2]]}f", 'abcd1e2f');
+  expectTemplate('TemplateListMap', "abc${['d',1] map (x)=>'>'+x}f", 'abc>d>1f');
+  expectTemplate('TemplateEscapedBrace', 'value \\${ignored}', 'value ${ignored}');
 
   finalizeSuite('Syntax2', suite);
 }

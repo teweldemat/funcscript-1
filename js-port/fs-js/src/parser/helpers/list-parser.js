@@ -12,8 +12,13 @@ module.exports = function createListParser(env) {
 
     const expressions = [];
     const nodeItems = [];
-    const closeImmediately = getLiteralMatch(exp, i, ']') > i;
-    if (!closeImmediately) {
+    let closeIndex = null;
+
+    const immediateClose = getLiteralMatch(exp, i, ']');
+    if (immediateClose > i) {
+      closeIndex = immediateClose;
+      i = skipSpace(exp, immediateClose);
+    } else {
       while (true) {
         const item = env.getExpression(context, exp, i, errors);
         if (!item.block) {
@@ -31,21 +36,20 @@ module.exports = function createListParser(env) {
         }
         i = skipSpace(exp, comma);
       }
-    } else {
-      i = skipSpace(exp, getLiteralMatch(exp, i, ']'));
-    }
 
-    const close = getLiteralMatch(exp, i, ']');
-    if (close === i) {
-      errors.push({ position: i, message: "']' expected" });
-      return { next: index, block: null, node: null };
+      closeIndex = getLiteralMatch(exp, i, ']');
+      if (closeIndex === i) {
+        errors.push({ position: i, message: "']' expected" });
+        return { next: index, block: null, node: null };
+      }
+      i = skipSpace(exp, closeIndex);
     }
 
     const list = new ListExpression();
     list.ValueExpressions = expressions;
     list.Pos = index;
-    list.Length = close - index;
-    const node = new env.ParseNode(env.ParseNodeType.List, index, close - index, nodeItems);
-    return { next: close, block: list, node };
+    list.Length = closeIndex - index;
+    const node = new env.ParseNode(env.ParseNodeType.List, index, closeIndex - index, nodeItems);
+    return { next: i, block: list, node };
   };
 };

@@ -90,7 +90,7 @@ const createHighlightExtension = (provider, callbacks) => {
         decorations: (value) => value.decorations
     });
 };
-const FuncscriptEditor = ({ value, onChange, onSegmentsChange, onError, minHeight = 260 }) => {
+const FuncScriptEditor = ({ value, onChange, onSegmentsChange, onError, minHeight = 260 }) => {
     const containerRef = useRef(null);
     const viewRef = useRef(null);
     const providerRef = useRef(null);
@@ -170,4 +170,4 @@ const FuncscriptEditor = ({ value, onChange, onSegmentsChange, onError, minHeigh
     }, [value]);
     return _jsx("div", { ref: containerRef });
 };
-export default FuncscriptEditor;
+export default FuncScriptEditor;

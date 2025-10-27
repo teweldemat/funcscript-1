@@ -21,7 +21,7 @@ import * as parserModule from 'funcscript/parser';
 
 const { FuncScriptParser } = parserModule as { FuncScriptParser: any };
 
-export type FuncscriptEditorProps = {
+export type FuncScriptEditorProps = {
   value: string;
   onChange: (value: string) => void;
   onSegmentsChange?: (segments: ColoredSegment[]) => void;
@@ -138,13 +138,13 @@ const createHighlightExtension = (
   );
 };
 
-const FuncscriptEditor = ({
+const FuncScriptEditor = ({
   value,
   onChange,
   onSegmentsChange,
   onError,
   minHeight = 260
-}: FuncscriptEditorProps) => {
+}: FuncScriptEditorProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const providerRef = useRef<DefaultFsDataProvider | null>(null);
@@ -239,4 +239,4 @@ const FuncscriptEditor = ({
   return <div ref={containerRef} />;
 };
 
-export default FuncscriptEditor;
+export default FuncScriptEditor;

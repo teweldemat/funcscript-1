@@ -34,6 +34,67 @@ function convertToString(value) {
   }
 }
 
+function formatNumberWithPattern(number, pattern) {
+  const normalizedPattern = pattern.trim();
+  if (!normalizedPattern) {
+    return String(number);
+  }
+
+  const hasGrouping = normalizedPattern.includes(',');
+  const decimalIndex = normalizedPattern.indexOf('.');
+  const integerPart = decimalIndex >= 0 ? normalizedPattern.slice(0, decimalIndex) : normalizedPattern;
+  const fractionalPart = decimalIndex >= 0 ? normalizedPattern.slice(decimalIndex + 1) : '';
+
+  const integerZeros = (integerPart.match(/0/g) || []).length;
+  const fractionalZeros = (fractionalPart.match(/0/g) || []).length;
+  const fractionalLength = fractionalPart.length;
+
+  const minimumIntegerDigits = integerZeros > 0 ? integerZeros : 1;
+  const minimumFractionDigits = fractionalZeros;
+  const maximumFractionDigits = Math.max(fractionalLength, fractionalZeros);
+
+  const formatter = new Intl.NumberFormat('en-US', {
+    useGrouping: hasGrouping,
+    minimumIntegerDigits,
+    minimumFractionDigits,
+    maximumFractionDigits
+  });
+
+  return formatter.format(number);
+}
+
+function tryFormatWithPattern(value, pattern) {
+  const typed = helpers.ensureTyped(value);
+  const formatPattern = pattern.trim();
+  if (!formatPattern) {
+    return convertToString(typed);
+  }
+
+  if (helpers.typeOf(typed) === FSDataType.Null) {
+    return 'null';
+  }
+
+  const isNumeric = helpers.isNumeric(typed);
+  if (isNumeric) {
+    const numeric = Number(helpers.valueOf(typed));
+    if (Number.isFinite(numeric)) {
+      return formatNumberWithPattern(numeric, formatPattern);
+    }
+    return String(numeric);
+  }
+
+  if (helpers.typeOf(typed) === FSDataType.String) {
+    const str = helpers.valueOf(typed);
+    const numeric = Number(str);
+    if (!Number.isNaN(numeric)) {
+      return formatNumberWithPattern(numeric, formatPattern);
+    }
+    return str;
+  }
+
+  return null;
+}
+
 class FormatValueFunction extends BaseFunction {
   constructor() {
     super();
@@ -50,14 +111,21 @@ class FormatValueFunction extends BaseFunction {
       return helpers.makeError(helpers.FsError.ERROR_PARAMETER_COUNT_MISMATCH, `${this.symbol} requires at least one parameter`);
     }
     const value = parameters.getParameter(provider, 0);
-    const format = parameters.count > 1 ? parameters.getParameter(provider, 1) : null;
+    const formatParameter = parameters.count > 1 ? helpers.ensureTyped(parameters.getParameter(provider, 1)) : null;
 
-    if (typeof format === 'string') {
-      switch (format.toLowerCase()) {
+    if (formatParameter && helpers.typeOf(formatParameter) === FSDataType.String) {
+      const rawFormat = helpers.valueOf(formatParameter);
+      const format = rawFormat.toLowerCase();
+      switch (format) {
         case 'json':
           return helpers.makeValue(FSDataType.String, JSON.stringify(convertToJs(value)));
         default:
           break;
+      }
+
+      const formatted = tryFormatWithPattern(value, rawFormat);
+      if (formatted !== null && typeof formatted !== 'undefined') {
+        return helpers.makeValue(FSDataType.String, formatted);
       }
     }
 

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const {
   evaluate,
+  evaluateTemplate,
   DefaultFsDataProvider,
   MapDataProvider,
   KvcProvider,
@@ -165,6 +166,7 @@ function finalizeSuite(suiteName, suite) {
 module.exports = {
   assert,
   evaluate,
+  evaluateTemplate,
   DefaultFsDataProvider,
   MapDataProvider,
   KvcProvider,

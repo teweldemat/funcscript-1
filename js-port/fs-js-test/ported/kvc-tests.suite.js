@@ -1,9 +1,4 @@
-const {
-  expectEvaluation,
-  expectNull,
-  markTodo,
-  finalizeSuite
-} = require('./common');
+const { expectEvaluation, expectNull, expectThrows, runCase, finalizeSuite } = require('./common');
 
 function run() {
   const suite = {};
@@ -19,8 +14,32 @@ function run() {
   expectEvaluation("Select({'a':1,'b':5,'c':8},{'a':null,'b':null})", { a: 1, b: 5 });
   expectEvaluation('Select({a:3,b:4},{a,c:5})', { a: 3, c: 5 });
 
-  markTodo(suite, 'FormatAndSerialization', 'FormatToJson and JSON equivalence tests not yet ported');
-  markTodo(suite, 'DelegateInterop', 'Delegate invocation and byte-array bridging pending');
+  runCase(suite, 'FormatJson', () => expectEvaluation("format({a:5,b:6}, 'json')", '{"a":5,"b":6}'));
+  runCase(
+    suite,
+    'ParseFsExpression',
+    () => expectEvaluation(`parse('{"a":5,"b":6}', 'fs')`, { a: 5, b: 6 })
+  );
+  runCase(suite, 'ParseHex', () => expectEvaluation("parse('ff', 'hex')", 255));
+
+  runCase(
+    suite,
+    'DelegateInvocation',
+    () => expectEvaluation('f(3)', 4, { provider: { f: (x) => x + 1 } })
+  );
+  runCase(
+    suite,
+    'DelegateThrows',
+    () => expectThrows('f(1)', { provider: { f: () => { throw new Error('boom'); } }, messageIncludes: 'boom' })
+  );
+  runCase(
+    suite,
+    'ByteArrayBridge',
+    () => {
+      const bytes = new Uint8Array([1, 2, 3]);
+      expectEvaluation('bytes', bytes, { provider: { bytes } });
+    }
+  );
 
   finalizeSuite('KvcTests', suite);
 }

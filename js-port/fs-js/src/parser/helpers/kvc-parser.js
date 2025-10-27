@@ -34,9 +34,6 @@ module.exports = function createKvcParser(env) {
   }
 
   function buildKvc(entries, returnExpression, entryNodes, startIndex, endIndex, errors) {
-    if (!entries.length && !returnExpression) {
-      return null;
-    }
     const kvc = new KvcExpression();
     const error = kvc.SetKeyValues(entries, returnExpression);
     if (error) {

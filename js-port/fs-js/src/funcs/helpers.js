@@ -38,8 +38,11 @@ function toBoolean(typed) {
 }
 
 function compare(typedLeft, typedRight, symbol) {
+  if (typeOf(typedLeft) === FSDataType.Null && typeOf(typedRight) === FSDataType.Null) {
+    return typedNull();
+  }
   if (typeOf(typedLeft) === FSDataType.Null || typeOf(typedRight) === FSDataType.Null) {
-    return makeError(FsError.ERROR_TYPE_INVALID_PARAMETER, `${symbol}: null value can't be compared`);
+    return typedNull();
   }
 
   let left = ensureTyped(typedLeft);

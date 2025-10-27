@@ -1,6 +1,5 @@
 const { BaseFunction, CallType } = require('../../core/function-base');
-const { ensureTyped, typeOf, valueOf, makeValue } = require('../../core/value');
-const { FSDataType } = require('../../core/fstypes');
+const helpers = require('../helpers');
 
 class EqualsFunction extends BaseFunction {
   constructor() {
@@ -14,14 +13,30 @@ class EqualsFunction extends BaseFunction {
   }
 
   evaluate(provider, parameters) {
-    if (parameters.count < 2) {
-      throw new Error('Equality requires two operands');
+    const error = helpers.expectParamCount(this.symbol, parameters, this.maxParameters);
+    if (error) {
+      return error;
     }
-    const left = ensureTyped(parameters.getParameter(provider, 0));
-    const right = ensureTyped(parameters.getParameter(provider, 1));
-    const sameType = typeOf(left) === typeOf(right);
-    const equal = sameType && valueOf(left) === valueOf(right);
-    return makeValue(FSDataType.Boolean, equal);
+
+    let left = helpers.ensureTyped(parameters.getParameter(provider, 0));
+    let right = helpers.ensureTyped(parameters.getParameter(provider, 1));
+
+    if (helpers.typeOf(left) === helpers.FSDataType.Null && helpers.typeOf(right) === helpers.FSDataType.Null) {
+      return helpers.makeValue(helpers.FSDataType.Boolean, true);
+    }
+    if (helpers.typeOf(left) === helpers.FSDataType.Null || helpers.typeOf(right) === helpers.FSDataType.Null) {
+      return helpers.makeValue(helpers.FSDataType.Boolean, false);
+    }
+
+    if (helpers.isNumeric(left) && helpers.isNumeric(right)) {
+      [left, right] = helpers.convertToCommonNumericType(left, right);
+    }
+
+    if (helpers.typeOf(left) !== helpers.typeOf(right)) {
+      return helpers.makeValue(helpers.FSDataType.Boolean, false);
+    }
+
+    return helpers.makeValue(helpers.FSDataType.Boolean, helpers.valueOf(left) === helpers.valueOf(right));
   }
 }
 
