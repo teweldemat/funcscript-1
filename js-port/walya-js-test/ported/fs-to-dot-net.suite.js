@@ -22,7 +22,7 @@ function run() {
     {
       name: 'Model8 real numbers',
       expression: "{ a:2.2*3; b:'Func'+'Script'; }",
-      expected: { a: 6.6000000000000005, b: 'Walya' }
+      expected: { a: 6.6000000000000005, b: 'FuncScript' }
     },
     { name: 'Model9 alternate numbers', expression: '{ numbers:[10,20,30]; }', expected: { numbers: [10, 20, 30] } },
     {
