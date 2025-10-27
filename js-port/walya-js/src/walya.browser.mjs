@@ -1,0 +1,63 @@
+import * as walya from './walya.browser.js';
+
+const {
+  evaluate,
+  colorParseTree,
+  DefaultFsDataProvider,
+  FsDataProvider,
+  MapDataProvider,
+  KvcProvider,
+  ensureTyped,
+  normalize,
+  makeValue,
+  typeOf,
+  valueOf,
+  typedNull,
+  isTyped,
+  expectType,
+  convertToCommonNumericType,
+  FSDataType,
+  getTypeName,
+  CallType,
+  BaseFunction,
+  ParameterList,
+  ExpressionFunction,
+  FsList,
+  ArrayFsList,
+  KeyValueCollection,
+  SimpleKeyValueCollection,
+  FsError,
+  buildBuiltinMap
+} = walya;
+
+export {
+  evaluate,
+  colorParseTree,
+  DefaultFsDataProvider,
+  FsDataProvider,
+  MapDataProvider,
+  KvcProvider,
+  ensureTyped,
+  normalize,
+  makeValue,
+  typeOf,
+  valueOf,
+  typedNull,
+  isTyped,
+  expectType,
+  convertToCommonNumericType,
+  FSDataType,
+  getTypeName,
+  CallType,
+  BaseFunction,
+  ParameterList,
+  ExpressionFunction,
+  FsList,
+  ArrayFsList,
+  KeyValueCollection,
+  SimpleKeyValueCollection,
+  FsError,
+  buildBuiltinMap
+};
+
+export default walya;

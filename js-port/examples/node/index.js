@@ -6,7 +6,7 @@ const {
   getTypeName,
   FSDataType,
   valueOf
-} = require('funcscript');
+} = require('walya');
 
 const provider = new DefaultFsDataProvider();
 
@@ -65,10 +65,10 @@ if (cliExpression) {
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  prompt: 'FuncScript> '
+  prompt: 'Walya> '
 });
 
-console.log('Enter FuncScript expressions (Ctrl+C to exit).');
+console.log('Enter Walya expressions (Ctrl+C to exit).');
 rl.prompt();
 
 rl.on('line', (line) => {

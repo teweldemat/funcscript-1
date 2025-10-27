@@ -14,10 +14,10 @@ import {
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import {
-  FuncScriptEditor,
+  WalyaEditor,
   type ColoredSegment,
   parseNodePalette
-} from 'funcscript-editor';
+} from 'walya-editor';
 import { theme } from './theme';
 
 const defaultExpression = 'If(1 = 1, 100 * sin(45), 0)';
@@ -48,7 +48,7 @@ function App(): JSX.Element {
       <AppBar position="static" color="primary" enableColorOnDark>
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            FuncScript Syntax Highlighting
+            Walya Syntax Highlighting
           </Typography>
         </Toolbar>
       </AppBar>
@@ -62,11 +62,11 @@ function App(): JSX.Element {
                     Interactive Playground
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
-                    Type FuncScript expressions and see parse-driven syntax highlighting powered by the
+                    Type Walya expressions and see parse-driven syntax highlighting powered by the
                     shared <code>colorParseTree</code> helper.
                   </Typography>
                 </Box>
-                <FuncScriptEditor
+                <WalyaEditor
                   value={expression}
                   onChange={setExpression}
                   onSegmentsChange={setSegments}

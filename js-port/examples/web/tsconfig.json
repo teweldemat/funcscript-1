@@ -17,7 +17,7 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "funcscript/parser": ["../../fs-js/src/parser/func-script-parser"]
+      "walya/parser": ["../../walya-js/src/parser/walya-parser"]
     }
   },
   "include": ["src"]

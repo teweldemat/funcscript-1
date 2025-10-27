@@ -1,0 +1,67 @@
+{
+  "name": "walya-editor",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "walya": "*"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.3.3",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.26.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.67",
+    "@types/react-dom": "^18.2.21",
+    "walya": "file:../walya-js",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.5"
+  },
+  "license": "MIT",
+  "author": "Tewelde Ma. Tegegne <teweldemat@gmail.com>",
+  "description": "Code editor components and bindings for working with Walya in React apps.",
+  "keywords": [
+    "walya",
+    "editor",
+    "react",
+    "codemirror"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teweldemat/walya-1.git"
+  },
+  "bugs": {
+    "url": "https://github.com/teweldemat/walya-1/issues"
+  },
+  "homepage": "https://github.com/teweldemat/walya-1/tree/main/js-port/walya-editor",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "contributors": [
+    "Tewelde Ma. Tegegne <teweldemat@gmail.com>"
+  ]
+}

@@ -25,11 +25,11 @@ import {
   type TypedValue,
   valueOf,
   colorParseTree
-} from 'funcscript';
-// funcscript parser is provided as CommonJS without type definitions
-import * as parserModule from 'funcscript/parser';
+} from 'walya';
+// walya parser is provided as CommonJS without type definitions
+import * as parserModule from 'walya/parser';
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-const { FuncScriptParser } = parserModule as { FuncScriptParser: any };
+const { WalyaParser } = parserModule as { WalyaParser: any };
 
 const theme = createTheme({
   palette: {
@@ -788,7 +788,7 @@ function App() {
   const handleEvaluate = () => {
     setIsEvaluating(true);
     try {
-      const { block, parseNode } = FuncScriptParser.parse(provider, expression);
+      const { block, parseNode } = WalyaParser.parse(provider, expression);
       const typed = ensureTyped(block.evaluate(provider));
       const plain = convertTypedValue(typed);
       const typeName = getTypeName(typed[0]);
@@ -838,10 +838,10 @@ function App() {
         <Stack spacing={4}>
           <Stack spacing={1}>
             <Typography variant="h3" component="h1" fontWeight={600}>
-              FuncScript Playground
+              Walya Playground
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Enter a FuncScript expression to evaluate it in the browser. Try list operations, lambdas, and more.
+              Enter a Walya expression to evaluate it in the browser. Try list operations, lambdas, and more.
             </Typography>
             <Alert severity="info" variant="outlined">
               File system functions are disabled in the browser environment.

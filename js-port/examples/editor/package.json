@@ -1,5 +1,5 @@
 {
-  "name": "funcscript-sh",
+  "name": "walya-sh",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,10 +13,13 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
-    "funcscript": "file:../../fs-js",
-    "funcscript-editor": "file:../../funcscript-editor",
+    "walya": "file:../../walya-js",
+    "walya-editor": "file:../../walya-editor",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.67",

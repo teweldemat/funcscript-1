@@ -1,20 +1,20 @@
-# FuncScript
+# Walya
 
-FuncScript is a .NET-first expression language and runtime that lets you embed concise, functional business logic inside your applications. It ships with a parser, evaluator, formatter, CLI, unit tests, and optional SQL/GIS helpers, making it straightforward to evaluate custom scripts, map data, or compute derived values at runtime.
+Walya is a .NET-first expression language and runtime that lets you embed concise, functional business logic inside your applications. It ships with a parser, evaluator, formatter, CLI, unit tests, and optional SQL/GIS helpers, making it straightforward to evaluate custom scripts, map data, or compute derived values at runtime.
 
 ## Highlights
 - Expression-oriented language with blocks, lambdas, pattern-like switches, string templates, lists, and key-value collections.
 - Batteries-included standard library covering math, logic, text, list processing, OS helpers, HTML utilities, and JSON conversion.
-- Ergonomic .NET embedding via `FuncScript.FuncScript.Evaluate(...)`, strongly-typed error reporting, and deterministic formatting utilities.
+- Ergonomic .NET embedding via `Walya.Walya.Evaluate(...)`, strongly-typed error reporting, and deterministic formatting utilities.
 - Extensible through custom `IFsFunction` implementations or ad-hoc variables injected with `DefaultFsDataProvider`.
 - Extra packages for SQL Server and NetTopologySuite geometries, plus an experimental JavaScript interpreter port.
 
 ## Repository Layout
-- `FuncScript/` - core library targeting .NET 6.0; contains the parser, runtime, standard library, and data model.
-- `FsCli/` - minimal .NET 8 CLI (`fscli`) that evaluates expressions from the command line.
-- `FsExample/` - interactive console sample that demonstrates the REPL-style usage of the runtime.
-- `FuncScript.Sql/` - optional extension with SQL/geometry helpers and type normalization for ADO.NET results.
-- `FuncScript.Test/` - NUnit-based test suite covering parsing, evaluation, errors, and formatting.
+- `Walya/` - core library targeting .NET 6.0; contains the parser, runtime, standard library, and data model.
+- `Walya.Cli/` - minimal .NET 8 CLI (`walyacli`) that evaluates expressions from the command line.
+- `Walya.Example/` - interactive console sample that demonstrates the REPL-style usage of the runtime.
+- `Walya.Sql/` - optional extension with SQL/geometry helpers and type normalization for ADO.NET results.
+- `Walya.Test/` - NUnit-based test suite covering parsing, evaluation, errors, and formatting.
 - `js-port/` - in-progress JavaScript port plus editor experiments and examples.
 
 ## Quick Start
@@ -23,25 +23,25 @@ Install the .NET 8 SDK (includes the .NET 6 tooling required by the library proj
 
 ### Build Everything
 ```bash
-dotnet restore FuncScript.sln
-dotnet build FuncScript.sln
+dotnet restore Walya.sln
+dotnet build Walya.sln
 ```
 
 ### Try the CLI
 ```bash
 # Evaluate a simple expression
-dotnet run --project FsCli -- "(2 + 3) * 4"
+dotnet run --project Walya.Cli -- "(2 + 3) * 4"
 
 # Evaluate a block with variables and built-in helpers
-dotnet run --project FsCli -- "{ rate:0.13; net:(gross)=>gross*(1-rate); return net(12500); }"
+dotnet run --project Walya.Cli -- "{ rate:0.13; net:(gross)=>gross*(1-rate); return net(12500); }"
 ```
 
 ### Embed in Your Application
 ```csharp
 using System;
 using System.Collections.Generic;
-using FuncScript;
-using FuncScript.Model;
+using Walya;
+using Walya.Model;
 
 var globals = new DefaultFsDataProvider(new List<KeyValuePair<string, object>>
 {
@@ -51,10 +51,10 @@ var globals = new DefaultFsDataProvider(new List<KeyValuePair<string, object>>
 
 var expression = "{ net:(gross)=>gross*(1-taxRate); return format(net(gross)); }";
 var context = new ObjectKvc(new { gross = 5200 });
-var result = FuncScript.FuncScript.Evaluate(new KvcProvider(context, globals), expression);
+var result = Walya.Walya.Evaluate(new KvcProvider(context, globals), expression);
 
 var output = new StringBuilder();
-FuncScript.FuncScript.Format(output, result);
+Walya.Walya.Format(output, result);
 Console.WriteLine(output);
 ```
 The runtime normalizes .NET values so that primitive types, lists, key-value collections, GUIDs, byte arrays, and even delegates translate seamlessly to script data.
@@ -68,7 +68,7 @@ Script files are case-insensitive and expression-oriented. Common constructs inc
 - **Control**: `If`, `Switch`, `Case`, `fault` for structured errors
 - **Functions**: `Map`, `Reduce`, `Filter`, `Distinct`, `Take`, `JoinText`, `Format`, `TicksToDate`, `point`, and many more
 
-A more elaborate example lives in `FuncScript/TestFormula.text`, where a payroll table is generated via mapping and HTML string templates.
+A more elaborate example lives in `Walya/TestFormula.text`, where a payroll table is generated via mapping and HTML string templates.
 
 ## Extending the Runtime
 Custom functions are regular .NET classes implementing `IFsFunction`:
@@ -92,7 +92,7 @@ public class HexFunction : IFsFunction
 Create a parameterless constructor, reference the assembly, and `DefaultFsDataProvider.LoadFromAssembly(...)` will auto-register the symbol (including optional aliases via `FunctionAliasAttribute`).
 
 ## SQL & GIS Helpers
-`FuncScript.Sql` adds converters for `Sql*` types and NetTopologySuite geometries plus GIS helpers such as `point(x, y)`. Reference the project alongside the core library to normalize database values before exposing them to scripts.
+`Walya.Sql` adds converters for `Sql*` types and NetTopologySuite geometries plus GIS helpers such as `point(x, y)`. Reference the project alongside the core library to normalize database values before exposing them to scripts.
 
 ## JavaScript Port (Experimental)
 The `js-port/` folder contains a progressively feature-complete JavaScript interpreter that mirrors the .NET runtime. See `js-port/AGENTS.md` and `js-port/port-progress.md` for implementation notes and status.
@@ -100,7 +100,7 @@ The `js-port/` folder contains a progressively feature-complete JavaScript inter
 ## Testing
 Run the NUnit suite to ensure language changes remain backwards compatible:
 ```bash
-dotnet test FuncScript.sln
+dotnet test Walya.sln
 ```
 
 ## Contributing

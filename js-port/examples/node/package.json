@@ -1,15 +1,15 @@
 {
-  "name": "funcscript-node-example",
+  "name": "walya-node-example",
   "version": "0.1.0",
   "private": true,
   "main": "./index.js",
   "bin": {
-    "funcscript-node-example": "./index.js"
+    "walya-node-example": "./index.js"
   },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "funcscript": "file:../../fs-js"
+    "walya": "file:../../walya-js"
   }
 }

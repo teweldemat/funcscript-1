@@ -1,5 +1,5 @@
 {
-  "name": "funcscript-example",
+  "name": "walya-example",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "funcscript": "file:../../fs-js",
+    "walya": "file:../../walya-js",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/material": "^5.15.16",

@@ -9,18 +9,18 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'funcscript/parser': path.resolve(__dirname, '../../fs-js/src/parser/func-script-parser')
+      'walya/parser': path.resolve(__dirname, '../../walya-js/src/parser/walya-parser')
     }
   },
   server: {
     port: 5173
   },
   optimizeDeps: {
-    include: ['funcscript', 'funcscript/parser']
+    include: ['walya', 'walya/parser']
   },
   build: {
     commonjsOptions: {
-      include: [/funcscript/, /node_modules/, /fs-js/]
+      include: [/walya/, /node_modules/, /walya-js/]
     }
   }
 });
