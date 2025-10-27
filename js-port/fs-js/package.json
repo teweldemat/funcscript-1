@@ -1,0 +1,28 @@
+{
+  "name": "funcscript",
+  "version": "0.0.1",
+  "description": "FuncScript runtime for Node.js and browser environments",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "./src/func-script.js",
+  "module": "./src/func-script.browser.mjs",
+  "browser": "./src/func-script.browser.js",
+  "types": "./src/func-script.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/func-script.d.ts",
+      "require": "./src/func-script.js",
+      "import": "./src/func-script.browser.mjs",
+      "default": "./src/func-script.js"
+    },
+    "./browser": {
+      "types": "./src/func-script.browser.d.ts",
+      "require": "./src/func-script.browser.js",
+      "import": "./src/func-script.browser.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src"
+  ]
+}
