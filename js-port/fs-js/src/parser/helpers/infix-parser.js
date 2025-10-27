@@ -1,0 +1,289 @@
+module.exports = function createInfixParser(env) {
+  const { LiteralBlock } = env;
+  const { skipSpace, getLiteralMatch, OPERATOR_SYMBOLS, getIdentifier } = env.utils;
+
+  const getBlockRange = (block) => {
+    if (!block || typeof block !== 'object') {
+      return null;
+    }
+    const start = Number.isFinite(block.Pos) ? block.Pos : Number.isFinite(block.position) ? block.position : null;
+    const length = Number.isFinite(block.Length)
+      ? block.Length
+      : Number.isFinite(block.length)
+        ? block.length
+        : null;
+    if (start === null || length === null) {
+      return null;
+    }
+    return { start, end: start + length };
+  };
+
+  function getOperator(context, candidates, exp, index) {
+    for (const op of candidates) {
+      const i = getLiteralMatch(exp, index, op);
+      if (i > index) {
+        const key = op.toLowerCase ? op.toLowerCase() : op;
+        const typedValue = context.get(key);
+        const node = new env.ParseNode(env.ParseNodeType.Operator, index, i - index);
+        if (!typedValue) {
+          return { next: i, symbol: op, functionValue: null, node };
+        }
+        const resolved = env.ensureTyped(typedValue);
+        if (env.typeOf(resolved) !== env.FSDataType.Function) {
+          return { next: i, symbol: op, functionValue: null, node };
+        }
+        return { next: i, symbol: op, functionValue: env.valueOf(resolved), node };
+      }
+    }
+    return { next: index, symbol: null, functionValue: null, node: null };
+  }
+
+  function interleaveOperandOperatorNodes(operandNodes, operatorNodes) {
+    const children = [];
+    let firstChild = null;
+    let lastChild = null;
+
+    for (let idx = 0; idx < operandNodes.length; idx += 1) {
+      const operandNode = operandNodes[idx];
+      if (operandNode) {
+        children.push(operandNode);
+        if (!firstChild) firstChild = operandNode;
+        lastChild = operandNode;
+      }
+      if (idx < operatorNodes.length) {
+        const operatorNode = operatorNodes[idx];
+        if (operatorNode) {
+          children.push(operatorNode);
+          if (!firstChild) firstChild = operatorNode;
+          lastChild = operatorNode;
+        }
+      }
+    }
+
+    let span = { start: 0, length: 0 };
+    if (firstChild && lastChild) {
+      const start = firstChild.Pos;
+      const end = lastChild.Pos + lastChild.Length;
+      span = { start, length: Math.max(0, end - start) };
+    }
+
+    return { children, span };
+  }
+
+  function getInfixExpressionSingleLevel(context, level, candidates, exp, index, errors) {
+    let i = index;
+    let prog = null;
+    let progNode = null;
+
+    while (true) {
+      if (!prog) {
+        const res = level === 0
+          ? env.getPrefixOrCall(context, exp, i, errors)
+          : getInfixExpressionSingleLevel(context, level - 1, OPERATOR_SYMBOLS[level - 1], exp, i, errors);
+        if (!res.block) {
+          return { next: index, block: null, node: null };
+        }
+        prog = res.block;
+        progNode = res.node;
+        i = skipSpace(exp, res.next);
+        continue;
+      }
+
+      const operatorStart = i;
+      const operatorRes = getOperator(context, candidates, exp, operatorStart);
+      if (operatorRes.next === i || !operatorRes.functionValue) {
+        break;
+      }
+      const symbol = operatorRes.symbol;
+      const func = operatorRes.functionValue;
+      i = skipSpace(exp, operatorRes.next);
+
+      const operands = [prog];
+      const operandNodes = [progNode];
+      const operatorNodes = [];
+      if (operatorRes.node) {
+        operatorNodes.push(operatorRes.node);
+      }
+
+      while (true) {
+        const operandRes = level === 0
+          ? env.getPrefixOrCall(context, exp, i, errors)
+          : getInfixExpressionSingleLevel(context, level - 1, OPERATOR_SYMBOLS[level - 1], exp, i, errors);
+        if (!operandRes.block) {
+          errors.push({ position: i, message: `Operand expected for operator ${symbol}` });
+          return { next: index, block: null, node: null };
+        }
+        operands.push(operandRes.block);
+        operandNodes.push(operandRes.node);
+        i = skipSpace(exp, operandRes.next);
+
+        const repeat = getLiteralMatch(exp, i, symbol);
+        if (repeat === i) {
+          break;
+        }
+        if (repeat > i) {
+          operatorNodes.push(new env.ParseNode(env.ParseNodeType.Operator, i, repeat - i));
+        }
+        i = skipSpace(exp, repeat);
+      }
+
+      const firstOperand = operands[0];
+      const lastOperand = operands[operands.length - 1];
+      const firstRange = getBlockRange(firstOperand) ?? { start: operatorStart, end: operatorStart };
+      const lastRange = getBlockRange(lastOperand) ?? firstRange;
+      const startPos = firstRange.start;
+      const endPos = Math.max(startPos, lastRange.end);
+      const spanLength = Math.max(0, endPos - startPos);
+
+      const primaryOperator = operatorNodes[0] ?? operatorRes.node ?? {
+        Pos: operatorStart,
+        Length: Math.max(0, operatorRes.next - operatorStart)
+      };
+      const funcLiteral = new LiteralBlock(
+        env.makeValue(env.FSDataType.Function, func),
+        primaryOperator.Pos,
+        primaryOperator.Length
+      );
+      funcLiteral.Pos = primaryOperator.Pos;
+      funcLiteral.Length = primaryOperator.Length;
+
+      const call = new env.FunctionCallExpression(funcLiteral, operands, startPos, spanLength);
+      call.Pos = startPos;
+      call.Length = spanLength;
+      prog = call;
+
+      const { children, span } = interleaveOperandOperatorNodes(operandNodes, operatorNodes);
+      progNode = new env.ParseNode(env.ParseNodeType.InfixExpression, span.start, span.length, children);
+    }
+
+    return { next: i, block: prog, node: progNode };
+  }
+
+  function getPrefixOrCall(context, exp, index, errors) {
+    const prefix = env.getPrefixOperator(context, exp, index, errors);
+    if (prefix.block) {
+      return prefix;
+    }
+    const general = getGeneralInfixFunctionCall(context, exp, index, errors);
+    if (general.block) {
+      return general;
+    }
+    return env.getCallAndMemberAccess(context, exp, index, errors);
+  }
+
+  function getInfixExpression(context, exp, index, errors) {
+    return getInfixExpressionSingleLevel(
+      context,
+      OPERATOR_SYMBOLS.length - 1,
+      OPERATOR_SYMBOLS[OPERATOR_SYMBOLS.length - 1],
+      exp,
+      index,
+      errors
+    );
+  }
+
+  function buildGeneralInfixNode(children, fallbackPos) {
+    const filtered = children.filter(Boolean);
+    if (!filtered.length) {
+      return null;
+    }
+    const first = filtered[0];
+    const last = filtered[filtered.length - 1];
+    const start = first.Pos;
+    const end = last.Pos + last.Length;
+    return new env.ParseNode(env.ParseNodeType.GeneralInfixExpression, start, Math.max(0, end - start), filtered);
+  }
+
+  function getGeneralInfixFunctionCall(context, exp, index, errors) {
+    let i = skipSpace(exp, index);
+    const firstRes = env.getCallAndMemberAccess(context, exp, i, errors);
+    if (!firstRes.block) {
+      return { next: index, block: null, node: null };
+    }
+
+    let currentIndex = skipSpace(exp, firstRes.next);
+
+    const idRes = getIdentifier(exp, currentIndex);
+    if (idRes.next === currentIndex) {
+      return { next: index, block: null, node: null };
+    }
+
+    const fnTyped = context.get(idRes.identifierLower || idRes.identifier);
+    if (!fnTyped) {
+      errors.push({ position: currentIndex, message: 'A function expected' });
+      return { next: index, block: null, node: null };
+    }
+
+    const funcValue = env.ensureTyped(fnTyped);
+    if (env.typeOf(funcValue) !== env.FSDataType.Function) {
+      errors.push({ position: currentIndex, message: 'A function expected' });
+      return { next: index, block: null, node: null };
+    }
+
+    const funcObject = env.valueOf(funcValue);
+    if (funcObject.callType !== env.CallType.Dual) {
+      return { next: index, block: null, node: null };
+    }
+
+    const operands = [firstRes.block];
+    const childNodes = [];
+    if (firstRes.node) {
+      childNodes.push(firstRes.node);
+    }
+    if (idRes.node) {
+      childNodes.push(idRes.node);
+    }
+
+    currentIndex = skipSpace(exp, idRes.next);
+
+    const secondRes = env.getCallAndMemberAccess(context, exp, currentIndex, errors);
+    if (!secondRes.block) {
+      errors.push({ position: currentIndex, message: `Right side operand expected for ${idRes.identifier}` });
+      return { next: index, block: null, node: null };
+    }
+
+    operands.push(secondRes.block);
+    if (secondRes.node) {
+      childNodes.push(secondRes.node);
+    }
+    currentIndex = skipSpace(exp, secondRes.next);
+
+    while (true) {
+      const nextTilde = getLiteralMatch(exp, currentIndex, '~');
+      if (nextTilde === currentIndex) {
+        break;
+      }
+      currentIndex = skipSpace(exp, nextTilde);
+      const moreRes = env.getInfixExpression(context, exp, currentIndex, errors);
+      if (!moreRes.block) {
+        break;
+      }
+      operands.push(moreRes.block);
+      if (moreRes.node) {
+        childNodes.push(moreRes.node);
+      }
+      currentIndex = skipSpace(exp, moreRes.next);
+    }
+
+    if (operands.length < 2) {
+      return { next: index, block: null, node: null };
+    }
+
+    const literalFunc = new LiteralBlock(env.makeValue(env.FSDataType.Function, funcObject));
+    const call = new env.FunctionCallExpression(literalFunc, operands);
+    call.Pos = operands[0].Pos;
+    const last = operands[operands.length - 1];
+    call.Length = last.Pos + last.Length - call.Pos;
+
+    const node = buildGeneralInfixNode(childNodes, call.Pos);
+
+    return { next: currentIndex, block: call, node };
+  }
+
+  return {
+    getInfixExpression,
+    getInfixExpressionSingleLevel,
+    getPrefixOrCall,
+    getGeneralInfixFunctionCall
+  };
+};
