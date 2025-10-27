@@ -70,7 +70,7 @@ namespace Walya.Functions.List
                 total = func.Evaluate(parent, new DoListFuncPar { S = total, X = lst[i], I = i });
             }
 
-            return Walya.NormalizeDataType(total);
+            return Engine.NormalizeDataType(total);
         }
 
         public string ParName(int index)

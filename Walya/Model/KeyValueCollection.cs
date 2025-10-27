@@ -32,7 +32,7 @@ namespace Walya.Model
         /// <returns></returns>
         public T ConvertTo<T>()
         {
-            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(Walya.FormatToJson(this));
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(Engine.FormatToJson(this));
         }
         /// <summary>
         /// Converst a KVC to a .net type
@@ -41,7 +41,7 @@ namespace Walya.Model
         /// <returns></returns>
         public object ConvertTo(Type t)
         {
-            var json = Walya.FormatToJson(this);
+            var json = Engine.FormatToJson(this);
             return Newtonsoft.Json.JsonConvert.DeserializeObject(json,t);
         }
         /// <summary>

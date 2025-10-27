@@ -1,6 +1,6 @@
 const assert = require('assert');
-const { evaluate, DefaultFsDataProvider } = require('../walya-js/src/walya');
-const { FSDataType } = require('../walya-js/src/core/fstypes');
+const { Engine } = require('../walya-js/src/walya');
+const { evaluate, DefaultFsDataProvider, FSDataType } = Engine;
 const { ensureTyped, typeOf, valueOf } = require('../walya-js/src/core/value');
 
 function expectNumber(expression, expectedType, expectedValue, provider) {

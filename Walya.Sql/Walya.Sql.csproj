@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>Walya.Sql</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Tewelde Ma. Tegegne</Authors>
     <Company>Walya</Company>
     <Description>SQL Server and NetTopologySuite helpers for the Walya runtime.</Description>

@@ -31,9 +31,9 @@ namespace Walya.Functions.Logic
             if (par0 == null || par1 == null)
                 return null;
 
-            if (Walya.IsNumeric(par0) && Walya.IsNumeric(par1))
+            if (Engine.IsNumeric(par0) && Engine.IsNumeric(par1))
             {
-                Walya.ConvertToCommonNumericType(par0, par1, out par0, out par1);
+                Engine.ConvertToCommonNumericType(par0, par1, out par0, out par1);
             }
 
             if (par0.GetType() != par1.GetType())

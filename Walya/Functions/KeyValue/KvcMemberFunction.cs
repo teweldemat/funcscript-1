@@ -29,7 +29,7 @@ namespace Walya.Functions.KeyValue
                 throw new Error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from null data");
 
             if (!(par0 is KeyValueCollection))
-                throw new Error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {Walya.GetFsDataType(par0)}");
+                throw new Error.TypeMismatchError($"{Symbol} function: Can't get member {par1} from a {Engine.GetFsDataType(par0)}");
 
             return ((KeyValueCollection)par0).Get(((string)par1).ToLower());
 

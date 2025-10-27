@@ -23,7 +23,7 @@ namespace Walya.Functions.KeyValue
                 return null;
 
             if (!(target is KeyValueCollection))
-                throw new Error.TypeMismatchError($"{Symbol} function: Cannot access member '{key}' on non-KeyValueCollection type '{Walya.GetFsDataType(target)}'.");
+                throw new Error.TypeMismatchError($"{Symbol} function: Cannot access member '{key}' on non-KeyValueCollection type '{Engine.GetFsDataType(target)}'.");
 
             return ((KeyValueCollection)target).Get(((string)key).ToLower());
         }

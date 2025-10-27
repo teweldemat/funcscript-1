@@ -199,7 +199,7 @@ function colorParseTree(node) {
   return result;
 }
 
-module.exports = {
+const Engine = {
   evaluate,
   evaluateTemplate,
   colorParseTree,
@@ -228,4 +228,38 @@ module.exports = {
   SimpleKeyValueCollection,
   FsError,
   buildBuiltinMap
+};
+
+module.exports = {
+  Engine,
+  evaluate,
+  evaluateTemplate,
+  colorParseTree,
+  DefaultFsDataProvider,
+  FsDataProvider: dataProviders.FsDataProvider,
+  MapDataProvider: dataProviders.MapDataProvider,
+  KvcProvider: dataProviders.KvcProvider,
+  ensureTyped: valueModule.ensureTyped,
+  normalize: valueModule.normalize,
+  makeValue: valueModule.makeValue,
+  typeOf: valueModule.typeOf,
+  valueOf: valueModule.valueOf,
+  typedNull: valueModule.typedNull,
+  isTyped: valueModule.isTyped,
+  expectType: valueModule.expectType,
+  convertToCommonNumericType: valueModule.convertToCommonNumericType,
+  FSDataType,
+  getTypeName,
+  CallType,
+  BaseFunction,
+  ParameterList,
+  ExpressionFunction,
+  FsList,
+  ArrayFsList,
+  KeyValueCollection,
+  SimpleKeyValueCollection,
+  FsError,
+  buildBuiltinMap,
+  WalyaParser,
+  ParseNode
 };

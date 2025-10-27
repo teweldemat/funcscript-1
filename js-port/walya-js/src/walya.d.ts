@@ -194,4 +194,35 @@ export declare function colorParseTree(
   node: import('./parser/walya-parser').ParseNode | null | undefined
 ): import('./parser/walya-parser').ParseNode[];
 
+export declare const Engine: {
+  evaluate: typeof evaluate;
+  evaluateTemplate: typeof evaluateTemplate;
+  colorParseTree: typeof colorParseTree;
+  DefaultFsDataProvider: typeof DefaultFsDataProvider;
+  FsDataProvider: typeof FsDataProvider;
+  MapDataProvider: typeof MapDataProvider;
+  KvcProvider: typeof KvcProvider;
+  ensureTyped: typeof ensureTyped;
+  normalize: typeof normalize;
+  makeValue: typeof makeValue;
+  typeOf: typeof typeOf;
+  valueOf: typeof valueOf;
+  typedNull: typeof typedNull;
+  isTyped: typeof isTyped;
+  expectType: typeof expectType;
+  convertToCommonNumericType: typeof convertToCommonNumericType;
+  FSDataType: typeof FSDataType;
+  getTypeName: typeof getTypeName;
+  CallType: typeof CallType;
+  BaseFunction: typeof BaseFunction;
+  ParameterList: typeof ParameterList;
+  ExpressionFunction: typeof ExpressionFunction;
+  FsList: typeof FsList;
+  ArrayFsList: typeof ArrayFsList;
+  KeyValueCollection: typeof KeyValueCollection;
+  SimpleKeyValueCollection: typeof SimpleKeyValueCollection;
+  FsError: typeof FsError;
+  buildBuiltinMap: typeof buildBuiltinMap;
+};
+
 export { WalyaParser, ParseNodeType, ParseNode, ParseResult } from './parser/walya-parser';

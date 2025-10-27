@@ -15,17 +15,19 @@ import {
   Typography,
   createTheme
 } from '@mui/material';
-import {
+import { Engine } from 'walya';
+import type { TypedValue, FsList as FsListType, KeyValueCollection as KeyValueCollectionType } from 'walya';
+
+const {
   DefaultFsDataProvider,
   FSDataType,
   KeyValueCollection,
   FsList,
   ensureTyped,
   getTypeName,
-  type TypedValue,
   valueOf,
   colorParseTree
-} from 'walya';
+} = Engine;
 // walya parser is provided as CommonJS without type definitions
 import * as parserModule from 'walya/parser';
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -122,11 +124,11 @@ const convertTypedValue = (typed: TypedValue): unknown => {
     case FSDataType.ByteArray:
       return raw instanceof Uint8Array ? convertByteArray(raw) : raw;
     case FSDataType.List: {
-      const list = raw as FsList;
+      const list = raw as FsListType;
       return Array.from(list).map((item) => convertTypedValue(item));
     }
     case FSDataType.KeyValueCollection: {
-      const collection = raw as KeyValueCollection;
+      const collection = raw as KeyValueCollectionType;
       const entries = collection.getAll();
       const result: Record<string, unknown> = {};
       for (const [key, value] of entries) {

@@ -36,7 +36,7 @@ namespace Walya.Functions.Logic
                 throw new Error.EvaluationTimeException(
                     $"{this.Symbol} function: {this.ParName(1)} should be a list");
 
-            bool par0Numeric = Walya.IsNumeric(par0);
+            bool par0Numeric = Engine.IsNumeric(par0);
 
             foreach (var val in ((FsList)par1))
             {
@@ -45,9 +45,9 @@ namespace Walya.Functions.Logic
 
                 object left, right;
 
-                if (par0Numeric && Walya.IsNumeric(val))
+                if (par0Numeric && Engine.IsNumeric(val))
                 {
-                    Walya.ConvertToCommonNumericType(par0, val, out left, out right);
+                    Engine.ConvertToCommonNumericType(par0, val, out left, out right);
                 }
                 else
                 {

@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 const readline = require('readline');
+const { Engine } = require('walya');
 const {
   evaluate,
   DefaultFsDataProvider,
   getTypeName,
   FSDataType,
   valueOf
-} = require('walya');
+} = Engine;
 
-const provider = new DefaultFsDataProvider();
+const provider = new Engine.DefaultFsDataProvider();
 
 function convertTypedValue(typed) {
   const [type, raw] = typed;

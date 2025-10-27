@@ -1,1 +1,1 @@
-global using WalyaRuntime = global::Walya.Walya;
+global using WalyaRuntime = global::Walya.Engine;

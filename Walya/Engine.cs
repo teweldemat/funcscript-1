@@ -12,11 +12,11 @@ using System.Diagnostics.Tracing;
 
 namespace Walya
 {
-    public static class Walya
+    public static class Engine
     {
         static HashSet<Type> _useJson;
         static Newtonsoft.Json.JsonSerializerSettings _nsSetting;
-        static Walya()
+        static Engine()
         {
             _nsSetting = new Newtonsoft.Json.JsonSerializerSettings
             {
@@ -164,7 +164,7 @@ namespace Walya
             if (_useJson.Contains(value.GetType()))
             {
                 var json = Newtonsoft.Json.JsonConvert.SerializeObject(value, _nsSetting);
-                var obj = Walya.Evaluate(json);
+                var obj = Engine.Evaluate(json);
                 return obj;
             }
             if (FsList.IsListType(t))

@@ -1,4 +1,4 @@
-import { colorParseTree } from 'walya';
+import { Engine } from 'walya';
 export const parseNodePalette = [
     '#1565C0',
     '#C2185B',
@@ -34,7 +34,7 @@ export function computeColoredSegments(expression, parseNode) {
     }
     let rawSegments = [];
     try {
-        const segments = colorParseTree(parseNode);
+        const segments = Engine.colorParseTree(parseNode);
         if (Array.isArray(segments)) {
             rawSegments = segments;
         }

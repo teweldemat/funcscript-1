@@ -5,7 +5,7 @@ Walya is a .NET-first expression language and runtime that lets you embed concis
 ## Highlights
 - Expression-oriented language with blocks, lambdas, pattern-like switches, string templates, lists, and key-value collections.
 - Batteries-included standard library covering math, logic, text, list processing, OS helpers, HTML utilities, and JSON conversion.
-- Ergonomic .NET embedding via `Walya.Walya.Evaluate(...)`, strongly-typed error reporting, and deterministic formatting utilities.
+- Ergonomic .NET embedding via `Walya.Engine.Evaluate(...)`, strongly-typed error reporting, and deterministic formatting utilities.
 - Extensible through custom `IFsFunction` implementations or ad-hoc variables injected with `DefaultFsDataProvider`.
 - Extra packages for SQL Server and NetTopologySuite geometries, plus an experimental JavaScript interpreter port.
 
@@ -51,10 +51,10 @@ var globals = new DefaultFsDataProvider(new List<KeyValuePair<string, object>>
 
 var expression = "{ net:(gross)=>gross*(1-taxRate); return format(net(gross)); }";
 var context = new ObjectKvc(new { gross = 5200 });
-var result = Walya.Walya.Evaluate(new KvcProvider(context, globals), expression);
+var result = Walya.Engine.Evaluate(new KvcProvider(context, globals), expression);
 
 var output = new StringBuilder();
-Walya.Walya.Format(output, result);
+Walya.Engine.Format(output, result);
 Console.WriteLine(output);
 ```
 The runtime normalizes .NET values so that primitive types, lists, key-value collections, GUIDs, byte arrays, and even delegates translate seamlessly to script data.

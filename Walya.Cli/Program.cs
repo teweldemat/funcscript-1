@@ -1,7 +1,7 @@
 using System.Text;
 using global::Walya;
 using global::Walya.Error;
-using WalyaRuntime = global::Walya.Walya;
+using WalyaRuntime = global::Walya.Engine;
 
 if (args.Length == 0)
 {

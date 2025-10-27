@@ -14,7 +14,7 @@ namespace Walya.Block
         public override string AsExpString(IFsDataProvider provider)
         {
             var sb = new StringBuilder();
-            Walya.Format(sb, Value, null, true, false);
+            Engine.Format(sb, Value, null, true, false);
             return sb.ToString();
         }
 

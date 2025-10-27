@@ -1,4 +1,4 @@
-import { colorParseTree } from 'walya';
+import { Engine } from 'walya';
 
 type RawSegment = {
   Pos?: number;
@@ -57,7 +57,7 @@ export function computeColoredSegments(
 
   let rawSegments: unknown[] = [];
   try {
-    const segments = colorParseTree(parseNode as any);
+    const segments = Engine.colorParseTree(parseNode as any);
     if (Array.isArray(segments)) {
       rawSegments = segments;
     }

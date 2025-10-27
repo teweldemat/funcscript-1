@@ -91,14 +91,14 @@ namespace Walya.Model
                     var l = (System.Collections.IList)data;
                     _data = new object[l.Count];
                     for (int i = 0; i < l.Count; i++)
-                        _data[i] = Walya.NormalizeDataType(l[i]);
+                        _data[i] = Engine.NormalizeDataType(l[i]);
                 }
                 else if (t.IsAssignableTo(typeof(System.Collections.IEnumerable)))
                 {
                     var l = (System.Collections.IEnumerable)data;
                     var list = new List<object>();
                     foreach (var o in l)
-                        list.Add(Walya.NormalizeDataType(o));
+                        list.Add(Engine.NormalizeDataType(o));
                     _data = list.ToArray();
                 }
                 else

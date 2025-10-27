@@ -62,7 +62,7 @@ namespace Walya
                 if (k.Value is Func<object>)
                     _data.Add(k.Key, k.Value);
                 else
-                    _data.Add(k.Key, Walya.NormalizeDataType(k.Value));
+                    _data.Add(k.Key, Engine.NormalizeDataType(k.Value));
             }
         }
         public object Get(string name)

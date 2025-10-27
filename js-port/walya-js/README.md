@@ -9,14 +9,14 @@ npm install walya
 
 ## Usage
 ```javascript
-import { evaluate, DefaultFsDataProvider } from 'walya';
+import { Engine } from 'walya';
 
-const provider = new DefaultFsDataProvider({
+const provider = new Engine.DefaultFsDataProvider({
   gross: 5200,
   taxRate: 0.12
 });
 
-const result = evaluate('{ net:(x)=>x*(1-taxRate); return net(gross); }', provider);
+const result = Engine.evaluate('{ net:(x)=>x*(1-taxRate); return net(gross); }', provider);
 
 console.log(result);
 ```

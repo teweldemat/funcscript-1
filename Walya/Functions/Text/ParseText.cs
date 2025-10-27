@@ -51,7 +51,7 @@ namespace Walya.Functions.Text
                 case "l":
                     return Convert.ToInt64(str);
                 case "fs":
-                    return Walya.Evaluate(this, str); // Assuming parent context is not needed or it is correctly handled within Walya.Evaluate
+                    return Engine.Evaluate(this, str); // Assuming parent context is not needed or it is correctly handled within Engine.Evaluate
                 default:
                     return str;
             }

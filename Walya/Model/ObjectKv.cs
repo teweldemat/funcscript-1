@@ -72,8 +72,8 @@ namespace Walya.Model
             if (!tInfo.Properties.TryGetValue(key, out var val))
                 return null;
             if(val.Prop!=null)
-                return Walya.NormalizeDataType(val.Prop.GetValue(_val));
-            return Walya.NormalizeDataType(val.Field.GetValue(_val));
+                return Engine.NormalizeDataType(val.Prop.GetValue(_val));
+            return Engine.NormalizeDataType(val.Field.GetValue(_val));
         }
 
         public override IFsDataProvider ParentProvider => null;
@@ -89,7 +89,7 @@ namespace Walya.Model
             {
                 var val = prop.Value.Field == null ?
                         prop.Value.Prop.GetValue(_val) : prop.Value.Field.GetValue(_val);
-                val = Walya.NormalizeDataType(val);
+                val = Engine.NormalizeDataType(val);
                 list.Add(KeyValuePair.Create(prop.Value.Name, val));
             }
             return list;

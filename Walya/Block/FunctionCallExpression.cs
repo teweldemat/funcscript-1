@@ -87,7 +87,7 @@ namespace Walya.Block
                 return ret;
             }
             throw new EvaluationException(this.Pos, this.Length,
-                new TypeMismatchError($"Function part didn't evaluate to a function or a list. {Walya.GetFsDataType(func)}"));
+                new TypeMismatchError($"Function part didn't evaluate to a function or a list. {Engine.GetFsDataType(func)}"));
         }
 
         

@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, keymap, drawSelection, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { DefaultFsDataProvider } from 'walya';
+import { Engine } from 'walya';
 import { computeColoredSegments } from './walyaColoring';
 // walya parser exposed via CommonJS build without type declarations
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -106,7 +106,7 @@ const WalyaEditor = ({ value, onChange, onSegmentsChange, onError, minHeight = 2
         if (!containerRef.current) {
             return undefined;
         }
-        const provider = new DefaultFsDataProvider();
+        const provider = new Engine.DefaultFsDataProvider();
         providerRef.current = provider;
         const highlightExtension = createHighlightExtension(provider, {
             getSegmentsCallback: () => segmentsCallbackRef.current,

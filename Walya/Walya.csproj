@@ -11,7 +11,7 @@
 
   <PropertyGroup>
     <PackageId>Walya</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Tewelde Ma. Tegegne</Authors>
     <Company>Walya</Company>
     <Description>Expression-oriented scripting language runtime for .NET applications.</Description>

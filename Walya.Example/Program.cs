@@ -2,7 +2,7 @@
 using global::Walya;
 using global::Walya.Core;
 using global::Walya.Error;
-using WalyaRuntime = global::Walya.Walya;
+using WalyaRuntime = global::Walya.Engine;
 using System.Data;
 using static global::Walya.Core.WalyaParser;
 

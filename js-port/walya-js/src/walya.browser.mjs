@@ -1,6 +1,7 @@
 import * as walya from './walya.browser.js';
 
 const {
+  Engine,
   evaluate,
   colorParseTree,
   DefaultFsDataProvider,
@@ -31,6 +32,7 @@ const {
 } = walya;
 
 export {
+  Engine,
   evaluate,
   colorParseTree,
   DefaultFsDataProvider,

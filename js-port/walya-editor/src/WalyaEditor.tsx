@@ -11,7 +11,8 @@ import {
   highlightActiveLine
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { DefaultFsDataProvider } from 'walya';
+import { Engine } from 'walya';
+import type { DefaultFsDataProvider } from 'walya';
 import type { ColoredSegment } from './walyaColoring';
 import { computeColoredSegments } from './walyaColoring';
 
@@ -165,7 +166,7 @@ const WalyaEditor = ({
       return undefined;
     }
 
-    const provider = new DefaultFsDataProvider();
+    const provider = new Engine.DefaultFsDataProvider();
     providerRef.current = provider;
 
     const highlightExtension = createHighlightExtension(provider, {

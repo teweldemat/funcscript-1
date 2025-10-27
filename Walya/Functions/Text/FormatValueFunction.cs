@@ -22,7 +22,7 @@ namespace Walya.Functions.Text
 
             string format = par1 as string;
             var sb = new StringBuilder();
-            Walya.Format(sb, par0, format);
+            Engine.Format(sb, par0, format);
             return sb.ToString();
         }
 
