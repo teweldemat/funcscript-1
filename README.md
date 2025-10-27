@@ -106,5 +106,8 @@ dotnet test FuncScript.sln
 ## Contributing
 Issues and pull requests are welcome. If you plan substantial language or runtime changes, open an issue first so we can align on approach.
 
+## Maintainers
+- Tewelde Ma. Tegegne (<teweldemat@gmail.com>)
+
 ## License
-No explicit license file is included yet. Until one is published, all rights are reserved by the authors.
+Released under the MIT License. See `LICENSE` for details.

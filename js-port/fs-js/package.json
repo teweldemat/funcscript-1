@@ -1,6 +1,6 @@
 {
   "name": "funcscript",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "FuncScript runtime for Node.js and browser environments",
   "license": "MIT",
   "type": "commonjs",
@@ -24,5 +24,29 @@
   },
   "files": [
     "src"
+  ],
+  "author": "Tewelde Ma. Tegegne <teweldemat@gmail.com>",
+  "keywords": [
+    "expression",
+    "runtime",
+    "scripting",
+    "funcscript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teweldemat/funcscript-1.git"
+  },
+  "bugs": {
+    "url": "https://github.com/teweldemat/funcscript-1/issues"
+  },
+  "homepage": "https://github.com/teweldemat/funcscript-1#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "contributors": [
+    "Tewelde Ma. Tegegne <teweldemat@gmail.com>"
   ]
 }

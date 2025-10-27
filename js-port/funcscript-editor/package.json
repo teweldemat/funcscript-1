@@ -1,7 +1,7 @@
 {
   "name": "funcscript-editor",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -37,5 +37,31 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.4.5"
-  }
+  },
+  "license": "MIT",
+  "author": "Tewelde Ma. Tegegne <teweldemat@gmail.com>",
+  "description": "Code editor components and bindings for working with FuncScript in React apps.",
+  "keywords": [
+    "funcscript",
+    "editor",
+    "react",
+    "codemirror"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teweldemat/funcscript-1.git"
+  },
+  "bugs": {
+    "url": "https://github.com/teweldemat/funcscript-1/issues"
+  },
+  "homepage": "https://github.com/teweldemat/funcscript-1/tree/main/js-port/funcscript-editor",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "contributors": [
+    "Tewelde Ma. Tegegne <teweldemat@gmail.com>"
+  ]
 }
