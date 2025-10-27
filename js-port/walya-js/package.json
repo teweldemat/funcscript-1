@@ -1,5 +1,5 @@
 {
-  "name": "walya",
+  "name": "@tewelde/walya",
   "version": "0.1.1",
   "description": "Walya runtime for Node.js and browser environments",
   "license": "MIT",
@@ -34,12 +34,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/teweldemat/walya-1.git"
+    "url": "git+https://github.com/teweldemat/walya.git"
   },
   "bugs": {
-    "url": "https://github.com/teweldemat/walya-1/issues"
+    "url": "https://github.com/teweldemat/walya/issues"
   },
-  "homepage": "https://github.com/teweldemat/walya-1#readme",
+  "homepage": "https://github.com/teweldemat/walya#readme",
   "publishConfig": {
     "access": "public"
   },

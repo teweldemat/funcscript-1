@@ -4,7 +4,11 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": false,
     "esModuleInterop": true,
     "isolatedModules": true,
@@ -14,11 +18,17 @@
     "strict": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "baseUrl": ".",
     "paths": {
-      "walya/parser": ["../../walya-js/src/parser/walya-parser"]
+      "@tewelde/walya/parser": [
+        "../../walya-js/src/parser/walya-parser"
+      ]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

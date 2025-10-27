@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { Engine } = require('walya');
+const { Engine } = require('@tewelde/walya');
 const {
   evaluate,
   DefaultFsDataProvider,

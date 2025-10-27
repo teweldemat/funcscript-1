@@ -15,8 +15,8 @@ import {
   Typography,
   createTheme
 } from '@mui/material';
-import { Engine } from 'walya';
-import type { TypedValue, FsList as FsListType, KeyValueCollection as KeyValueCollectionType } from 'walya';
+import { Engine } from '@tewelde/walya';
+import type { TypedValue, FsList as FsListType, KeyValueCollection as KeyValueCollectionType } from '@tewelde/walya';
 
 const {
   DefaultFsDataProvider,
@@ -29,7 +29,7 @@ const {
   colorParseTree
 } = Engine;
 // walya parser is provided as CommonJS without type definitions
-import * as parserModule from 'walya/parser';
+import * as parserModule from '@tewelde/walya/parser';
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const { WalyaParser } = parserModule as { WalyaParser: any };
 

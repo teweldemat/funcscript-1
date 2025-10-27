@@ -1,4 +1,4 @@
-import { Engine } from 'walya';
+import { Engine } from '@tewelde/walya';
 
 type RawSegment = {
   Pos?: number;

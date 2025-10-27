@@ -13,13 +13,13 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
-    "walya": "file:../../walya-js",
     "walya-editor": "file:../../walya-editor",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "@codemirror/commands": "^6.0.0",
     "@codemirror/state": "^6.0.0",
-    "@codemirror/view": "^6.0.0"
+    "@codemirror/view": "^6.0.0",
+    "@tewelde/walya": "file:../../walya-js"
   },
   "devDependencies": {
     "@types/react": "^18.2.67",

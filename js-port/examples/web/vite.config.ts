@@ -9,18 +9,18 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'walya/parser': path.resolve(__dirname, '../../walya-js/src/parser/walya-parser')
+      '@tewelde/walya/parser': path.resolve(__dirname, '../../walya-js/src/parser/walya-parser')
     }
   },
   server: {
     port: 5173
   },
   optimizeDeps: {
-    include: ['walya', 'walya/parser']
+    include: ['@tewelde/walya', '@tewelde/walya/parser']
   },
   build: {
     commonjsOptions: {
-      include: [/walya/, /node_modules/, /walya-js/]
+      include: [/@tewelde\/walya/, /node_modules/, /walya-js/]
     }
   }
 });

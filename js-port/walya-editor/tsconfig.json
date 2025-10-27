@@ -5,7 +5,9 @@
     "moduleResolution": "Node",
     "baseUrl": ".",
     "paths": {
-      "walya/parser": ["../walya-js/src/parser/walya-parser"]
+      "@tewelde/walya/parser": [
+        "../walya-js/src/parser/walya-parser"
+      ]
     },
     "jsx": "react-jsx",
     "strict": true,
@@ -19,5 +21,7 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

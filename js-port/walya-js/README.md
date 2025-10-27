@@ -1,15 +1,15 @@
 # Walya JS Runtime
 
-The `walya` package exposes the Walya expression runtime for Node.js and browser environments. It mirrors the .NET interpreter so the same scripts can be evaluated on either platform.
+The `@tewelde/walya` package exposes the Walya expression runtime for Node.js and browser environments. It mirrors the .NET interpreter so the same scripts can be evaluated on either platform.
 
 ## Install
 ```bash
-npm install walya
+npm install @tewelde/walya
 ```
 
 ## Usage
 ```javascript
-import { Engine } from 'walya';
+import { Engine } from '@tewelde/walya';
 
 const provider = new Engine.DefaultFsDataProvider({
   gross: 5200,
