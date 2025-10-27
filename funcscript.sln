@@ -3,15 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "funcscript", "funcscript\funcscript.csproj", "{B07EBEE3-415E-42F5-BD55-9B45D13B9211}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FuncScript", "FuncScript\FuncScript.csproj", "{B07EBEE3-415E-42F5-BD55-9B45D13B9211}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "funcscript.test", "funcscript.test\funcscript.test.csproj", "{45EEA9D0-D2A5-4A7B-9269-A6AF1D9CD6A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FuncScript.Test", "FuncScript.Test\FuncScript.Test.csproj", "{45EEA9D0-D2A5-4A7B-9269-A6AF1D9CD6A7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FsExample", "FsExample\FsExample.csproj", "{90C7C4A4-9B5E-4978-A831-E0268B03DB3B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "funcscript.sql", "funcscript.sql\funcscript.sql.csproj", "{483A92B5-CE84-4580-9EB6-F59FD6147961}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FuncScript.Sql", "FuncScript.Sql\FuncScript.Sql.csproj", "{483A92B5-CE84-4580-9EB6-F59FD6147961}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fscli", "fscli\fscli.csproj", "{14C46A6C-2A99-45D5-95F9-8BF0FC8AE3FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FsCli", "FsCli\FsCli.csproj", "{14C46A6C-2A99-45D5-95F9-8BF0FC8AE3FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

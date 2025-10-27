@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\funcscript\funcscript.csproj" />
+    <ProjectReference Include="..\FuncScript\FuncScript.csproj" />
   </ItemGroup>
 
 </Project>
