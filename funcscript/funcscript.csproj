@@ -21,7 +21,7 @@
   </ItemGroup>
 
 	<ItemGroup>
-	  <Compile Remove="parser\FuncScriptParser.cs" />
+	  <Compile Remove="Parser\FuncScriptParser.cs" />
 	</ItemGroup>
 
 </Project>

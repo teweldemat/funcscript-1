@@ -1,7 +1,7 @@
 ﻿using global::FuncScript.Core;
 using NetTopologySuite.Geometries;
 
-namespace FuncScript.Sql.funcs.gis
+namespace FuncScript.Sql.Functions.Gis
 {
     public class PointFunction : IFsFunction
     {
