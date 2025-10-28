@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { EditorState, type Range } from '@codemirror/state';
 import {
   Decoration,
@@ -28,6 +28,7 @@ export type WalyaEditorProps = {
   onSegmentsChange?: (segments: ColoredSegment[]) => void;
   onError?: (message: string | null) => void;
   minHeight?: number;
+  style?: CSSProperties;
 };
 
 type HighlightCallbacks = {
@@ -144,7 +145,8 @@ const WalyaEditor = ({
   onChange,
   onSegmentsChange,
   onError,
-  minHeight = 260
+  minHeight = 260,
+  style
 }: WalyaEditorProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -237,7 +239,7 @@ const WalyaEditor = ({
     }
   }, [value]);
 
-  return <div ref={containerRef} />;
+  return <div ref={containerRef} style={style} />;
 };
 
 export default WalyaEditor;

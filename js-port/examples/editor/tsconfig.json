@@ -18,8 +18,13 @@
     "strict": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "skipLibCheck": true,
     "types": [
       "vite/client"
+    ],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./node_modules"
     ],
     "baseUrl": "."
   },

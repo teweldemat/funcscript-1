@@ -68,11 +68,12 @@ function App(): JSX.Element {
                 </Box>
                 <Box
                   sx={{
+                    height: { xs: '55vh', md: '60vh' },
                     '& .cm-editor': {
-                      maxHeight: { xs: '55vh', md: '60vh' }
+                      height: '100%'
                     },
                     '& .cm-scroller': {
-                      maxHeight: { xs: '55vh', md: '60vh' },
+                      height: '100%',
                       overflowY: 'auto'
                     }
                   }}
@@ -83,6 +84,7 @@ function App(): JSX.Element {
                     onSegmentsChange={setSegments}
                     onError={setParseError}
                     minHeight={320}
+                    style={{ height: '100%' }}
                   />
                 </Box>
                 {parseError ? (

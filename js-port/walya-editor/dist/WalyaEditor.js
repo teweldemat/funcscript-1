@@ -90,7 +90,7 @@ const createHighlightExtension = (provider, callbacks) => {
         decorations: (value) => value.decorations
     });
 };
-const WalyaEditor = ({ value, onChange, onSegmentsChange, onError, minHeight = 260 }) => {
+const WalyaEditor = ({ value, onChange, onSegmentsChange, onError, minHeight = 260, style }) => {
     const containerRef = useRef(null);
     const viewRef = useRef(null);
     const providerRef = useRef(null);
@@ -168,6 +168,6 @@ const WalyaEditor = ({ value, onChange, onSegmentsChange, onError, minHeight = 2
             });
         }
     }, [value]);
-    return _jsx("div", { ref: containerRef });
+    return _jsx("div", { ref: containerRef, style: style });
 };
 export default WalyaEditor;
