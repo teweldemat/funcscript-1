@@ -31,6 +31,17 @@ export const parseNodePalette = [
   '#558B2F'
 ];
 
+const stableNodeTypeIndex = (nodeType: string, paletteSize: number) => {
+  if (paletteSize <= 0) {
+    return 0;
+  }
+  let hash = 0;
+  for (let index = 0; index < nodeType.length; index += 1) {
+    hash = (hash * 31 + nodeType.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash) % paletteSize;
+};
+
 const sanitizeRange = (start: number, end: number, length: number) => {
   const safeStart = Math.max(0, Math.min(start, length));
   const safeEnd = Math.max(safeStart, Math.min(end, length));
@@ -97,15 +108,15 @@ export function computeColoredSegments(
     .filter((segment): segment is { start: number; end: number; nodeType: string } => Boolean(segment))
     .sort((a, b) => (a.start === b.start ? a.end - b.end : a.start - b.start));
 
-  const colorMap = new Map<string, string>();
-  let paletteIndex = 0;
+  const colorCache = new Map<string, string>();
   const getColor = (nodeType: string) => {
-    if (colorMap.has(nodeType)) {
-      return colorMap.get(nodeType)!;
+    let color = colorCache.get(nodeType);
+    if (color) {
+      return color;
     }
-    const color = parseNodePalette[paletteIndex % parseNodePalette.length];
-    paletteIndex += 1;
-    colorMap.set(nodeType, color);
+    const paletteIndex = stableNodeTypeIndex(nodeType, parseNodePalette.length);
+    color = parseNodePalette[paletteIndex];
+    colorCache.set(nodeType, color);
     return color;
   };
 
