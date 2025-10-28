@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <AssemblyName>FunscScript</AssemblyName>
+    <RootNamespace>FunscScript</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>FunscScript</PackageId>
+    <Version>0.1.1</Version>
+    <Authors>Tewelde Ma. Tegegne</Authors>
+    <Company>FunscScript</Company>
+    <Description>Expression-oriented scripting language runtime for .NET applications.</Description>
+    <PackageTags>funscscript;expression-language;scripting;runtime</PackageTags>
+    <PackageProjectUrl>https://github.com/teweldemat/funscscript-1</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/teweldemat/funscscript-1</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReleaseNotes>Initial cross-platform release.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageOutputPath>../artifacts/NuGet</PackageOutputPath>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../LICENSE" Pack="true" PackagePath="" />
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Parser/FunscScriptParser.cs" />
+  </ItemGroup>
+
+</Project>

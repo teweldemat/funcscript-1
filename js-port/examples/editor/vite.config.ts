@@ -13,12 +13,12 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['@tewelde/walya', '@tewelde/walya/parser', '@tewelde/walya-editor'],
+    include: ['@tewelde/funscscript', '@tewelde/funscscript/parser', '@tewelde/funscscript-editor'],
     force: true
   },
   build: {
     commonjsOptions: {
-      include: [/node_modules/, /walya-js\//, /walya-editor\//]
+      include: [/node_modules/, /funscscript-js\//, /funscscript-editor\//]
     }
   }
 });

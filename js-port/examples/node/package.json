@@ -1,15 +1,15 @@
 {
-  "name": "walya-node-example",
+  "name": "funscscript-node-example",
   "version": "0.1.0",
   "private": true,
   "main": "./index.js",
   "bin": {
-    "walya-node-example": "./index.js"
+    "funscscript-node-example": "./index.js"
   },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@tewelde/walya": "^0.1.3"
+    "@tewelde/funscscript": "^0.1.3"
   }
 }

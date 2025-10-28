@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { Engine } = require('@tewelde/walya');
+const { Engine } = require('@tewelde/funscscript');
 const {
   evaluate,
   DefaultFsDataProvider,
@@ -66,10 +66,10 @@ if (cliExpression) {
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  prompt: 'Walya> '
+  prompt: 'FunscScript> '
 });
 
-console.log('Enter Walya expressions (Ctrl+C to exit).');
+console.log('Enter FunscScript expressions (Ctrl+C to exit).');
 rl.prompt();
 
 rl.on('line', (line) => {

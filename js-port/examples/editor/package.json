@@ -1,5 +1,5 @@
 {
-  "name": "walya-sh",
+  "name": "funscscript-sh",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
-    "@tewelde/walya": "file:../../walya-js",
-    "@tewelde/walya-editor": "file:../../walya-editor",
+    "@tewelde/funscscript": "file:../../funscscript-js",
+    "@tewelde/funscscript-editor": "file:../../funscscript-editor",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
