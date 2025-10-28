@@ -1,6 +1,6 @@
-# Node FunscScript Console
+# Node FuncScript Console
 
-Sample CLI that evaluates FunscScript expressions with the JavaScript runtime. Use it directly with an argument:
+Sample CLI that evaluates FuncScript expressions with the JavaScript runtime. Use it directly with an argument:
 
 ```sh
 npm install
@@ -14,6 +14,6 @@ npm install
 node index.js
 ```
 
-If you already have the `funscscript` package installed globally or in a parent workspace you can skip the local `npm install` and use `npx funscscript-node-example` after linking.
+If you already have the `funcscript` package installed globally or in a parent workspace you can skip the local `npm install` and use `npx funcscript-node-example` after linking.
 
 Type expressions and press Enter to see the type and value.

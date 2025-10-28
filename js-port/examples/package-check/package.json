@@ -1,12 +1,12 @@
 {
-  "name": "funscscript-package-check",
+  "name": "funcscript-package-check",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
-  "description": "Manual verification sandbox for FunscScript npm packages before publishing.",
+  "description": "Manual verification sandbox for FuncScript npm packages before publishing.",
   "scripts": {
     "clean": "rm -rf node_modules package-lock.json tarballs",
-    "pack": "rm -rf tarballs && mkdir -p tarballs && npm --prefix ../../funscscript-js pack --pack-destination ./tarballs && npm --prefix ../../funscscript-editor pack --pack-destination ./tarballs",
+    "pack": "rm -rf tarballs && mkdir -p tarballs && npm --prefix ../../funcscript-js pack --pack-destination ./tarballs && npm --prefix ../../funcscript-editor pack --pack-destination ./tarballs",
     "install:tarballs": "npm install ./tarballs/*.tgz",
     "check": "node scripts/sanity-check.js",
     "verify": "npm run clean && npm run pack && npm run install:tarballs && npm run check"

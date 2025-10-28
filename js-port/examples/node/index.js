@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { Engine } = require('@tewelde/funscscript');
+const { Engine } = require('@tewelde/funcscript');
 const {
   evaluate,
   DefaultFsDataProvider,
@@ -66,10 +66,10 @@ if (cliExpression) {
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
-  prompt: 'FunscScript> '
+  prompt: 'FuncScript> '
 });
 
-console.log('Enter FunscScript expressions (Ctrl+C to exit).');
+console.log('Enter FuncScript expressions (Ctrl+C to exit).');
 rl.prompt();
 
 rl.on('line', (line) => {

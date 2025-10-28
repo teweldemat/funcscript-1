@@ -1,9 +1,9 @@
-# FunscScript Package Check
+# FuncScript Package Check
 
-This example project helps you manually validate the FunscScript npm packages before publishing them to the registry.
+This example project helps you manually validate the FuncScript npm packages before publishing them to the registry.
 
 ## What it does
-- Packs the local `@tewelde/funscscript` runtime and `@tewelde/funscscript-editor` packages into tarballs under `tarballs/`.
+- Packs the local `@tewelde/funcscript` runtime and `@tewelde/funcscript-editor` packages into tarballs under `tarballs/`.
 - Installs those tarballs into this project to mimic what consumers receive from npm.
 - Runs a small sanity script (`scripts/sanity-check.js`) that imports the runtime package and exercises core functionality.
 

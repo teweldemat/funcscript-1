@@ -1,6 +1,6 @@
-# FunscScript Editor Tarball Check
+# FuncScript Editor Tarball Check
 
-This Vite + React sample mirrors `js-port/examples/editor`, but it installs the FunscScript runtime and editor packages from locally packed `.tgz` files. Use it to smoke test the packages exactly as they will be consumed from npm before publishing.
+This Vite + React sample mirrors `js-port/examples/editor`, but it installs the FuncScript runtime and editor packages from locally packed `.tgz` files. Use it to smoke test the packages exactly as they will be consumed from npm before publishing.
 
 ## Workflow
 1. From the repository root run:
@@ -9,7 +9,7 @@ This Vite + React sample mirrors `js-port/examples/editor`, but it installs the 
    npm install
    ```
    The `preinstall` hook runs `scripts/prepare-tarballs.cjs`, which:
-   - Packs `@tewelde/funscscript` and `@tewelde/funscscript-editor` using `npm pack`.
+   - Packs `@tewelde/funcscript` and `@tewelde/funcscript-editor` using `npm pack`.
    - Drops the tarballs into `tarballs/` with deterministic names.
    - Keeps `package.json` dependencies pointed at those tarballs via `file:` specifiers.
 

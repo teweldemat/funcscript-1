@@ -1,5 +1,5 @@
 {
-  "name": "funscscript-editor-tarball-check",
+  "name": "funcscript-editor-tarball-check",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
-    "@tewelde/funscscript": "file:tarballs/funscscript-runtime.tgz",
-    "@tewelde/funscscript-editor": "file:tarballs/funscscript-editor.tgz",
+    "@tewelde/funcscript": "file:tarballs/funcscript-runtime.tgz",
+    "@tewelde/funcscript-editor": "file:tarballs/funcscript-editor.tgz",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

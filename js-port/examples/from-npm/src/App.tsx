@@ -3,7 +3,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import theme from './theme';
 import './global.css';
-import {FunscScriptEditor} from '@tewelde/funscscript-editor'
+import {FuncScriptEditor} from '@tewelde/funcscript-editor'
 import { useState } from 'react';
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
             <HomeRoundedIcon fontSize="large" />
             <Typography variant="h4" component="h1">MUI + TypeScript + Webpack</Typography>
             <Typography>Starter is live.</Typography>
-            <FunscScriptEditor value={exp} onChange={setExp} />
+            <FuncScriptEditor value={exp} onChange={setExp} />
             <Button variant="contained">Primary Action</Button>
           </Stack>
         </Box>

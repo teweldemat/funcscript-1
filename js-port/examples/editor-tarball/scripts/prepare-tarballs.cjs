@@ -10,14 +10,14 @@ const tarballDir = path.resolve(__dirname, '..', 'tarballs');
 
 const packages = [
   {
-    name: '@tewelde/funscscript',
-    sourceDir: path.join(repoRoot, 'js-port', 'funscscript-js'),
-    targetName: 'funscscript-runtime.tgz'
+    name: '@tewelde/funcscript',
+    sourceDir: path.join(repoRoot, 'js-port', 'funcscript-js'),
+    targetName: 'funcscript-runtime.tgz'
   },
   {
-    name: '@tewelde/funscscript-editor',
-    sourceDir: path.join(repoRoot, 'js-port', 'funscscript-editor'),
-    targetName: 'funscscript-editor.tgz'
+    name: '@tewelde/funcscript-editor',
+    sourceDir: path.join(repoRoot, 'js-port', 'funcscript-editor'),
+    targetName: 'funcscript-editor.tgz'
   }
 ];
 

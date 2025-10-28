@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 
-const funscscript = require('@tewelde/funscscript');
+const funcscript = require('@tewelde/funcscript');
 
-const { Engine, DefaultFsDataProvider, FunscScriptParser } = funscscript;
+const { Engine, DefaultFsDataProvider, FuncScriptParser } = funcscript;
 
 function verifyEvaluate() {
   const provider = new DefaultFsDataProvider({ gross: 1250, rate: 0.12 });
@@ -18,7 +18,7 @@ function verifyTemplate() {
 }
 
 function verifyParser() {
-  const { block, parseNode } = FunscScriptParser.parse(new DefaultFsDataProvider(), '1 + 2');
+  const { block, parseNode } = FuncScriptParser.parse(new DefaultFsDataProvider(), '1 + 2');
   assert.ok(block, 'Parser did not return a block');
   assert.ok(parseNode, 'Parser did not return a parse node');
 }
@@ -27,4 +27,4 @@ verifyEvaluate();
 verifyTemplate();
 verifyParser();
 
-console.log('FunscScript runtime sanity check passed.');
+console.log('FuncScript runtime sanity check passed.');

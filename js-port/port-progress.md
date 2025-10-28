@@ -8,7 +8,7 @@
       [x] Arithmetic and equality operators
       [x] Case/switch constructs & prefix ops
       [x] Key-value selector chaining resilient to browser bundlers
-[ ] Port funscscript.test file for file
+[ ] Port funcscript.test file for file
   [ ] AdvancedSyntax parity
     [x] Naked key-value literal expressions
     [x] General infix syntax (`reduce`, optional chaining)

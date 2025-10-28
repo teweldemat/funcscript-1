@@ -1,15 +1,15 @@
 {
-  "name": "funscscript-node-example",
+  "name": "funcscript-node-example",
   "version": "0.1.0",
   "private": true,
   "main": "./index.js",
   "bin": {
-    "funscscript-node-example": "./index.js"
+    "funcscript-node-example": "./index.js"
   },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@tewelde/funscscript": "^0.1.3"
+    "@tewelde/funcscript": "^0.1.3"
   }
 }

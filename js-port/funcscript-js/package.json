@@ -1,0 +1,57 @@
+{
+  "name": "@tewelde/funcscript",
+  "version": "0.1.1",
+  "description": "FuncScript runtime for Node.js and browser environments",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "./src/funcscript.js",
+  "module": "./src/funcscript.browser.mjs",
+  "browser": "./src/funcscript.browser.js",
+  "types": "./src/funcscript.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/funcscript.d.ts",
+      "require": "./src/funcscript.js",
+      "import": "./src/funcscript.browser.mjs",
+      "default": "./src/funcscript.js"
+    },
+    "./parser": {
+      "types": "./src/parser/funcscript-parser.d.ts",
+      "require": "./src/parser/funcscript-parser.js",
+      "import": "./src/parser/funcscript-parser.js"
+    },
+    "./browser": {
+      "types": "./src/funcscript.browser.d.ts",
+      "require": "./src/funcscript.browser.js",
+      "import": "./src/funcscript.browser.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src"
+  ],
+  "author": "Tewelde Ma. Tegegne <teweldemat@gmail.com>",
+  "keywords": [
+    "expression",
+    "runtime",
+    "scripting",
+    "funcscript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teweldemat/funcscript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/teweldemat/funcscript/issues"
+  },
+  "homepage": "https://github.com/teweldemat/funcscript#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "contributors": [
+    "Tewelde Ma. Tegegne <teweldemat@gmail.com>"
+  ]
+}

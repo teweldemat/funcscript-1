@@ -13,12 +13,12 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['@tewelde/funscscript', '@tewelde/funscscript/parser', '@tewelde/funscscript-editor'],
+    include: ['@tewelde/funcscript', '@tewelde/funcscript/parser', '@tewelde/funcscript-editor'],
     force: true
   },
   build: {
     commonjsOptions: {
-      include: [/node_modules/, /funscscript-js\//, /funscscript-editor\//]
+      include: [/node_modules/, /funcscript-js\//, /funcscript-editor\//]
     }
   }
 });

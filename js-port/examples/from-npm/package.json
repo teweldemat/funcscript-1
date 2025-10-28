@@ -14,7 +14,7 @@
     "@mui/material": "^6.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@tewelde/funscscript-editor":"0.1.7"
+    "@tewelde/funcscript-editor":"0.1.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.7",
