@@ -1,5 +1,12 @@
-import { useEffect, useRef, type CSSProperties } from 'react';
-import { EditorState, StateField, type Range } from '@codemirror/state';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties
+} from 'react';
+import { Compartment, EditorState, StateField, type Range } from '@codemirror/state';
 import {
   Decoration,
   DecorationSet,
@@ -57,6 +64,7 @@ export type FuncScriptEditorProps = {
 type HighlightCallbacks = {
   getSegmentsCallback: () => ((segments: ColoredSegment[]) => void) | undefined;
   getErrorCallback: () => ((message: string | null) => void) | undefined;
+  getParseNodeCallback: () => ((node: RawParseNode | null) => void) | undefined;
 };
 
 type RawParseNode = {
@@ -68,6 +76,10 @@ type RawParseNode = {
   childs?: RawParseNode[];
   Children?: RawParseNode[];
   children?: RawParseNode[];
+  NodeType?: string;
+  nodeType?: string;
+  Type?: string;
+  type?: string;
 };
 
 type FoldRange = {
@@ -80,6 +92,7 @@ type FuncScriptAnalysis = {
   decorations: DecorationSet;
   segments: ColoredSegment[];
   foldRanges: FoldRange[];
+  parseNode: RawParseNode | null;
 };
 
 const clampRange = (start: number, end: number, length: number) => {
@@ -155,11 +168,451 @@ const collectFoldRanges = (root: RawParseNode, doc: EditorState['doc']): FoldRan
   return Array.from(byLine.values()).sort((a, b) => a.lineStart - b.lineStart);
 };
 
+type ParseTreeNode = {
+  id: string;
+  typeName: string;
+  range: { start: number; end: number } | null;
+  expression: string;
+  isEditable: boolean;
+  children: ParseTreeNode[];
+};
+
+// Node types that represent structural containers rather than standalone expressions.
+const NON_EDITABLE_NODE_TYPES = new Set<string>([
+  'FunctionParameterList',
+  'FunctionParameter',
+  'FunctionParameters',
+  'LambdaParameterList',
+  'LambdaParameters',
+  'ArgumentList',
+  'Arguments',
+  'IdentifierList',
+  'StatementList',
+  'Block',
+  'Operator',
+  "Key"
+]);
+
+const isEditableTypeName = (typeName: string) => {
+  if (!typeName) {
+    return false;
+  }
+  if (NON_EDITABLE_NODE_TYPES.has(typeName)) {
+    return false;
+  }
+  if (typeName.includes('Parameter')) {
+    return false;
+  }
+  if (typeName.includes('Argument')) {
+    return false;
+  }
+  if (typeName.endsWith('List') && !typeName.endsWith('ExpressionList')) {
+    return false;
+  }
+  if (typeName.endsWith('Block') || typeName.endsWith('Body')) {
+    return false;
+  }
+  return true;
+};
+
+const getNodeTypeName = (node: RawParseNode) => {
+  if (typeof node.NodeType === 'string' && node.NodeType.length > 0) {
+    return node.NodeType;
+  }
+  if (typeof node.nodeType === 'string' && node.nodeType.length > 0) {
+    return node.nodeType;
+  }
+  if (typeof node.Type === 'string' && node.Type.length > 0) {
+    return node.Type;
+  }
+  if (typeof node.type === 'string' && node.type.length > 0) {
+    return node.type;
+  }
+  return 'Unknown';
+};
+
+const buildParseTree = (root: RawParseNode | null, docText: string): ParseTreeNode | null => {
+  if (!root) {
+    return null;
+  }
+
+  const docLength = docText.length;
+
+  const collapseSingleChild = (node: RawParseNode, path: number[]) => {
+    let currentNode = node;
+    const collapsedPath = [...path];
+    while (true) {
+      const children = getChildNodes(currentNode);
+      if (children.length !== 1) {
+        break;
+      }
+      currentNode = children[0];
+      collapsedPath.push(0);
+    }
+    return { node: currentNode, path: collapsedPath };
+  };
+
+  const collectDisplayChildren = (node: RawParseNode, path: number[]): ParseTreeNode[] => {
+    const rawChildren = getChildNodes(node);
+    const displayChildren: ParseTreeNode[] = [];
+    for (let index = 0; index < rawChildren.length; index += 1) {
+      const { node: collapsedNode, path: collapsedPath } = collapseSingleChild(
+        rawChildren[index],
+        [...path, index]
+      );
+      displayChildren.push(walk(collapsedNode, collapsedPath));
+    }
+    return displayChildren;
+  };
+
+  const walk = (node: RawParseNode, path: number[]): ParseTreeNode => {
+    const range = toNodeRange(node, docLength);
+    const expression = range ? docText.slice(range.start, range.end) : '';
+    const typeName = getNodeTypeName(node);
+    const children = collectDisplayChildren(node, path);
+    const id = path.length === 0 ? 'root' : path.join('-');
+    return {
+      id,
+      typeName,
+      range,
+      expression,
+      isEditable: Boolean(range) && isEditableTypeName(typeName),
+      children
+    };
+  };
+
+  return walk(root, []);
+};
+
+const createParseNodeIndex = (root: ParseTreeNode | null) => {
+  const map = new Map<string, ParseTreeNode>();
+
+  const visit = (node: ParseTreeNode) => {
+    map.set(node.id, node);
+    for (const child of node.children) {
+      visit(child);
+    }
+  };
+
+  if (root) {
+    visit(root);
+  }
+
+  return map;
+};
+
+const formatExpressionPreview = (expression: string) => {
+  const condensed = expression.replace(/\s+/g, ' ').trim();
+  if (condensed.length === 0) {
+    return '';
+  }
+  if (condensed.length > 48) {
+    return condensed.slice(0, 45) + '...';
+  }
+  return condensed;
+};
+
+const findNodeByRange = (
+  root: ParseTreeNode | null,
+  target: { start: number; end: number }
+): ParseTreeNode | null => {
+  if (!root) {
+    return null;
+  }
+
+  let exactMatch: ParseTreeNode | null = null;
+  let startMatch: { node: ParseTreeNode; diff: number } | null = null;
+  let overlapMatch: { node: ParseTreeNode; diff: number } | null = null;
+
+  const stack: ParseTreeNode[] = [root];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node) {
+      continue;
+    }
+    const range = node.range;
+    if (range) {
+      if (range.start === target.start && range.end === target.end) {
+        exactMatch = node;
+        break;
+      }
+
+      if (range.start === target.start) {
+        const diff = Math.abs(range.end - target.end);
+        if (!startMatch || diff < startMatch.diff) {
+          startMatch = { node, diff };
+        }
+      }
+
+      const overlaps = !(range.end <= target.start || range.start >= target.end);
+      if (overlaps) {
+        const diff = Math.abs(range.start - target.start) + Math.abs(range.end - target.end);
+        if (!overlapMatch || diff < overlapMatch.diff) {
+          overlapMatch = { node, diff };
+        }
+      }
+    }
+
+    for (const child of node.children) {
+      stack.push(child);
+    }
+  }
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+  if (startMatch) {
+    return startMatch.node;
+  }
+  if (overlapMatch) {
+    return overlapMatch.node;
+  }
+  return null;
+};
+
+const findFirstEditableNode = (root: ParseTreeNode | null): ParseTreeNode | null => {
+  if (!root) {
+    return null;
+  }
+  if (root.isEditable) {
+    return root;
+  }
+  for (const child of root.children) {
+    const match = findFirstEditableNode(child);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+const TREE_NODE_INDENT = 12;
+
+type ParseTreeListProps = {
+  node: ParseTreeNode;
+  level: number;
+  selectedId: string | null;
+  onSelect: (nodeId: string) => void;
+};
+
+const treeButtonBaseStyle: CSSProperties = {
+  width: '100%',
+  background: 'transparent',
+  border: '1px solid transparent',
+  textAlign: 'left',
+  padding: '2px 6px',
+  borderRadius: 4,
+  fontSize: 12,
+  transition: 'background-color 0.1s ease'
+};
+
+const ParseTreeList = ({ node, level, selectedId, onSelect }: ParseTreeListProps) => {
+  const label = `${node.typeName}:${formatExpressionPreview(node.expression)}`;
+  const isSelected = node.id === selectedId;
+  const isEditable = node.isEditable;
+  const isSelectable = isEditable;
+  const displayLabel = label || node.typeName;
+
+  if (!isEditable) {
+    return (
+      <div>
+        {node.children.map((child) => (
+          <ParseTreeList
+            key={child.id}
+            node={child}
+            level={level}
+            selectedId={selectedId}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const style: CSSProperties = {
+    ...treeButtonBaseStyle,
+    marginLeft: level * TREE_NODE_INDENT,
+    backgroundColor: isSelected ? '#0366d6' : 'transparent',
+    color: isSelected ? '#ffffff' : '#24292f',
+    cursor: isSelectable ? 'pointer' : 'default'
+  };
+
+  return (
+    <div>
+      <button
+        type="button"
+        style={style}
+        disabled={!isSelectable}
+        onClick={() => {
+          if (isSelectable) {
+            onSelect(node.id);
+          }
+        }}
+        title={label}
+      >
+        {displayLabel}
+      </button>
+      {node.children.map((child) => (
+        <ParseTreeList
+          key={child.id}
+          node={child}
+          level={level + 1}
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  );
+};
+
+const containerBaseStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  border: '1px solid #d0d7de',
+  borderRadius: 6,
+  backgroundColor: '#ffffff',
+  overflow: 'hidden'
+};
+
+const titleBarStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '6px 8px',
+  borderBottom: '1px solid #d0d7de',
+  backgroundColor: '#f6f8fa',
+  gap: 8
+};
+
+const titleTextStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  color: '#24292f'
+};
+
+const titleControlsStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6
+};
+
+const modeButtonBaseStyle: CSSProperties = {
+  border: '1px solid #d0d7de',
+  backgroundColor: '#ffffff',
+  color: '#24292f',
+  borderRadius: 4,
+  fontSize: 12,
+  padding: '2px 8px',
+  cursor: 'pointer'
+};
+
+const modeButtonActiveStyle: CSSProperties = {
+  backgroundColor: '#24292f',
+  color: '#ffffff',
+  borderColor: '#24292f'
+};
+
+const modeButtonDisabledStyle: CSSProperties = {
+  opacity: 0.5,
+  cursor: 'not-allowed'
+};
+
+const bodyBaseStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'stretch',
+  minHeight: 0,
+  flex: 1
+};
+
+const treePaneBaseStyle: CSSProperties = {
+  width: 260,
+  borderRight: '1px solid #d0d7de',
+  overflowY: 'auto',
+  padding: '8px 4px',
+  backgroundColor: '#fafbfc'
+};
+
+const treeEmptyStyle: CSSProperties = {
+  fontSize: 12,
+  color: '#57606a',
+  padding: '4px 6px'
+};
+
+const editorPaneBaseStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+const codeMirrorContainerBaseStyle: CSSProperties = {
+  flex: 1
+};
+
+const nodeInfoStyle: CSSProperties = {
+  fontSize: 12,
+  padding: '6px 12px',
+  borderBottom: '1px solid #e1e4e8',
+  backgroundColor: '#f6f8fa',
+  color: '#24292f'
+};
+
+const treeEditorContainerBaseStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  position: 'relative',
+  borderTop: '1px solid #e1e4e8',
+  backgroundColor: '#ffffff'
+};
+
+const treeEditorCodeMirrorStyle: CSSProperties = {
+  position: 'absolute',
+  inset: 0
+};
+
+const treeEditorOverlayStyle: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 12,
+  color: '#57606a',
+  pointerEvents: 'auto',
+  backgroundColor: 'rgba(246, 248, 250, 0.85)'
+};
+
+const nodeErrorStyle: CSSProperties = {
+  fontSize: 12,
+  color: '#cf222e',
+  padding: '4px 12px',
+  backgroundColor: '#ffebeb',
+  borderBottom: '1px solid #ffd7d5'
+};
+
+const expressionPreviewContainerStyle: CSSProperties = {
+  fontSize: 11,
+  lineHeight: 1.4,
+  fontFamily: 'Roboto Mono, monospace',
+  padding: '8px 12px',
+  borderTop: '1px solid #e1e4e8',
+  backgroundColor: '#f6f8fa',
+  color: '#57606a',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word'
+};
+
+const expressionSelectedTextStyle: CSSProperties = {
+  textDecoration: 'underline',
+  fontWeight: 600,
+  color: '#24292f'
+};
+
 const createFuncScriptExtensions = (
   provider: DefaultFsDataProvider,
   callbacks: HighlightCallbacks
 ) => {
-  const { getSegmentsCallback, getErrorCallback } = callbacks;
+  const { getSegmentsCallback, getErrorCallback, getParseNodeCallback } = callbacks;
 
   const analyze = (state: EditorState): FuncScriptAnalysis => {
     const expression = state.doc.toString();
@@ -204,13 +657,18 @@ const createFuncScriptExtensions = (
     if (errorCallback) {
       errorCallback(errorMessage);
     }
+    const parseNodeCallback = getParseNodeCallback();
+    if (parseNodeCallback) {
+      parseNodeCallback(parseNode);
+    }
 
     const foldRanges = parseNode ? collectFoldRanges(parseNode, state.doc) : [];
 
     return {
       decorations: Decoration.set(decorations, true),
       segments,
-      foldRanges
+      foldRanges,
+      parseNode
     };
   };
 
@@ -273,19 +731,351 @@ const FuncScriptEditor = ({
   style
 }: FuncScriptEditorProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const nodeEditorContainerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const nodeEditorViewRef = useRef<EditorView | null>(null);
   const providerRef = useRef<DefaultFsDataProvider | null>(null);
 
+  const [mode, setMode] = useState<'standard' | 'tree'>('standard');
+  const [currentParseNode, setCurrentParseNode] = useState<RawParseNode | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [pendingNodeValue, setPendingNodeValue] = useState('');
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [currentParseError, setCurrentParseError] = useState<string | null>(null);
+  const [nodeEditorParseError, setNodeEditorParseError] = useState<string | null>(null);
+
   const segmentsCallbackRef = useRef(onSegmentsChange);
-  const errorCallbackRef = useRef(onError);
+  const userErrorCallbackRef = useRef(onError);
+  const parseNodeCallbackRef = useRef<(node: RawParseNode | null) => void>(() => {});
+  const analysisErrorCallbackRef = useRef<(message: string | null) => void>(() => {});
+  const nodeEditorErrorCallbackRef = useRef<(message: string | null) => void>(() => {});
+  const selectedNodeRef = useRef<ParseTreeNode | null>(null);
+  const nodeEditorEditableCompartment = useRef(new Compartment());
+  const pendingSelectionRangeRef = useRef<{ start: number; end: number } | null>(null);
+
+  const handleParseNodeUpdate = useCallback((node: RawParseNode | null) => {
+    setCurrentParseNode(node);
+  }, []);
+
+  parseNodeCallbackRef.current = handleParseNodeUpdate;
+
+  analysisErrorCallbackRef.current = (message) => {
+    setCurrentParseError(message);
+    const external = userErrorCallbackRef.current;
+    if (external) {
+      external(message);
+    }
+  };
+
+  nodeEditorErrorCallbackRef.current = (message) => {
+    setNodeEditorParseError(message);
+  };
 
   useEffect(() => {
     segmentsCallbackRef.current = onSegmentsChange;
   }, [onSegmentsChange]);
 
   useEffect(() => {
-    errorCallbackRef.current = onError;
+    userErrorCallbackRef.current = onError;
   }, [onError]);
+
+  const parseTree = useMemo(() => buildParseTree(currentParseNode, value), [currentParseNode, value]);
+  const parseNodeMap = useMemo(() => createParseNodeIndex(parseTree), [parseTree]);
+  const firstEditableNode = useMemo(() => findFirstEditableNode(parseTree), [parseTree]);
+  const selectedNode = selectedNodeId ? parseNodeMap.get(selectedNodeId) ?? null : null;
+
+  useEffect(() => {
+    selectedNodeRef.current = selectedNode;
+    const view = nodeEditorViewRef.current;
+    if (!view) {
+      return;
+    }
+    const isEditable = Boolean(selectedNode?.range && selectedNode?.isEditable);
+    view.dispatch({
+      effects: nodeEditorEditableCompartment.current.reconfigure(
+        EditorView.editable.of(isEditable)
+      )
+    });
+  }, [selectedNode]);
+
+  useEffect(() => {
+    if (mode === 'tree' && !parseTree) {
+      setMode('standard');
+    }
+  }, [mode, parseTree]);
+
+  useEffect(() => {
+    if (parseTree) {
+      return;
+    }
+    if (selectedNodeId !== null) {
+      setSelectedNodeId(null);
+    }
+    if (pendingNodeValue !== '') {
+      setPendingNodeValue('');
+    }
+    if (hasPendingChanges) {
+      setHasPendingChanges(false);
+    }
+    if (nodeEditorParseError) {
+      setNodeEditorParseError(null);
+    }
+  }, [parseTree, selectedNodeId, pendingNodeValue, hasPendingChanges, nodeEditorParseError]);
+
+  useEffect(() => {
+    if (!parseTree) {
+      return;
+    }
+    const pendingRange = pendingSelectionRangeRef.current;
+    if (pendingRange) {
+      const replacement = findNodeByRange(parseTree, pendingRange);
+      if (replacement && replacement.isEditable) {
+        pendingSelectionRangeRef.current = null;
+        setSelectedNodeId(replacement.id);
+        setPendingNodeValue(replacement.expression);
+        setHasPendingChanges(false);
+        setNodeEditorParseError(null);
+        return;
+      }
+      pendingSelectionRangeRef.current = null;
+    }
+    if (selectedNodeId) {
+      const existing = parseNodeMap.get(selectedNodeId);
+      if (existing && existing.isEditable) {
+        return;
+      }
+    }
+    const fallback = firstEditableNode;
+    if (fallback) {
+      pendingSelectionRangeRef.current = null;
+      setSelectedNodeId(fallback.id);
+      setPendingNodeValue(fallback.expression);
+      setHasPendingChanges(false);
+      setNodeEditorParseError(null);
+      return;
+    }
+    pendingSelectionRangeRef.current = null;
+    setSelectedNodeId(null);
+    setHasPendingChanges(false);
+    setNodeEditorParseError(null);
+  }, [parseTree, parseNodeMap, selectedNodeId, firstEditableNode]);
+
+  useEffect(() => {
+    if (!selectedNode) {
+      return;
+    }
+    if (!selectedNode.isEditable) {
+      return;
+    }
+    if (!hasPendingChanges && !pendingSelectionRangeRef.current) {
+      setNodeEditorParseError(null);
+    }
+  }, [selectedNode, hasPendingChanges]);
+
+  const handleSelectNode = useCallback(
+    (nodeId: string) => {
+      if (selectedNodeId === nodeId) {
+        return;
+      }
+      const node = parseNodeMap.get(nodeId);
+      if (!node) {
+        return;
+      }
+      if (!node.isEditable) {
+        return;
+      }
+      setSelectedNodeId(nodeId);
+      setPendingNodeValue(node.expression);
+      setHasPendingChanges(false);
+      setNodeEditorParseError(null);
+      pendingSelectionRangeRef.current = null;
+    },
+    [parseNodeMap, selectedNodeId]
+  );
+
+  const handleApplyChanges = useCallback(() => {
+    if (!selectedNode || !selectedNode.range || !selectedNode.isEditable) {
+      return;
+    }
+    if (!hasPendingChanges) {
+      return;
+    }
+    const { start, end } = selectedNode.range;
+    const nextDoc = value.slice(0, start) + pendingNodeValue + value.slice(end);
+    pendingSelectionRangeRef.current = {
+      start,
+      end: start + pendingNodeValue.length
+    };
+    onChange(nextDoc);
+    setHasPendingChanges(false);
+  }, [selectedNode, hasPendingChanges, pendingNodeValue, value, onChange]);
+
+  const mergedContainerStyle = useMemo(
+    () => ({
+      ...containerBaseStyle,
+      ...(style ?? {})
+    }),
+    [style]
+  );
+
+  const contentStyle = useMemo(() => {
+    const base: CSSProperties = { ...bodyBaseStyle };
+    if (mode === 'tree') {
+      base.minHeight = minHeight;
+    }
+    return base;
+  }, [mode, minHeight]);
+
+  const codeMirrorContainerStyle = useMemo(
+    () => ({
+      ...codeMirrorContainerBaseStyle,
+      display: mode === 'tree' ? 'none' : 'block'
+    }),
+    [mode]
+  );
+
+  const treeEditorContainerStyle = useMemo(
+    () => ({
+      ...treeEditorContainerBaseStyle,
+      minHeight
+    }),
+    [minHeight]
+  );
+
+  const standardButtonStyle = useMemo(
+    () => ({
+      ...modeButtonBaseStyle,
+      ...(mode === 'standard' ? modeButtonActiveStyle : {})
+    }),
+    [mode]
+  );
+
+  const treeButtonStyle = useMemo(
+    () => ({
+      ...modeButtonBaseStyle,
+      ...(mode === 'tree' ? modeButtonActiveStyle : {}),
+      ...(!parseTree ? modeButtonDisabledStyle : {})
+    }),
+    [mode, parseTree]
+  );
+
+  const canApplyChanges =
+    mode === 'tree' &&
+    Boolean(selectedNode?.range && selectedNode?.isEditable) &&
+    hasPendingChanges &&
+    !currentParseError &&
+    !nodeEditorParseError;
+
+  const applyButtonStyle = useMemo(
+    () => ({
+      ...modeButtonBaseStyle,
+      fontWeight: 600
+    }),
+    []
+  );
+
+  useEffect(() => {
+    if (mode !== 'tree') {
+      if (nodeEditorViewRef.current) {
+        nodeEditorViewRef.current.destroy();
+        nodeEditorViewRef.current = null;
+      }
+      if (nodeEditorParseError !== null) {
+        setNodeEditorParseError(null);
+      }
+      return;
+    }
+
+    if (!nodeEditorContainerRef.current) {
+      return;
+    }
+
+    if (nodeEditorViewRef.current) {
+      return;
+    }
+
+    const provider = providerRef.current ?? new Engine.DefaultFsDataProvider();
+    if (!providerRef.current) {
+      providerRef.current = provider;
+    }
+
+    const nodeExtensions = createFuncScriptExtensions(provider, {
+      getSegmentsCallback: () => undefined,
+      getErrorCallback: () => nodeEditorErrorCallbackRef.current,
+      getParseNodeCallback: () => undefined
+    });
+
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: pendingNodeValue,
+        extensions: [
+          history(),
+          drawSelection(),
+          highlightActiveLine(),
+          keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+          EditorView.lineWrapping,
+          EditorView.theme(
+            {
+              '&': {
+                fontFamily: 'Roboto Mono, monospace',
+                minHeight: `${minHeight}px`
+              },
+              '.cm-content': {
+                padding: '16px 0'
+              },
+              '.cm-scroller': {
+                overflow: 'auto'
+              }
+            },
+            { dark: false }
+          ),
+          ...nodeExtensions,
+          nodeEditorEditableCompartment.current.of(
+            EditorView.editable.of(
+              Boolean(selectedNodeRef.current?.range && selectedNodeRef.current?.isEditable)
+            )
+          ),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              const nextValue = update.state.doc.toString();
+              setPendingNodeValue(nextValue);
+              const node = selectedNodeRef.current;
+              if (node && node.isEditable) {
+                setHasPendingChanges(nextValue !== node.expression);
+              } else {
+                setHasPendingChanges(false);
+              }
+            }
+          })
+        ]
+      }),
+      parent: nodeEditorContainerRef.current
+    });
+
+    nodeEditorViewRef.current = view;
+
+    return () => {
+      view.destroy();
+      nodeEditorViewRef.current = null;
+    };
+  }, [mode, minHeight]);
+
+  useEffect(() => {
+    const view = nodeEditorViewRef.current;
+    if (!view) {
+      return;
+    }
+    const currentValue = view.state.doc.toString();
+    if (currentValue !== pendingNodeValue) {
+      view.dispatch({
+        changes: {
+          from: 0,
+          to: currentValue.length,
+          insert: pendingNodeValue
+        }
+      });
+    }
+  }, [pendingNodeValue]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -297,7 +1087,8 @@ const FuncScriptEditor = ({
 
     const funcscriptExtensions = createFuncScriptExtensions(provider, {
       getSegmentsCallback: () => segmentsCallbackRef.current,
-      getErrorCallback: () => errorCallbackRef.current
+      getErrorCallback: () => analysisErrorCallbackRef.current,
+      getParseNodeCallback: () => parseNodeCallbackRef.current
     });
 
     const state = EditorState.create({
@@ -345,6 +1136,7 @@ const FuncScriptEditor = ({
       view.destroy();
       viewRef.current = null;
       providerRef.current = null;
+      setCurrentParseNode(null);
     };
   }, [minHeight, onChange]);
 
@@ -365,7 +1157,136 @@ const FuncScriptEditor = ({
     }
   }, [value]);
 
-  return <div ref={containerRef} style={style} />;
+  const selectedLabel =
+    selectedNode
+      ? `${selectedNode.typeName}:${formatExpressionPreview(selectedNode.expression)}`
+      : parseTree
+      ? 'Select an editable node from the tree'
+      : 'No node selected';
+
+  const treeEditorOverlayMessage = useMemo(() => {
+    if (!parseTree) {
+      return 'Parse tree unavailable. Resolve syntax errors to enable tree mode.';
+    }
+    if (!firstEditableNode) {
+      return 'No editable nodes available for this expression.';
+    }
+    if (!selectedNode) {
+      return 'Select an editable node to modify';
+    }
+    if (!selectedNode.isEditable) {
+      return 'This node is read-only';
+    }
+    return '';
+  }, [parseTree, selectedNode, firstEditableNode]);
+
+  const expressionPreviewSegments = useMemo(() => {
+    if (!value) {
+      return null;
+    }
+    const range = selectedNode?.range;
+    if (!range || !selectedNode?.isEditable) {
+      return {
+        before: value,
+        selection: '',
+        after: '',
+        hasSelection: false
+      };
+    }
+    const start = Math.max(0, Math.min(range.start, value.length));
+    const end = Math.max(start, Math.min(range.end, value.length));
+    if (end <= start) {
+      return {
+        before: value,
+        selection: '',
+        after: '',
+        hasSelection: false
+      };
+    }
+    return {
+      before: value.slice(0, start),
+      selection: value.slice(start, end),
+      after: value.slice(end),
+      hasSelection: true
+    };
+  }, [selectedNode, value]);
+
+  return (
+    <div style={mergedContainerStyle}>
+      <div style={titleBarStyle}>
+        <span style={titleTextStyle}>{mode === 'tree' ? 'Tree Mode' : 'Standard Mode'}</span>
+        <div style={titleControlsStyle}>
+          <button type="button" style={standardButtonStyle} onClick={() => setMode('standard')}>
+            Standard
+          </button>
+          <button
+            type="button"
+            style={treeButtonStyle}
+            onClick={() => {
+              if (parseTree) {
+                setMode('tree');
+              }
+            }}
+            disabled={!parseTree}
+          >
+            Tree
+          </button>
+          {canApplyChanges && (
+            <button
+              type="button"
+              style={applyButtonStyle}
+              onClick={handleApplyChanges}
+              title="Apply changes to selected node"
+            >
+              ✓
+            </button>
+          )}
+        </div>
+      </div>
+      <div style={contentStyle}>
+        {mode === 'tree' && (
+          <div style={treePaneBaseStyle}>
+            {parseTree ? (
+              <ParseTreeList
+                node={parseTree}
+                level={0}
+                selectedId={selectedNodeId}
+                onSelect={handleSelectNode}
+              />
+            ) : (
+              <div style={treeEmptyStyle}>Parse tree unavailable. Resolve syntax errors to enable tree mode.</div>
+            )}
+          </div>
+        )}
+        <div style={editorPaneBaseStyle}>
+          {mode === 'tree' && <div style={nodeInfoStyle}>{selectedLabel}</div>}
+          {mode === 'tree' && nodeEditorParseError && (
+            <div style={nodeErrorStyle}>{nodeEditorParseError}</div>
+          )}
+          <div ref={containerRef} style={codeMirrorContainerStyle} />
+          {mode === 'tree' && (
+            <div style={treeEditorContainerStyle}>
+              <div ref={nodeEditorContainerRef} style={treeEditorCodeMirrorStyle} />
+              {treeEditorOverlayMessage && (!selectedNode || !selectedNode.isEditable) && (
+                <div style={treeEditorOverlayStyle}>{treeEditorOverlayMessage}</div>
+              )}
+            </div>
+          )}
+          {mode === 'tree' && expressionPreviewSegments && (
+            <div style={expressionPreviewContainerStyle}>
+              <span>{expressionPreviewSegments.before}</span>
+              {expressionPreviewSegments.hasSelection && (
+                <span style={expressionSelectedTextStyle}>
+                  {expressionPreviewSegments.selection || ' '}
+                </span>
+              )}
+              <span>{expressionPreviewSegments.after}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default FuncScriptEditor;
