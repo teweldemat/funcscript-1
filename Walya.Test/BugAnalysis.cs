@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Walya.Core;
@@ -19,5 +20,6 @@ public class BugAnalysis
         Assert.IsEmpty(err);
         timer.Stop();
         Assert.Less(timer.ElapsedMilliseconds, 500);
+        Console.WriteLine($"Parsing took {timer.ElapsedMilliseconds} milliseconds");
     }
 }
