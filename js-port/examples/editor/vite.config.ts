@@ -3,17 +3,22 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    preserveSymlinks: true,
     dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/commands']
   },
   server: {
-    port: 5174
+    port: 5174,
+    watch: {
+      followSymlinks: true
+    }
   },
   optimizeDeps: {
-    include: ['@tewelde/walya', '@tewelde/walya/parser']
+    include: ['@tewelde/walya', '@tewelde/walya/parser', '@tewelde/walya-editor'],
+    force: true
   },
   build: {
     commonjsOptions: {
-      include: [/@tewelde\/walya/, /node_modules/]
+      include: [/node_modules/, /walya-js\//, /walya-editor\//]
     }
   }
 });

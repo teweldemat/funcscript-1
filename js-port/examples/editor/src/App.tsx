@@ -66,13 +66,25 @@ function App(): JSX.Element {
                     shared <code>colorParseTree</code> helper.
                   </Typography>
                 </Box>
-                <WalyaEditor
-                  value={expression}
-                  onChange={setExpression}
-                  onSegmentsChange={setSegments}
-                  onError={setParseError}
-                  minHeight={280}
-                />
+                <Box
+                  sx={{
+                    '& .cm-editor': {
+                      maxHeight: { xs: '55vh', md: '60vh' }
+                    },
+                    '& .cm-scroller': {
+                      maxHeight: { xs: '55vh', md: '60vh' },
+                      overflowY: 'auto'
+                    }
+                  }}
+                >
+                  <WalyaEditor
+                    value={expression}
+                    onChange={setExpression}
+                    onSegmentsChange={setSegments}
+                    onError={setParseError}
+                    minHeight={320}
+                  />
+                </Box>
                 {parseError ? (
                   <Alert severity="error" variant="outlined">
                     {parseError}
