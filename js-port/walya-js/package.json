@@ -1,6 +1,6 @@
 {
   "name": "@tewelde/walya",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Walya runtime for Node.js and browser environments",
   "license": "MIT",
   "type": "commonjs",
