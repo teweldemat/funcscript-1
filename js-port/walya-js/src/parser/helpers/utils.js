@@ -22,52 +22,101 @@ function isCharWhiteSpace(ch) {
   return ch === ' ' || ch === '\r' || ch === '\t' || ch === '\n';
 }
 
-function skipSpace(exp, index) {
-  let i = index;
-  while (i < exp.length) {
-    if (isCharWhiteSpace(exp[i])) {
-      i += 1;
-      continue;
-    }
-    if (exp[i] === '/' && exp[i + 1] === '/') {
-      i += 2;
-      while (i < exp.length && exp[i] !== '\n') i += 1;
-      continue;
-    }
-    break;
+function getCommentBlock(exp, index) {
+  if (index + 1 >= exp.length) {
+    return { next: index, node: null };
   }
-  return i;
+  if (exp[index] !== '/' || exp[index + 1] !== '/') {
+    return { next: index, node: null };
+  }
+  const nextLine = exp.indexOf('\n', index + 2);
+  const end = nextLine === -1 ? exp.length : nextLine + 1;
+  return {
+    next: end,
+    node: new ParseNode(ParseNodeType.Comment, index, end - index)
+  };
+}
+
+function skipSpace(exp, index) {
+  let current = index;
+  while (current < exp.length) {
+    if (isCharWhiteSpace(exp[current])) {
+      current += 1;
+      continue;
+    }
+    const { next } = getCommentBlock(exp, current);
+    if (next === current) {
+      break;
+    }
+    current = next;
+  }
+  return current;
 }
 
 function getLiteralMatch(exp, index, ...keywords) {
   return getLiteralMatchArray(exp, index, keywords);
 }
 
+function toLowerCharCode(str, offset) {
+  const code = str.charCodeAt(offset);
+  if (code >= 65 && code <= 90) {
+    return code + 32;
+  }
+  return code;
+}
+
 function getLiteralMatchArray(exp, index, keywords) {
-  for (const keyword of keywords) {
-    const lowerKeyword = keyword.toLowerCase();
-    const len = lowerKeyword.length;
-    if (index + len > exp.length) continue;
+  if (exp == null) {
+    throw new TypeError('Expression cannot be null');
+  }
+  const length = exp.length;
+  for (let k = 0; k < keywords.length; k += 1) {
+    const keyword = keywords[k];
+    if (typeof keyword !== 'string') {
+      continue;
+    }
+    const keywordLength = keyword.length;
+    if (keywordLength === 0 || index + keywordLength > length) {
+      continue;
+    }
     let matched = true;
-    for (let i = 0; i < len; i += 1) {
-      if (exp[index + i].toLowerCase() !== lowerKeyword[i]) {
+    for (let i = 0; i < keywordLength; i += 1) {
+      const expCode = toLowerCharCode(exp, index + i);
+      const keyCode = toLowerCharCode(keyword, i);
+      if (expCode !== keyCode) {
         matched = false;
         break;
       }
     }
     if (matched) {
-      return index + len;
+      return index + keywordLength;
     }
   }
   return index;
 }
 
+function isAsciiLetterCode(code) {
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+function isAsciiDigitCode(code) {
+  return code >= 48 && code <= 57;
+}
+
 function isIdentifierFirstChar(ch) {
-  return /[A-Za-z_]/.test(ch);
+  if (!ch) {
+    return false;
+  }
+  const code = ch.charCodeAt(0);
+  return isAsciiLetterCode(code) || ch === '_';
 }
 
 function isIdentifierOtherChar(ch) {
-  return /[A-Za-z0-9_]/.test(ch);
+  if (!ch) {
+    return false;
+  }
+  const code = ch.charCodeAt(0);
+  return isAsciiLetterCode(code) || isAsciiDigitCode(code) || ch === '_';
 }
 
 function getIdentifier(exp, index) {
@@ -125,7 +174,11 @@ function getInt(exp, allowNegative, index) {
     }
   }
   const start = i;
-  while (i < exp.length && /[0-9]/.test(exp[i])) {
+  while (i < exp.length) {
+    const ch = exp[i];
+    if (ch < '0' || ch > '9') {
+      break;
+    }
     i += 1;
   }
   if (start === i) {
@@ -311,6 +364,7 @@ module.exports = {
   OPERATOR_SYMBOLS,
   KEYWORDS,
   skipSpace,
+  getCommentBlock,
   getLiteralMatch,
   getLiteralMatchArray,
   getIdentifier,

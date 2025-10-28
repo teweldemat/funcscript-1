@@ -22,20 +22,11 @@ module.exports = function createInfixParser(env) {
     for (const op of candidates) {
       const i = getLiteralMatch(exp, index, op);
       if (i > index) {
-        const key = op.toLowerCase ? op.toLowerCase() : op;
-        const typedValue = context.get(key);
         const node = new env.ParseNode(env.ParseNodeType.Operator, index, i - index);
-        if (!typedValue) {
-          return { next: i, symbol: op, functionValue: null, node };
-        }
-        const resolved = env.ensureTyped(typedValue);
-        if (env.typeOf(resolved) !== env.FSDataType.Function) {
-          return { next: i, symbol: op, functionValue: null, node };
-        }
-        return { next: i, symbol: op, functionValue: env.valueOf(resolved), node };
+        return { next: i, symbol: op, node };
       }
     }
-    return { next: index, symbol: null, functionValue: null, node: null };
+    return { next: index, symbol: null, node: null };
   }
 
   function interleaveOperandOperatorNodes(operandNodes, operatorNodes) {
@@ -91,11 +82,10 @@ module.exports = function createInfixParser(env) {
 
       const operatorStart = i;
       const operatorRes = getOperator(context, candidates, exp, operatorStart);
-      if (operatorRes.next === i || !operatorRes.functionValue) {
+      if (operatorRes.next === i) {
         break;
       }
       const symbol = operatorRes.symbol;
-      const func = operatorRes.functionValue;
       i = skipSpace(exp, operatorRes.next);
 
       const operands = [prog];
@@ -110,7 +100,6 @@ module.exports = function createInfixParser(env) {
           ? env.getPrefixOrCall(context, exp, i, errors)
           : getInfixExpressionSingleLevel(context, level - 1, OPERATOR_SYMBOLS[level - 1], exp, i, errors);
         if (!operandRes.block) {
-          errors.push({ position: i, message: `Operand expected for operator ${symbol}` });
           return { next: index, block: null, node: null };
         }
         operands.push(operandRes.block);
@@ -127,6 +116,10 @@ module.exports = function createInfixParser(env) {
         i = skipSpace(exp, repeat);
       }
 
+      if (operands.length <= 1) {
+        break;
+      }
+
       const firstOperand = operands[0];
       const lastOperand = operands[operands.length - 1];
       const firstRange = getBlockRange(firstOperand) ?? { start: operatorStart, end: operatorStart };
@@ -135,22 +128,20 @@ module.exports = function createInfixParser(env) {
       const endPos = Math.max(startPos, lastRange.end);
       const spanLength = Math.max(0, endPos - startPos);
 
-      const primaryOperator = operatorNodes[0] ?? operatorRes.node ?? {
-        Pos: operatorStart,
-        Length: Math.max(0, operatorRes.next - operatorStart)
-      };
-      const funcLiteral = new LiteralBlock(
-        env.makeValue(env.FSDataType.Function, func),
-        primaryOperator.Pos,
-        primaryOperator.Length
-      );
-      funcLiteral.Pos = primaryOperator.Pos;
-      funcLiteral.Length = primaryOperator.Length;
-
-      const call = new env.FunctionCallExpression(funcLiteral, operands, startPos, spanLength);
-      call.Pos = startPos;
-      call.Length = spanLength;
-      prog = call;
+      if (symbol === '|') {
+        const listExpr = new env.ListExpression();
+        listExpr.ValueExpressions = operands;
+        listExpr.Pos = startPos;
+        listExpr.Length = spanLength;
+        prog = listExpr;
+      } else {
+        const funcValue = context.get(symbol);
+        const funcLiteral = new LiteralBlock(funcValue, operatorRes.node?.Pos ?? operatorStart, operatorRes.node?.Length ?? 0);
+        const call = new env.FunctionCallExpression(funcLiteral, operands, startPos, spanLength);
+        call.Pos = startPos;
+        call.Length = spanLength;
+        prog = call;
+      }
 
       const { children, span } = interleaveOperandOperatorNodes(operandNodes, operatorNodes);
       progNode = new env.ParseNode(env.ParseNodeType.InfixExpression, span.start, span.length, children);
