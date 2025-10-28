@@ -103,6 +103,7 @@ function run() {
     { allowAssertionTodo: true }
   );
 
+  
   runCase(
     suite,
     'SumListWithInitial',
@@ -116,6 +117,14 @@ function run() {
     () => expectEvaluation('[1,2,4]', [1, 2, 4]),
     { allowAssertionTodo: true }
   );
+
+  runCase(
+    suite,
+    'TestListParserTrailingComma',
+    () => expectEvaluation('[1,2,4,]', [1, 2, 4]),
+    { allowAssertionTodo: true }
+  );
+
 
   runCase(suite, 'TestJsonParser', () => expectEvaluation('{"a":23}', { a: 23 }));
 

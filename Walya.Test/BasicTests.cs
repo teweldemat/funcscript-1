@@ -203,6 +203,14 @@ namespace Walya.Test
             var res = AssertSingleResultType("[1,2,4]", typeof(FsList));
             Assert.IsTrue(res is FsList, ".net data type not ListData");
         }
+        
+        [Test]
+        public void TestListParserTrailingComma()
+        {
+
+            var res = AssertSingleResultType("[1,2,4,]", typeof(FsList));
+            Assert.IsTrue(res is FsList, ".net data type not ListData");
+        }
 
         [Test]
         [TestCase("12.3")]

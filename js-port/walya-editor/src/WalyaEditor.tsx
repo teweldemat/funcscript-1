@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
-import { EditorState, type Range } from '@codemirror/state';
+import { EditorState, StateField, type Range } from '@codemirror/state';
 import {
   Decoration,
   DecorationSet,
@@ -11,6 +11,8 @@ import {
   highlightActiveLine
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { foldGutter, foldKeymap, foldService } from '@codemirror/language';
+import { lineNumbers } from '@codemirror/view';
 import { Engine } from '@tewelde/walya/browser';
 import type { DefaultFsDataProvider } from '@tewelde/walya/browser';
 import type { ColoredSegment } from './walyaColoring.js';
@@ -22,12 +24,33 @@ import * as parserModule from '@tewelde/walya/parser';
 
 const { WalyaParser } = parserModule as { WalyaParser: any };
 
+/**
+ * Props for the {@link WalyaEditor} component.
+ */
 export type WalyaEditorProps = {
+  /**
+   * Current Walya expression text to display inside the editor.
+   */
   value: string;
+  /**
+   * Called with the updated text whenever the document changes.
+   */
   onChange: (value: string) => void;
+  /**
+   * Optional callback fired with the list of colored segments generated from the Walya parse tree.
+   */
   onSegmentsChange?: (segments: ColoredSegment[]) => void;
+  /**
+   * Optional callback invoked when parsing fails or succeeds (receives `null` on success).
+   */
   onError?: (message: string | null) => void;
+  /**
+   * Minimum height, in pixels, applied to the editor surface.
+   */
   minHeight?: number;
+  /**
+   * Inline styles applied to the editor container element.
+   */
   style?: CSSProperties;
 };
 
@@ -36,40 +59,117 @@ type HighlightCallbacks = {
   getErrorCallback: () => ((message: string | null) => void) | undefined;
 };
 
-const areSegmentsEqual = (a: ColoredSegment[], b: ColoredSegment[]): boolean => {
-  if (a.length !== b.length) {
-    return false;
-  }
-  for (let i = 0; i < a.length; i += 1) {
-    const segA = a[i];
-    const segB = b[i];
-    if (
-      segA.start !== segB.start ||
-      segA.end !== segB.end ||
-      segA.nodeType !== segB.nodeType ||
-      segA.color !== segB.color
-    ) {
-      return false;
-    }
-  }
-  return true;
+type RawParseNode = {
+  Pos?: number;
+  pos?: number;
+  Length?: number;
+  length?: number;
+  Childs?: RawParseNode[];
+  childs?: RawParseNode[];
+  Children?: RawParseNode[];
+  children?: RawParseNode[];
 };
 
-const createHighlightExtension = (
+type FoldRange = {
+  lineStart: number;
+  from: number;
+  to: number;
+};
+
+type WalyaAnalysis = {
+  decorations: DecorationSet;
+  segments: ColoredSegment[];
+  foldRanges: FoldRange[];
+};
+
+const clampRange = (start: number, end: number, length: number) => {
+  const safeStart = Math.max(0, Math.min(start, length));
+  const safeEnd = Math.max(safeStart, Math.min(end, length));
+  return safeEnd > safeStart ? { start: safeStart, end: safeEnd } : null;
+};
+
+const toNodeRange = (node: RawParseNode, docLength: number) => {
+  const pos =
+    typeof node.Pos === 'number' ? node.Pos : typeof node.pos === 'number' ? node.pos : null;
+  const len =
+    typeof node.Length === 'number'
+      ? node.Length
+      : typeof node.length === 'number'
+      ? node.length
+      : null;
+  if (pos === null || len === null) {
+    return null;
+  }
+  return clampRange(pos, pos + len, docLength);
+};
+
+const getChildNodes = (node: RawParseNode): RawParseNode[] => {
+  const value = node.Childs ?? node.childs ?? node.Children ?? node.children;
+  return Array.isArray(value) ? (value as RawParseNode[]) : [];
+};
+
+const collectFoldRanges = (root: RawParseNode, doc: EditorState['doc']): FoldRange[] => {
+  if (doc.length === 0) {
+    return [];
+  }
+
+  const stack: RawParseNode[] = [root];
+  const byLine = new Map<number, FoldRange>();
+
+  while (stack.length) {
+    const current = stack.pop();
+    if (!current) {
+      continue;
+    }
+
+    const range = toNodeRange(current, doc.length);
+    if (range) {
+      const { start, end } = range;
+      if (end > start) {
+        const startPos = Math.min(start, doc.length - 1);
+        const endPos = Math.max(startPos, Math.min(end - 1, doc.length - 1));
+        const startLine = doc.lineAt(startPos);
+        const endLine = doc.lineAt(endPos);
+        if (startLine.number < endLine.number) {
+          const from = startLine.to;
+          const to = endLine.from;
+          if (to > from) {
+            const existing = byLine.get(startLine.from);
+            if (!existing || to - from > existing.to - existing.from) {
+              byLine.set(startLine.from, {
+                lineStart: startLine.from,
+                from,
+                to
+              });
+            }
+          }
+        }
+      }
+    }
+
+    for (const child of getChildNodes(current)) {
+      stack.push(child);
+    }
+  }
+
+  return Array.from(byLine.values()).sort((a, b) => a.lineStart - b.lineStart);
+};
+
+const createWalyaExtensions = (
   provider: DefaultFsDataProvider,
   callbacks: HighlightCallbacks
 ) => {
   const { getSegmentsCallback, getErrorCallback } = callbacks;
 
-  const buildDecorations = (state: EditorState) => {
+  const analyze = (state: EditorState): WalyaAnalysis => {
     const expression = state.doc.toString();
-    let parseNode: unknown = null;
+    let parseNode: RawParseNode | null = null;
     let errorMessage: string | null = null;
 
     if (expression.trim().length > 0) {
       try {
         const result = WalyaParser.parse(provider, expression);
-        parseNode = result?.parseNode ?? null;
+        parseNode = (result?.parseNode as RawParseNode) ?? null;
       } catch (error) {
         errorMessage = error instanceof Error ? error.message : String(error);
       }
@@ -105,32 +205,38 @@ const createHighlightExtension = (
       errorCallback(errorMessage);
     }
 
+    const foldRanges = parseNode ? collectFoldRanges(parseNode, state.doc) : [];
+
     return {
       decorations: Decoration.set(decorations, true),
-      segments
+      segments,
+      foldRanges
     };
   };
 
-  return ViewPlugin.fromClass(
+  const analysisField = StateField.define<WalyaAnalysis>({
+    create(state) {
+      return analyze(state);
+    },
+    update(value, tr) {
+      if (!tr.docChanged) {
+        return value;
+      }
+      return analyze(tr.state);
+    }
+  });
+
+  const highlightPlugin = ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
-      segments: ColoredSegment[];
 
       constructor(view: EditorView) {
-        const { decorations, segments } = buildDecorations(view.state);
-        this.decorations = decorations;
-        this.segments = segments;
+        this.decorations = view.state.field(analysisField).decorations;
       }
 
       update(update: ViewUpdate) {
         if (update.docChanged) {
-          const { decorations, segments } = buildDecorations(update.state);
-          this.decorations = decorations;
-          if (!areSegmentsEqual(this.segments, segments)) {
-            this.segments = segments;
-          } else {
-            this.segments = segments;
-          }
+          this.decorations = update.state.field(analysisField).decorations;
         }
       }
     },
@@ -138,8 +244,26 @@ const createHighlightExtension = (
       decorations: (value) => value.decorations
     }
   );
+
+  const folding = foldService.of((state, lineStart, _lineEnd) => {
+    const analysis = state.field(analysisField, false);
+    if (!analysis) {
+      return null;
+    }
+    for (const range of analysis.foldRanges) {
+      if (range.lineStart === lineStart) {
+        return { from: range.from, to: range.to };
+      }
+    }
+    return null;
+  });
+
+  return [analysisField, highlightPlugin, folding];
 };
 
+/**
+ * CodeMirror-powered editor with Walya-aware parsing, syntax coloring, folding, and telemetry.
+ */
 const WalyaEditor = ({
   value,
   onChange,
@@ -171,7 +295,7 @@ const WalyaEditor = ({
     const provider = new Engine.DefaultFsDataProvider();
     providerRef.current = provider;
 
-    const highlightExtension = createHighlightExtension(provider, {
+    const walyaExtensions = createWalyaExtensions(provider, {
       getSegmentsCallback: () => segmentsCallbackRef.current,
       getErrorCallback: () => errorCallbackRef.current
     });
@@ -182,8 +306,10 @@ const WalyaEditor = ({
         history(),
         drawSelection(),
         highlightActiveLine(),
-        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+        keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab, ...foldKeymap]),
+        lineNumbers(),
         EditorView.lineWrapping,
+        foldGutter(),
         EditorView.theme(
           {
             '&': {
@@ -199,7 +325,7 @@ const WalyaEditor = ({
           },
           { dark: false }
         ),
-        highlightExtension,
+        ...walyaExtensions,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const nextValue = update.state.doc.toString();

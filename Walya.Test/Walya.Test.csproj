@@ -20,4 +20,10 @@
     <ProjectReference Include="..\Walya\Walya.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="data\parse-test-1.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
