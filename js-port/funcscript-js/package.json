@@ -39,12 +39,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/teweldemat/funcscript.git"
+    "url": "git+https://github.com/teweldemat/funcscript-1.git"
   },
   "bugs": {
-    "url": "https://github.com/teweldemat/funcscript/issues"
+    "url": "https://github.com/teweldemat/funcscript-1/issues"
   },
-  "homepage": "https://github.com/teweldemat/funcscript#readme",
+  "homepage": "https://github.com/teweldemat/funcscript-1#readme",
   "publishConfig": {
     "access": "public"
   },
