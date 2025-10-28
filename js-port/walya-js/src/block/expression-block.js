@@ -1,7 +1,23 @@
 class ExpressionBlock {
   constructor(position = 0, length = 0) {
-    this.position = position;
-    this.length = length;
+    this.Pos = position;
+    this.Length = length;
+  }
+
+  get position() {
+    return this.Pos;
+  }
+
+  set position(value) {
+    this.Pos = value;
+  }
+
+  get length() {
+    return this.Length;
+  }
+
+  set length(value) {
+    this.Length = value;
   }
 
   evaluate(provider) {

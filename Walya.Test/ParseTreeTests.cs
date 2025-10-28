@@ -76,7 +76,7 @@ namespace Walya.Test
             Assert.AreEqual(2, right.Pos);
             Assert.AreEqual(1, right.Length);
 
-            //check evaluateion tree
+            //check evaluation tree
             Assert.That(block, Is.TypeOf<FunctionCallExpression>());
             Assert.That(block.CodeLocation.Position, Is.EqualTo(0));
             Assert.That(block.CodeLocation.Length, Is.EqualTo(3));

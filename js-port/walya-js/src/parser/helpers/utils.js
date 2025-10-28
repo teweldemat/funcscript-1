@@ -2,6 +2,69 @@ const { makeValue, typedNull } = require('../../core/value');
 const { FSDataType } = require('../../core/fstypes');
 const { ParseNode, ParseNodeType } = require('../parse-node');
 
+const identifierMetrics = {
+  calls: 0,
+  totalTimeNs: 0n,
+  maxTimeNs: 0n
+};
+
+const literalMatchMetrics = {
+  calls: 0,
+  attemptsByKey: new Map()
+};
+
+function getHighResTime() {
+  if (typeof process !== 'undefined' && process?.hrtime?.bigint) {
+    try {
+      return process.hrtime.bigint();
+    } catch (err) {
+      // fall back below
+    }
+  }
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    const ms = performance.now();
+    return BigInt(Math.floor(ms * 1e6));
+  }
+  return BigInt(Date.now()) * 1000000n;
+}
+
+function recordIdentifierTiming(start) {
+  try {
+    const elapsed = getHighResTime() - start;
+    identifierMetrics.calls += 1;
+    identifierMetrics.totalTimeNs += elapsed;
+    if (elapsed > identifierMetrics.maxTimeNs) {
+      identifierMetrics.maxTimeNs = elapsed;
+    }
+  } catch (err) {
+    // Swallow timing errors so parsing behaviour stays unchanged.
+  }
+}
+
+function resetIdentifierMetrics() {
+  identifierMetrics.calls = 0;
+  identifierMetrics.totalTimeNs = 0n;
+  identifierMetrics.maxTimeNs = 0n;
+}
+
+function recordLiteralMatchAttempt(index, keywords) {
+  try {
+    literalMatchMetrics.calls += 1;
+    if (Array.isArray(keywords) && keywords.length) {
+      const key = `${index}|${keywords.join('|')}`;
+      const prev = literalMatchMetrics.attemptsByKey.get(key) || 0;
+      literalMatchMetrics.attemptsByKey.set(key, prev + 1);
+    }
+  } catch (err) {
+    // Ignore instrumentation issues; parsing must proceed.
+  }
+}
+
+function resetLiteralMatchMetrics() {
+  literalMatchMetrics.calls = 0;
+  literalMatchMetrics.attemptsByKey = new Map();
+}
+
 const MAX_INT_LITERAL = 9223372036854775807n;
 const MIN_INT_LITERAL = -9223372036854775808n;
 
@@ -64,11 +127,11 @@ function toLowerCharCode(str, offset) {
   }
   return code;
 }
-
 function getLiteralMatchArray(exp, index, keywords) {
   if (exp == null) {
     throw new TypeError('Expression cannot be null');
   }
+  recordLiteralMatchAttempt(index, keywords);
   const length = exp.length;
   for (let k = 0; k < keywords.length; k += 1) {
     const keyword = keywords[k];
@@ -119,10 +182,21 @@ function isIdentifierOtherChar(ch) {
   return isAsciiLetterCode(code) || isAsciiDigitCode(code) || ch === '_';
 }
 
+function wrapIdentifierResult(start, result) {
+  recordIdentifierTiming(start);
+  return result;
+}
+
 function getIdentifier(exp, index) {
+  const start = getHighResTime();
   let i = index;
   if (i >= exp.length || !isIdentifierFirstChar(exp[i])) {
-    return { next: index, identifier: null, identifierLower: null, node: null };
+    return wrapIdentifierResult(start, {
+      next: index,
+      identifier: null,
+      identifierLower: null,
+      node: null
+    });
   }
   i += 1;
   while (i < exp.length && isIdentifierOtherChar(exp[i])) {
@@ -131,10 +205,15 @@ function getIdentifier(exp, index) {
   const identifier = exp.substring(index, i);
   const lower = identifier.toLowerCase();
   if (KEYWORDS.has(lower)) {
-    return { next: index, identifier: null, identifierLower: null, node: null };
+    return wrapIdentifierResult(start, {
+      next: index,
+      identifier: null,
+      identifierLower: null,
+      node: null
+    });
   }
   const node = new ParseNode(ParseNodeType.Identifier, index, i - index);
-  return { next: i, identifier, identifierLower: lower, node };
+  return wrapIdentifierResult(start, { next: i, identifier, identifierLower: lower, node });
 }
 
 function getKeyWordLiteral(exp, index) {
@@ -373,5 +452,9 @@ module.exports = {
   getNumber,
   getSimpleString,
   ParseNode,
-  ParseNodeType
+  ParseNodeType,
+  identifierMetrics,
+  resetIdentifierMetrics,
+  literalMatchMetrics,
+  resetLiteralMatchMetrics
 };

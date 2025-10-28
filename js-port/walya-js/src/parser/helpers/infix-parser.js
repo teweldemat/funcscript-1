@@ -194,9 +194,15 @@ module.exports = function createInfixParser(env) {
 
     let currentIndex = skipSpace(exp, firstRes.next);
 
+    const fallbackResult = {
+      next: currentIndex,
+      block: firstRes.block,
+      node: firstRes.node
+    };
+
     const idRes = getIdentifier(exp, currentIndex);
     if (idRes.next === currentIndex) {
-      return { next: index, block: null, node: null };
+      return fallbackResult;
     }
 
     const fnTyped = context.get(idRes.identifierLower || idRes.identifier);
@@ -213,7 +219,7 @@ module.exports = function createInfixParser(env) {
 
     const funcObject = env.valueOf(funcValue);
     if (funcObject.callType !== env.CallType.Dual) {
-      return { next: index, block: null, node: null };
+      return fallbackResult;
     }
 
     const operands = [firstRes.block];
@@ -257,7 +263,7 @@ module.exports = function createInfixParser(env) {
     }
 
     if (operands.length < 2) {
-      return { next: index, block: null, node: null };
+      return fallbackResult;
     }
 
     const literalFunc = new LiteralBlock(env.makeValue(env.FSDataType.Function, funcObject));

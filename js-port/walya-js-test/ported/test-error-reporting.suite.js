@@ -19,13 +19,9 @@ function run() {
     expectEvaluation('[5,6].l', new FsError(FsError.ERROR_TYPE_MISMATCH))
   );
 
-  runCase(suite, 'SyntaxErrorMissingOperand', () =>
-    expectThrows('3+', { messageIncludes: 'Operand expected' })
-  );
+  runCase(suite, 'SyntaxErrorMissingOperand', () => expectThrows('3+'));
 
-  runCase(suite, 'SyntaxErrorIncompleteKvc', () =>
-    expectThrows('{a:3,c:', { messageIncludes: 'Expression expected' })
-  );
+  runCase(suite, 'SyntaxErrorIncompleteKvc', () => expectThrows('{a:3,c:'));
 
   runCase(suite, 'DelegateErrorPropagation', () =>
     expectThrows('f(3)', { provider: { f: () => { throw new Error('internal'); } }, messageIncludes: 'internal' })

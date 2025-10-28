@@ -13,8 +13,10 @@ namespace Walya.Core
         /// <remarks>
         /// This method uses a nested for loop for character comparison, providing better performance.
         /// </remarks>
+        private static int lm_count = 0;
         static public int GetLiteralMatch(string exp, int index, params string[] keyWord)
         {
+            Console.WriteLine($"LM {lm_count++}: {index}");
             return GetLiteralMatch(exp, index, keyWord, out var matched);
         }
 
