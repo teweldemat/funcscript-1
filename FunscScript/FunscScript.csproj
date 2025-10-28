@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>FunscScript</PackageId>
-    <Version>0.1.1</Version>
+    <PackageId>Tewelde.FuncScript</PackageId>
+    <Version>0.1.0</Version>
     <Authors>Tewelde Ma. Tegegne</Authors>
     <Company>FunscScript</Company>
     <Description>Expression-oriented scripting language runtime for .NET applications.</Description>

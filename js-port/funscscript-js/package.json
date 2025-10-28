@@ -1,6 +1,6 @@
 {
   "name": "@tewelde/funscscript",
-  "version": "0.1.6",
+  "version": "0.1.0",
   "description": "FunscScript runtime for Node.js and browser environments",
   "license": "MIT",
   "type": "commonjs",

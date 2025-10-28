@@ -1,6 +1,6 @@
 {
   "name": "@tewelde/funscscript-editor",
-  "version": "0.1.8",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
