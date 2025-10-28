@@ -131,8 +131,8 @@ function run() {
     const seg = segments[i++];
     assert.strictEqual(seg.NodeType, ParseNodeType.KeyValueCollection);
     assert.strictEqual(seg.Pos, p);
-    assert.strictEqual(seg.Length, 1);
-    p += 1;
+    assert.strictEqual(seg.Length, 6);
+    p += 6;
   });
 
   finalizeSuite('case-1', suite);

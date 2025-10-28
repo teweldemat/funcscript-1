@@ -182,10 +182,15 @@ module.exports = function createKvcParser(env) {
     return { next: skipSpace(exp, i), block: result.block, node: result.node };
   }
 
-  return function getKvcExpression(context, exp, index, errors) {
+  return function getKvcExpression(context, exp, index, errors, options = {}) {
+    const { allowNaked = false } = options;
+
     let i = skipSpace(exp, index);
     const open = getLiteralMatch(exp, i, '{');
     if (open === i) {
+      if (!allowNaked) {
+        return { next: index, block: null, node: null };
+      }
       const naked = parseEntries(context, exp, index, errors, {
         requireClosing: false,
         start: index,

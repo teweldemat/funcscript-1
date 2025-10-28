@@ -62,11 +62,6 @@ module.exports = function createSwitchParser(env) {
       i = skipSpace(exp, valueRes.next);
     }
 
-    if (parameters.length === 1) {
-      errors.push({ position: i, message: 'Switch requires at least one case' });
-      return { next: index, block: null, node: null };
-    }
-
     const switchFunc = context.get('switch');
     const typed = env.ensureTyped(switchFunc);
     if (env.typeOf(typed) !== env.FSDataType.Function) {

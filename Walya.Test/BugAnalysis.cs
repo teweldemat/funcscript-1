@@ -18,6 +18,6 @@ public class BugAnalysis
         Assert.NotNull(exp);
         Assert.IsEmpty(err);
         timer.Stop();
-        Assert.Less(timer.ElapsedMilliseconds, 1000);
+        Assert.Less(timer.ElapsedMilliseconds, 500);
     }
 }

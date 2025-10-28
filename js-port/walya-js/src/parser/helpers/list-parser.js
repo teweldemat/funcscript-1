@@ -35,14 +35,21 @@ module.exports = function createListParser(env) {
           break;
         }
         i = skipSpace(exp, comma);
+        const trailingClose = getLiteralMatch(exp, i, ']');
+        if (trailingClose > i) {
+          closeIndex = trailingClose;
+          i = skipSpace(exp, trailingClose);
+          break;
+        }
       }
-
-      closeIndex = getLiteralMatch(exp, i, ']');
-      if (closeIndex === i) {
-        errors.push({ position: i, message: "']' expected" });
-        return { next: index, block: null, node: null };
+      if (closeIndex === null) {
+        closeIndex = getLiteralMatch(exp, i, ']');
+        if (closeIndex === i) {
+          errors.push({ position: i, message: "']' expected" });
+          return { next: index, block: null, node: null };
+        }
+        i = skipSpace(exp, closeIndex);
       }
-      i = skipSpace(exp, closeIndex);
     }
 
     const list = new ListExpression();

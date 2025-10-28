@@ -169,6 +169,7 @@ namespace Walya.Test
         [TestCase("switch 4, 1:'a', 2:'b', 4:'c'", "c")]
         [TestCase("switch 4, 1:'a', 2:'b', 3:'c'", null)]
         [TestCase("switch 4, 1:'a', 2:'b', 3:'c','that'", "that")]
+        [TestCase("switch a, b:1,2", 1)]
         public void SwitchExpression(string exp, object expected)
         {
             Assert.AreEqual(expected, WalyaRuntime.Evaluate(exp));

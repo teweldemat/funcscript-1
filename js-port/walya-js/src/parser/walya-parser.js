@@ -84,7 +84,7 @@ env.getSwitchExpression = getSwitchExpression;
 env.getGeneralInfixFunctionCall = getGeneralInfixFunctionCall;
 
 function getRootExpression(context, exp, index, errors) {
-  const kvcRes = getKvcExpression(context, exp, index, errors);
+  const kvcRes = getKvcExpression(context, exp, index, errors, { allowNaked: true });
   if (kvcRes.block) {
     const end = utils.skipSpace(exp, kvcRes.next);
     if (end === exp.length) {
