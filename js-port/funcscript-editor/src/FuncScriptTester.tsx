@@ -519,7 +519,6 @@ const ParseTreeList = ({
 
 const containerStyle: CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
   border: '1px solid #d0d7de',
   borderRadius: 6,
   backgroundColor: '#ffffff',
@@ -528,7 +527,14 @@ const containerStyle: CSSProperties = {
   minHeight: 0
 };
 
-const headerStyle: CSSProperties = {
+const leftPaneBaseStyle: CSSProperties = {
+  flex: 2,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0
+};
+
+const toolbarStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -538,7 +544,7 @@ const headerStyle: CSSProperties = {
   gap: 8
 };
 
-const headerGroupStyle: CSSProperties = {
+const toolbarButtonGroupStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 6
@@ -566,25 +572,23 @@ const modeButtonDisabledStyle: CSSProperties = {
   cursor: 'not-allowed'
 };
 
-const testingToggleStyle: CSSProperties = {
+const testToggleStyle: CSSProperties = {
   ...modeButtonBaseStyle,
   fontWeight: 600
 };
 
-const contentStyle: CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'stretch',
-  flex: 1,
-  minHeight: 0,
-  padding: '0.75rem'
+const playButtonStyle: CSSProperties = {
+  ...modeButtonBaseStyle,
+  padding: '2px 10px',
+  fontWeight: 600
 };
 
-const editorColumnStyle: CSSProperties = {
-  flex: 2,
+const leftPaneContentStyle: CSSProperties = {
+  flex: 1,
   display: 'flex',
   flexDirection: 'column',
   gap: '0.75rem',
+  padding: '0.75rem',
   minHeight: 0
 };
 
@@ -683,7 +687,10 @@ const testingColumnStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '0.75rem',
-  minHeight: 0
+  minHeight: 0,
+  padding: '0.75rem',
+  borderLeft: '1px solid #d0d7de',
+  backgroundColor: '#ffffff'
 };
 
 const resultPanelStyle: CSSProperties = {
@@ -746,6 +753,18 @@ const nodeEditorSurfaceStyle: CSSProperties = {
 };
 
 const testerEditorStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0
+};
+
+const variableEditorContainerStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0
+};
+
+const variableEditorSurfaceStyle: CSSProperties = {
   flex: 1,
   minHeight: 0
 };
@@ -1393,48 +1412,74 @@ const FuncScriptTester = ({
   }, [applyPendingChanges]);
 
   const treeModeDisabled = !parseTree || Boolean(currentParseError);
+  const leftPaneStyle = useMemo(
+    () => ({
+      ...leftPaneBaseStyle,
+      borderRight: showTestingControls ? '1px solid #d0d7de' : 'none'
+    }),
+    [showTestingControls]
+  );
+  const testToggleButtonStyle = useMemo(
+    () => ({
+      ...testToggleStyle,
+      ...(showTestingControls ? modeButtonActiveStyle : {})
+    }),
+    [showTestingControls]
+  );
 
   return (
     <div className="funcscript-tester" style={containerStyle}>
-      <div style={headerStyle}>
-        <div style={headerGroupStyle}>
-          <button
-            type="button"
-            style={{
-              ...modeButtonBaseStyle,
-              ...(mode === 'standard' ? modeButtonActiveStyle : {})
-            }}
-            onClick={() => setMode('standard')}
-          >
-            Standard
-          </button>
-          <button
-            type="button"
-            style={{
-              ...modeButtonBaseStyle,
-              ...(mode === 'tree' ? modeButtonActiveStyle : {}),
-              ...(treeModeDisabled ? modeButtonDisabledStyle : {})
-            }}
-            onClick={() => {
-              if (!treeModeDisabled) {
-                setMode('tree');
-              }
-            }}
-            disabled={treeModeDisabled}
-          >
-            Tree
-          </button>
+      <div style={leftPaneStyle}>
+        <div style={toolbarStyle}>
+          <div style={toolbarButtonGroupStyle}>
+            <button
+              type="button"
+              style={{
+                ...modeButtonBaseStyle,
+                ...(mode === 'standard' ? modeButtonActiveStyle : {})
+              }}
+              onClick={() => setMode('standard')}
+            >
+              Standard
+            </button>
+            <button
+              type="button"
+              style={{
+                ...modeButtonBaseStyle,
+                ...(mode === 'tree' ? modeButtonActiveStyle : {}),
+                ...(treeModeDisabled ? modeButtonDisabledStyle : {})
+              }}
+              onClick={() => {
+                if (!treeModeDisabled) {
+                  setMode('tree');
+                }
+              }}
+              disabled={treeModeDisabled}
+            >
+              Tree
+            </button>
+            <button
+              type="button"
+              style={testToggleButtonStyle}
+              onClick={() => setShowTestingControls((prev) => !prev)}
+              aria-pressed={showTestingControls}
+            >
+              Test
+            </button>
+          </div>
+          {showTestingControls && (
+            <button
+              type="button"
+              style={playButtonStyle}
+              onClick={runTest}
+              title="Run test"
+              aria-label="Run test"
+            >
+              {'\u25B6'}
+            </button>
+          )}
         </div>
-        <button
-          type="button"
-          style={testingToggleStyle}
-          onClick={() => setShowTestingControls((prev) => !prev)}
-        >
-          {showTestingControls ? 'Hide Testing' : 'Show Testing'}
-        </button>
-      </div>
-      <div style={contentStyle}>
-        <div style={editorColumnStyle}>
+        <div style={leftPaneContentStyle}>
           <div style={editorBodyStyle}>
             <div
               style={{
@@ -1504,57 +1549,52 @@ const FuncScriptTester = ({
               </div>
             )}
           </div>
+          <div style={resultPanelStyle}>{resultContent}</div>
         </div>
-        {showTestingControls && (
-          <div style={testingColumnStyle}>
-            <div>
-              <button type="button" style={modeButtonBaseStyle} onClick={runTest}>
-                Test
-              </button>
-            </div>
-            <div style={resultPanelStyle}>{resultContent}</div>
-            <div style={variablesListStyle}>
-              {variableEntries.length === 0 ? (
-                <div style={unsetTokenStyle}>Variables will appear here when referenced.</div>
-              ) : (
-                variableEntries.map((entry) => {
-                  const isSelected = entry.key === selectedVariableKey;
-                  const hasValue = entry.typedValue !== null && !entry.error;
-                  const summaryText = entry.error
-                    ? 'Error'
-                    : hasValue
-                    ? Engine.getTypeName(Engine.typeOf(entry.typedValue as TypedValue))
-                    : 'Unset';
-                  return (
-                    <button
-                      key={entry.key}
-                      type="button"
-                      onClick={() => handleSelectVariable(entry.key)}
-                      style={isSelected ? selectedListItemStyle : listItemStyle}
-                    >
-                      <div>
-                        <strong>{entry.name}</strong>
-                      </div>
-                      <div style={hasValue ? undefined : unsetTokenStyle}>{summaryText}</div>
-                      {entry.error ? <div style={errorTextStyle}>{entry.error}</div> : null}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-            <div>
-              <div onBlur={handleVariableEditorBlur}>
-                <FuncScriptEditor
-                  key={selectedVariableKey ?? 'variable-editor'}
-                  value={variableEditorValue}
-                  onChange={handleVariableEditorChange}
-                  minHeight={160}
-                />
-              </div>
+      </div>
+      {showTestingControls && (
+        <div style={testingColumnStyle}>
+          <div style={variablesListStyle}>
+            {variableEntries.length === 0 ? (
+              <div style={unsetTokenStyle}>Variables will appear here when referenced.</div>
+            ) : (
+              variableEntries.map((entry) => {
+                const isSelected = entry.key === selectedVariableKey;
+                const hasValue = entry.typedValue !== null && !entry.error;
+                const summaryText = entry.error
+                  ? 'Error'
+                  : hasValue
+                  ? Engine.getTypeName(Engine.typeOf(entry.typedValue as TypedValue))
+                  : 'Unset';
+                return (
+                  <button
+                    key={entry.key}
+                    type="button"
+                    onClick={() => handleSelectVariable(entry.key)}
+                    style={isSelected ? selectedListItemStyle : listItemStyle}
+                  >
+                    <div>
+                      <strong>{entry.name}</strong>
+                    </div>
+                    <div style={hasValue ? undefined : unsetTokenStyle}>{summaryText}</div>
+                    {entry.error ? <div style={errorTextStyle}>{entry.error}</div> : null}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div style={variableEditorContainerStyle}>
+            <div onBlur={handleVariableEditorBlur} style={variableEditorSurfaceStyle}>
+              <FuncScriptEditor
+                key={selectedVariableKey ?? 'variable-editor'}
+                value={variableEditorValue}
+                onChange={handleVariableEditorChange}
+                minHeight={160}
+              />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

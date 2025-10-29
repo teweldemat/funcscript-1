@@ -174,7 +174,8 @@ describe('FuncScriptTester tree workflow', () => {
       expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
     });
 
-    await user.click(screen.getAllByRole('button', { name: 'Show Testing' })[0]);
+    const testToggle = screen.getAllByRole('button', { name: 'Test' })[0];
+    await user.click(testToggle);
 
     unmount();
 
@@ -182,7 +183,8 @@ describe('FuncScriptTester tree workflow', () => {
 
     await screen.findByTestId('tester-tree-editor');
     expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Hide Testing' })[0]).toBeInTheDocument();
+    const toggles = screen.getAllByRole('button', { name: 'Test' });
+    expect(toggles[0]).toHaveAttribute('aria-pressed', 'true');
 
     const expandToggle = await screen.findByRole('button', {
       name: /^Expand node sin\(x\)$/
@@ -238,10 +240,11 @@ describe('FuncScriptTester tree workflow', () => {
 
     expect(screen.queryByText('Variables will appear here when referenced.')).toBeNull();
 
-    await user.click(screen.getAllByRole('button', { name: 'Show Testing' })[0]);
+    const testToggle = screen.getAllByRole('button', { name: 'Test' })[0];
+    await user.click(testToggle);
     expect(await screen.findByText('Variables will appear here when referenced.')).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole('button', { name: 'Hide Testing' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Test' })[0]);
     await waitFor(() => {
       expect(screen.queryByText('Variables will appear here when referenced.')).toBeNull();
     });
