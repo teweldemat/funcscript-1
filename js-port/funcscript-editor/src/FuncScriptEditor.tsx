@@ -991,6 +991,9 @@ const FuncScriptEditor = ({
 
   useEffect(() => {
     if (!parseTree) {
+      if (!hadParseTreeRef.current) {
+        return;
+      }
       setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
       return;
     }
