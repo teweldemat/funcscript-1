@@ -257,7 +257,8 @@ const NON_EDITABLE_NODE_TYPES = new Set<string>([
   'StatementList',
   'Block',
   'Operator',
-  "Key"
+  "Key",
+  "KeyValuePair"
 ]);
 
 const isEditableTypeName = (typeName: string) => {
@@ -453,6 +454,18 @@ const findFirstEditableNode = (root: ParseTreeNode | null): ParseTreeNode | null
   return null;
 };
 
+const hasVisibleEditableDescendant = (node: ParseTreeNode): boolean => {
+  if (node.isEditable) {
+    return true;
+  }
+  for (const child of node.children) {
+    if (hasVisibleEditableDescendant(child)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 const TREE_NODE_INDENT = 12;
 
 type ParseTreeListProps = {
@@ -501,12 +514,6 @@ const treeToggleSpacerStyle: CSSProperties = {
   height: 18
 };
 
-const nonEditableTreeLabelStyle: CSSProperties = {
-  ...treeButtonBaseStyle,
-  color: '#57606a',
-  cursor: 'default'
-};
-
 const ParseTreeList = ({
   node,
   level,
@@ -520,7 +527,8 @@ const ParseTreeList = ({
   const isEditable = node.isEditable;
   const displayLabel = expressionLabel || node.typeName;
   const title = expressionLabel ? `${node.typeName}:${expressionLabel}` : node.typeName;
-  const hasChildren = node.children.length > 0;
+  const visibleChildren = node.children.filter((child) => hasVisibleEditableDescendant(child));
+  const hasChildren = visibleChildren.length > 0;
   const isCollapsed = hasChildren && collapsedNodeIds.has(node.id);
 
   const rowStyle: CSSProperties = {
@@ -534,6 +542,27 @@ const ParseTreeList = ({
     color: isSelected ? '#ffffff' : '#24292f',
     cursor: isEditable ? 'pointer' : 'default'
   };
+
+  if (!isEditable) {
+    if (!hasChildren) {
+      return null;
+    }
+    return (
+      <>
+        {visibleChildren.map((child) => (
+          <ParseTreeList
+            key={child.id}
+            node={child}
+            level={level}
+            selectedId={selectedId}
+            collapsedNodeIds={collapsedNodeIds}
+            onToggleNode={onToggleNode}
+            onSelect={onSelect}
+          />
+        ))}
+      </>
+    );
+  }
 
   return (
     <div>
@@ -550,18 +579,12 @@ const ParseTreeList = ({
         ) : (
           <span style={treeToggleSpacerStyle} />
         )}
-        {isEditable ? (
-          <button type="button" style={buttonStyle} onClick={() => onSelect(node.id)} title={title}>
-            {displayLabel}
-          </button>
-        ) : (
-          <span style={nonEditableTreeLabelStyle} title={title}>
-            {displayLabel}
-          </span>
-        )}
+        <button type="button" style={buttonStyle} onClick={() => onSelect(node.id)} title={title}>
+          {displayLabel}
+        </button>
       </div>
       {hasChildren && !isCollapsed &&
-        node.children.map((child) => (
+        visibleChildren.map((child) => (
           <ParseTreeList
             key={child.id}
             node={child}
@@ -1004,7 +1027,9 @@ const FuncScriptEditor = ({
       if (!current) {
         continue;
       }
-      validIds.add(current.id);
+      if (current.isEditable) {
+        validIds.add(current.id);
+      }
       for (const child of current.children) {
         stack.push(child);
       }
@@ -1112,13 +1137,17 @@ const FuncScriptEditor = ({
         if (ancestorId === 'root') {
           continue;
         }
+        const ancestorNode = parseNodeMap.get(ancestorId);
+        if (!ancestorNode?.isEditable) {
+          continue;
+        }
         if (next.delete(ancestorId)) {
           changed = true;
         }
       }
       return changed ? next : prev;
     });
-  }, [selectedNodeId]);
+  }, [selectedNodeId, parseNodeMap]);
 
   const handleToggleNode = useCallback((nodeId: string) => {
     setCollapsedNodeIds((prev) => {
