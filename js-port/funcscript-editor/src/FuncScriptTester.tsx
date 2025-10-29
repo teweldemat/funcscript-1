@@ -7,14 +7,16 @@ import {
   type CSSProperties,
   type ReactNode
 } from 'react';
-import FuncScriptEditor from './FuncScriptEditor.js';
+import FuncScriptEditor, {
+  type FuncScriptEditorProps,
+  type FuncScriptParseNode
+} from './FuncScriptEditor.js';
 import {
   Engine,
   FSDataType,
   type DefaultFsDataProvider,
   type TypedValue
 } from '@tewelde/funcscript/browser';
-import type { FuncScriptEditorProps } from './FuncScriptEditor.js';
 
 type VariableState = {
   name: string;
@@ -71,6 +73,681 @@ class TesterDataProvider extends Engine.FsDataProvider {
 type EvaluationState = {
   value: TypedValue | null;
   error: string | null;
+};
+
+type PersistedTesterState = {
+  mode: 'standard' | 'tree';
+  collapsedNodeIds: string[];
+  showTesting: boolean;
+};
+
+const STORAGE_PREFIX = 'funcscript-tester:';
+
+const getStorageKey = (key: string) => `${STORAGE_PREFIX}${key}`;
+
+const sanitizeCollapsedNodeIds = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === 'string');
+};
+
+const loadPersistedState = (key: string): PersistedTesterState | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(getStorageKey(key));
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<PersistedTesterState> | null;
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    const mode = parsed.mode === 'tree' ? 'tree' : 'standard';
+    const collapsedNodeIds = sanitizeCollapsedNodeIds(parsed.collapsedNodeIds);
+    const showTesting = parsed.showTesting === true;
+    return { mode, collapsedNodeIds, showTesting };
+  } catch {
+    return null;
+  }
+};
+
+const storePersistedState = (key: string, state: PersistedTesterState) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(getStorageKey(key), JSON.stringify(state));
+  } catch {
+    // Ignore storage failures (e.g. quota exceeded, private mode)
+  }
+};
+
+type ParseTreeNode = {
+  id: string;
+  typeName: string;
+  range: { start: number; end: number } | null;
+  expression: string;
+  isEditable: boolean;
+  children: ParseTreeNode[];
+};
+
+const NON_EDITABLE_NODE_TYPES = new Set<string>([
+  'FunctionParameterList',
+  'FunctionParameter',
+  'FunctionParameters',
+  'LambdaParameterList',
+  'LambdaParameters',
+  'ArgumentList',
+  'Arguments',
+  'IdentifierList',
+  'StatementList',
+  'Block',
+  'Operator',
+  'Key',
+  'KeyValuePair'
+]);
+
+const isEditableTypeName = (typeName: string) => {
+  if (!typeName) {
+    return false;
+  }
+  if (NON_EDITABLE_NODE_TYPES.has(typeName)) {
+    return false;
+  }
+  if (typeName.includes('Parameter')) {
+    return false;
+  }
+  if (typeName.includes('Argument')) {
+    return false;
+  }
+  if (typeName.endsWith('List') && !typeName.endsWith('ExpressionList')) {
+    return false;
+  }
+  if (typeName.endsWith('Block') || typeName.endsWith('Body')) {
+    return false;
+  }
+  return true;
+};
+
+const getNodeTypeName = (node: FuncScriptParseNode) => {
+  if (typeof node.NodeType === 'string' && node.NodeType.length > 0) {
+    return node.NodeType;
+  }
+  if (typeof node.nodeType === 'string' && node.nodeType.length > 0) {
+    return node.nodeType;
+  }
+  if (typeof node.Type === 'string' && node.Type.length > 0) {
+    return node.Type;
+  }
+  if (typeof node.type === 'string' && node.type.length > 0) {
+    return node.type;
+  }
+  return 'Unknown';
+};
+
+const clampRange = (start: number, end: number, length: number) => {
+  const safeStart = Math.max(0, Math.min(start, length));
+  const safeEnd = Math.max(safeStart, Math.min(end, length));
+  return safeEnd > safeStart ? { start: safeStart, end: safeEnd } : null;
+};
+
+const toNodeRange = (node: FuncScriptParseNode, docLength: number) => {
+  const pos =
+    typeof node.Pos === 'number' ? node.Pos : typeof node.pos === 'number' ? node.pos : null;
+  const len =
+    typeof node.Length === 'number'
+      ? node.Length
+      : typeof node.length === 'number'
+      ? node.length
+      : null;
+  if (pos === null || len === null) {
+    return null;
+  }
+  return clampRange(pos, pos + len, docLength);
+};
+
+const getChildNodes = (node: FuncScriptParseNode): FuncScriptParseNode[] => {
+  const value = node.Childs ?? node.childs ?? node.Children ?? node.children;
+  return Array.isArray(value) ? (value as FuncScriptParseNode[]) : [];
+};
+
+const buildParseTree = (root: FuncScriptParseNode | null, docText: string): ParseTreeNode | null => {
+  if (!root) {
+    return null;
+  }
+
+  const docLength = docText.length;
+
+  const collapseSingleChild = (node: FuncScriptParseNode, path: number[]) => {
+    let currentNode = node;
+    const collapsedPath = [...path];
+    while (true) {
+      const children = getChildNodes(currentNode);
+      if (children.length !== 1) {
+        break;
+      }
+      currentNode = children[0];
+      collapsedPath.push(0);
+    }
+    return { node: currentNode, path: collapsedPath };
+  };
+
+  const collectDisplayChildren = (node: FuncScriptParseNode, path: number[]): ParseTreeNode[] => {
+    const rawChildren = getChildNodes(node);
+    const displayChildren: ParseTreeNode[] = [];
+    for (let index = 0; index < rawChildren.length; index += 1) {
+      const { node: collapsedNode, path: collapsedPath } = collapseSingleChild(
+        rawChildren[index],
+        [...path, index]
+      );
+      displayChildren.push(walk(collapsedNode, collapsedPath));
+    }
+    return displayChildren;
+  };
+
+  const walk = (node: FuncScriptParseNode, path: number[]): ParseTreeNode => {
+    const range = toNodeRange(node, docLength);
+    const expression = range ? docText.slice(range.start, range.end) : '';
+    const typeName = getNodeTypeName(node);
+    const children = collectDisplayChildren(node, path);
+    const id = path.length === 0 ? 'root' : path.join('-');
+    return {
+      id,
+      typeName,
+      range,
+      expression,
+      isEditable: Boolean(range) && isEditableTypeName(typeName),
+      children
+    };
+  };
+
+  return walk(root, []);
+};
+
+const createParseNodeIndex = (root: ParseTreeNode | null) => {
+  const map = new Map<string, ParseTreeNode>();
+
+  const visit = (node: ParseTreeNode) => {
+    map.set(node.id, node);
+    for (const child of node.children) {
+      visit(child);
+    }
+  };
+
+  if (root) {
+    visit(root);
+  }
+
+  return map;
+};
+
+const formatExpressionPreview = (expression: string) => {
+  const condensed = expression.replace(/\s+/g, ' ').trim();
+  if (condensed.length === 0) {
+    return '';
+  }
+  if (condensed.length > 48) {
+    return condensed.slice(0, 45) + '...';
+  }
+  return condensed;
+};
+
+const findNodeByRange = (
+  root: ParseTreeNode | null,
+  target: { start: number; end: number }
+): ParseTreeNode | null => {
+  if (!root) {
+    return null;
+  }
+
+  let exactMatch: ParseTreeNode | null = null;
+  let startMatch: { node: ParseTreeNode; diff: number } | null = null;
+  let overlapMatch: { node: ParseTreeNode; diff: number } | null = null;
+
+  const stack: ParseTreeNode[] = [root];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node) {
+      continue;
+    }
+    const range = node.range;
+    if (range) {
+      if (range.start === target.start && range.end === target.end) {
+        exactMatch = node;
+        break;
+      }
+
+      if (range.start === target.start) {
+        const diff = Math.abs(range.end - target.end);
+        if (!startMatch || diff < startMatch.diff) {
+          startMatch = { node, diff };
+        }
+      }
+
+      const overlaps = !(range.end <= target.start || range.start >= target.end);
+      if (overlaps) {
+        const diff = Math.abs(range.start - target.start) + Math.abs(range.end - target.end);
+        if (!overlapMatch || diff < overlapMatch.diff) {
+          overlapMatch = { node, diff };
+        }
+      }
+    }
+
+    for (const child of node.children) {
+      stack.push(child);
+    }
+  }
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+  if (startMatch) {
+    return startMatch.node;
+  }
+  if (overlapMatch) {
+    return overlapMatch.node;
+  }
+  return null;
+};
+
+const findFirstEditableNode = (root: ParseTreeNode | null): ParseTreeNode | null => {
+  if (!root) {
+    return null;
+  }
+  if (root.isEditable) {
+    return root;
+  }
+  for (const child of root.children) {
+    const match = findFirstEditableNode(child);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+const hasVisibleEditableDescendant = (node: ParseTreeNode): boolean => {
+  if (node.isEditable) {
+    return true;
+  }
+  for (const child of node.children) {
+    if (hasVisibleEditableDescendant(child)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const getAncestorNodeIds = (nodeId: string): string[] => {
+  if (!nodeId || nodeId === 'root') {
+    return [];
+  }
+  const segments = nodeId.split('-').filter((segment) => segment.length > 0);
+  if (segments.length === 0) {
+    return [];
+  }
+  const ancestors: string[] = ['root'];
+  for (let index = 1; index < segments.length; index += 1) {
+    ancestors.push(segments.slice(0, index).join('-'));
+  }
+  return ancestors;
+};
+
+const TREE_NODE_INDENT = 12;
+
+type ParseTreeListProps = {
+  node: ParseTreeNode;
+  level: number;
+  selectedId: string | null;
+  collapsedNodeIds: Set<string>;
+  onToggleNode: (nodeId: string) => void;
+  onSelect: (nodeId: string) => void;
+};
+
+const treeButtonBaseStyle: CSSProperties = {
+  flex: 1,
+  background: 'transparent',
+  border: '1px solid transparent',
+  textAlign: 'left',
+  padding: '2px 6px',
+  borderRadius: 4,
+  fontSize: 12,
+  transition: 'background-color 0.1s ease'
+};
+
+const treeRowBaseStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4
+};
+
+const treeToggleButtonStyle: CSSProperties = {
+  width: 18,
+  height: 18,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: '1px solid transparent',
+  borderRadius: 4,
+  background: 'transparent',
+  color: '#57606a',
+  cursor: 'pointer',
+  padding: 0,
+  fontSize: 10
+};
+
+const treeToggleSpacerStyle: CSSProperties = {
+  width: 18,
+  height: 18
+};
+
+const ParseTreeList = ({
+  node,
+  level,
+  selectedId,
+  collapsedNodeIds,
+  onToggleNode,
+  onSelect
+}: ParseTreeListProps) => {
+  const expressionLabel = formatExpressionPreview(node.expression);
+  const isSelected = node.id === selectedId;
+  const isEditable = node.isEditable;
+  const isCollapsed = collapsedNodeIds.has(node.id);
+
+  const hasChildren = node.children.length > 0;
+  const visibleChildren = hasChildren
+    ? node.children.filter((child) => hasVisibleEditableDescendant(child))
+    : [];
+
+  const rowStyle: CSSProperties = {
+    ...treeRowBaseStyle,
+    paddingLeft: TREE_NODE_INDENT * level
+  };
+
+  const buttonStyle: CSSProperties = {
+    ...treeButtonBaseStyle,
+    background: isSelected ? '#dbe9ff' : 'transparent',
+    borderColor: isSelected ? '#0969da' : 'transparent',
+    cursor: isEditable ? 'pointer' : 'default',
+    color: isEditable ? '#24292f' : '#8c959f'
+  };
+
+  const displayLabel = expressionLabel.length > 0 ? expressionLabel : node.typeName;
+  const title = node.isEditable ? `Edit ${node.typeName}` : `${node.typeName} (read only)`;
+
+  if (!isEditable && visibleChildren.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <div style={rowStyle}>
+        {hasChildren ? (
+          <button
+            type="button"
+            style={treeToggleButtonStyle}
+            onClick={() => onToggleNode(node.id)}
+            aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} node ${displayLabel}`}
+          >
+            {isCollapsed ? '▸' : '▾'}
+          </button>
+        ) : (
+          <span style={treeToggleSpacerStyle} />
+        )}
+        <button type="button" style={buttonStyle} onClick={() => onSelect(node.id)} title={title}>
+          {displayLabel}
+        </button>
+      </div>
+      {hasChildren && !isCollapsed &&
+        visibleChildren.map((child) => (
+          <ParseTreeList
+            key={child.id}
+            node={child}
+            level={level + 1}
+            selectedId={selectedId}
+            collapsedNodeIds={collapsedNodeIds}
+            onToggleNode={onToggleNode}
+            onSelect={onSelect}
+          />
+        ))}
+    </div>
+  );
+};
+
+const containerStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  border: '1px solid #d0d7de',
+  borderRadius: 6,
+  backgroundColor: '#ffffff',
+  overflow: 'hidden',
+  height: '100%',
+  minHeight: 0
+};
+
+const headerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '6px 8px',
+  borderBottom: '1px solid #d0d7de',
+  backgroundColor: '#f6f8fa',
+  gap: 8
+};
+
+const headerGroupStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6
+};
+
+const modeButtonBaseStyle: CSSProperties = {
+  border: '1px solid #d0d7de',
+  borderColor: '#d0d7de',
+  backgroundColor: '#ffffff',
+  color: '#24292f',
+  borderRadius: 4,
+  fontSize: 12,
+  padding: '2px 8px',
+  cursor: 'pointer'
+};
+
+const modeButtonActiveStyle: CSSProperties = {
+  backgroundColor: '#24292f',
+  color: '#ffffff',
+  borderColor: '#24292f'
+};
+
+const modeButtonDisabledStyle: CSSProperties = {
+  opacity: 0.5,
+  cursor: 'not-allowed'
+};
+
+const testingToggleStyle: CSSProperties = {
+  ...modeButtonBaseStyle,
+  fontWeight: 600
+};
+
+const contentStyle: CSSProperties = {
+  display: 'flex',
+  gap: '1rem',
+  alignItems: 'stretch',
+  flex: 1,
+  minHeight: 0,
+  padding: '0.75rem'
+};
+
+const editorColumnStyle: CSSProperties = {
+  flex: 2,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.75rem',
+  minHeight: 0
+};
+
+const editorBodyStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0
+};
+
+const standardEditorWrapperStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0
+};
+
+const treeLayoutStyle: CSSProperties = {
+  display: 'flex',
+  flex: 1,
+  minHeight: 0,
+  border: '1px solid #d0d7de',
+  borderRadius: 6,
+  overflow: 'hidden',
+  backgroundColor: '#ffffff'
+};
+
+const treePaneStyle: CSSProperties = {
+  width: 260,
+  borderRight: '1px solid #d0d7de',
+  overflowY: 'auto',
+  padding: '8px 4px',
+  backgroundColor: '#fafbfc'
+};
+
+const treeEmptyStyle: CSSProperties = {
+  fontSize: 12,
+  color: '#57606a',
+  padding: '4px 6px'
+};
+
+const treeEditorPaneStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+  minHeight: 0
+};
+
+const nodeInfoStyle: CSSProperties = {
+  fontSize: 12,
+  padding: '6px 12px',
+  borderBottom: '1px solid #e1e4e8',
+  backgroundColor: '#f6f8fa',
+  color: '#24292f'
+};
+
+const nodeErrorStyle: CSSProperties = {
+  fontSize: 12,
+  color: '#cf222e',
+  padding: '4px 12px',
+  backgroundColor: '#ffebeb',
+  borderBottom: '1px solid #ffd7d5'
+};
+
+const expressionPreviewContainerStyle: CSSProperties = {
+  fontSize: 11,
+  lineHeight: 1.4,
+  fontFamily: 'Roboto Mono, monospace',
+  padding: '8px 12px',
+  borderTop: '1px solid #e1e4e8',
+  backgroundColor: '#f6f8fa',
+  color: '#57606a',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word'
+};
+
+const expressionSelectedTextStyle: CSSProperties = {
+  textDecoration: 'underline',
+  fontWeight: 600,
+  color: '#24292f'
+};
+
+const treeEditorOverlayStyle: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 12,
+  color: '#57606a',
+  pointerEvents: 'auto',
+  backgroundColor: 'rgba(246, 248, 250, 0.85)'
+};
+
+const testingColumnStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.75rem',
+  minHeight: 0
+};
+
+const resultPanelStyle: CSSProperties = {
+  border: '1px solid #d0d7de',
+  borderRadius: 6,
+  padding: '0.75rem',
+  minHeight: 120,
+  maxHeight: 240,
+  overflow: 'auto',
+  background: '#f6f8fa'
+};
+
+const variablesListStyle: CSSProperties = {
+  border: '1px solid #d0d7de',
+  borderRadius: 6,
+  padding: '0.5rem',
+  minHeight: 0,
+  overflowY: 'auto',
+  flex: 1,
+  background: '#fff'
+};
+
+const listItemStyle: CSSProperties = {
+  border: '1px solid transparent',
+  borderRadius: 4,
+  padding: '0.5rem',
+  textAlign: 'left',
+  width: '100%',
+  background: 'transparent',
+  cursor: 'pointer'
+};
+
+const selectedListItemStyle: CSSProperties = {
+  ...listItemStyle,
+  borderColor: '#0969da',
+  background: '#dbe9ff'
+};
+
+const unsetTokenStyle: CSSProperties = {
+  color: '#57606a',
+  fontStyle: 'italic'
+};
+
+const errorTextStyle: CSSProperties = {
+  color: '#d1242f',
+  marginTop: '0.25rem',
+  whiteSpace: 'pre-wrap'
+};
+
+const nodeEditorContainerStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  position: 'relative',
+  display: 'flex'
+};
+
+const nodeEditorSurfaceStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0
+};
+
+const testerEditorStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0
 };
 
 const typedValueToPlain = (typedValue: TypedValue): unknown => {
@@ -131,70 +808,8 @@ const formatTypedValue = (typedValue: TypedValue): string => {
   }
 };
 
-export type FuncScriptTesterProps = FuncScriptEditorProps;
-
-const containerStyle: CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'stretch',
-  height: '100%',
-  overflow: 'hidden'
-};
-
-const columnStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem',
-  flex: 1,
-  minHeight: 0,
-  overflow: 'hidden'
-};
-
-const resultPanelStyle: CSSProperties = {
-  border: '1px solid #d0d7de',
-  borderRadius: 6,
-  padding: '0.75rem',
-  minHeight: 120,
-  maxHeight: 240,
-  overflow: 'auto',
-  background: '#f6f8fa'
-};
-
-const variablesListStyle: CSSProperties = {
-  border: '1px solid #d0d7de',
-  borderRadius: 6,
-  padding: '0.5rem',
-  minHeight: 0,
-  overflowY: 'auto',
-  flex: 1,
-  background: '#fff'
-};
-
-const listItemStyle: CSSProperties = {
-  border: '1px solid transparent',
-  borderRadius: 4,
-  padding: '0.5rem',
-  textAlign: 'left',
-  width: '100%',
-  background: 'transparent',
-  cursor: 'pointer'
-};
-
-const selectedListItemStyle: CSSProperties = {
-  ...listItemStyle,
-  borderColor: '#0969da',
-  background: '#dbe9ff'
-};
-
-const unsetTokenStyle: CSSProperties = {
-  color: '#57606a',
-  fontStyle: 'italic'
-};
-
-const errorTextStyle: CSSProperties = {
-  color: '#d1242f',
-  marginTop: '0.25rem',
-  whiteSpace: 'pre-wrap'
+export type FuncScriptTesterProps = Omit<FuncScriptEditorProps, 'onParseNodeChange' | 'readOnly'> & {
+  saveKey?: string;
 };
 
 const FuncScriptTester = ({
@@ -212,10 +827,74 @@ const FuncScriptTester = ({
   const [variableEditorValue, setVariableEditorValue] = useState('');
   const [resultState, setResultState] = useState<EvaluationState>({ value: null, error: null });
 
+  const initialPersistedState = useMemo(() => (saveKey ? loadPersistedState(saveKey) : null), [saveKey]);
+
+  const [mode, setMode] = useState<'standard' | 'tree'>(initialPersistedState?.mode ?? 'standard');
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(
+    () => new Set(initialPersistedState?.collapsedNodeIds ?? [])
+  );
+  const [showTestingControls, setShowTestingControls] = useState<boolean>(
+    initialPersistedState?.showTesting ?? false
+  );
+
+  const [currentParseNode, setCurrentParseNode] = useState<FuncScriptParseNode | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [pendingNodeValue, setPendingNodeValue] = useState('');
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [currentParseError, setCurrentParseError] = useState<string | null>(null);
+  const [nodeEditorParseError, setNodeEditorParseError] = useState<string | null>(null);
+
+  const pendingSelectionRangeRef = useRef<{ start: number; end: number } | null>(null);
+  const selectedNodeRef = useRef<ParseTreeNode | null>(null);
+  const hadParseTreeRef = useRef(false);
+
   const providerRef = useRef<TesterDataProvider | null>(null);
   if (!providerRef.current) {
     providerRef.current = new TesterDataProvider();
   }
+
+  useEffect(() => {
+    variablesRef.current = variables;
+  }, [variables]);
+
+  useEffect(() => {
+    if (!saveKey) {
+      setMode((prev) => (prev === 'standard' ? prev : 'standard'));
+      setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
+      setShowTestingControls(false);
+      return;
+    }
+    const stored = loadPersistedState(saveKey);
+    const desiredMode = stored?.mode ?? 'standard';
+    setMode((prev) => (prev === desiredMode ? prev : desiredMode));
+    setShowTestingControls(stored?.showTesting ?? false);
+    setCollapsedNodeIds(new Set(stored?.collapsedNodeIds ?? []));
+  }, [saveKey]);
+
+  useEffect(() => {
+    if (!saveKey) {
+      return;
+    }
+    storePersistedState(saveKey, {
+      mode,
+      collapsedNodeIds: Array.from(collapsedNodeIds),
+      showTesting: showTestingControls
+    });
+  }, [saveKey, mode, collapsedNodeIds, showTestingControls]);
+
+  const handleEditorError = useCallback(
+    (message: string | null) => {
+      setCurrentParseError(message);
+      if (onError) {
+        onError(message);
+      }
+    },
+    [onError]
+  );
+
+  const handleParseNodeChange = useCallback((node: FuncScriptParseNode | null) => {
+    setCurrentParseNode(node);
+  }, []);
 
   const evaluateExpression = useCallback((expression: string): {
     typedValue: TypedValue | null;
@@ -258,10 +937,6 @@ const FuncScriptTester = ({
     },
     [evaluateExpression]
   );
-
-  useEffect(() => {
-    variablesRef.current = variables;
-  }, [variables]);
 
   const handleVariableDiscovered = useCallback((name: string) => {
     const key = name.toLowerCase();
@@ -317,8 +992,8 @@ const FuncScriptTester = ({
   }, [selectedVariableKey, variables]);
 
   const handleVariableEditorChange = useCallback(
-    (value: string) => {
-      setVariableEditorValue(value);
+    (nextValue: string) => {
+      setVariableEditorValue(nextValue);
       if (!selectedVariableKey) {
         return;
       }
@@ -330,7 +1005,7 @@ const FuncScriptTester = ({
         const next = new Map(prev);
         next.set(selectedVariableKey, {
           ...current,
-          expression: value
+          expression: nextValue
         });
         return next;
       });
@@ -380,6 +1055,283 @@ const FuncScriptTester = ({
     }
   }, [evaluateExpression, value]);
 
+  const parseTree = useMemo(() => buildParseTree(currentParseNode, value), [currentParseNode, value]);
+  const parseNodeMap = useMemo(() => createParseNodeIndex(parseTree), [parseTree]);
+  const firstEditableNode = useMemo(() => findFirstEditableNode(parseTree), [parseTree]);
+  const selectedNode = selectedNodeId ? parseNodeMap.get(selectedNodeId) ?? null : null;
+
+  useEffect(() => {
+    selectedNodeRef.current = selectedNode;
+  }, [selectedNode]);
+
+  useEffect(() => {
+    if (parseTree) {
+      hadParseTreeRef.current = true;
+      return;
+    }
+    if (mode === 'tree' && hadParseTreeRef.current) {
+      setMode('standard');
+    }
+  }, [mode, parseTree]);
+
+  useEffect(() => {
+    if (parseTree) {
+      return;
+    }
+    if (selectedNodeId !== null) {
+      setSelectedNodeId(null);
+    }
+    if (pendingNodeValue !== '') {
+      setPendingNodeValue('');
+    }
+    if (hasPendingChanges) {
+      setHasPendingChanges(false);
+    }
+    if (nodeEditorParseError) {
+      setNodeEditorParseError(null);
+    }
+  }, [parseTree, selectedNodeId, pendingNodeValue, hasPendingChanges, nodeEditorParseError]);
+
+  useEffect(() => {
+    if (!parseTree) {
+      if (!hadParseTreeRef.current) {
+        return;
+      }
+      setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
+      return;
+    }
+    const validIds = new Set<string>();
+    const stack: ParseTreeNode[] = [parseTree];
+    while (stack.length) {
+      const current = stack.pop();
+      if (!current) {
+        continue;
+      }
+      if (current.isEditable) {
+        validIds.add(current.id);
+      }
+      for (const child of current.children) {
+        stack.push(child);
+      }
+    }
+    setCollapsedNodeIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (validIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      if (!changed) {
+        return prev;
+      }
+      return next;
+    });
+  }, [parseTree]);
+
+  useEffect(() => {
+    if (!parseTree) {
+      return;
+    }
+    const pendingRange = pendingSelectionRangeRef.current;
+    if (!pendingRange && hasPendingChanges) {
+      return;
+    }
+    if (pendingRange) {
+      const safeStart = Math.max(0, Math.min(pendingRange.start, value.length));
+      const safeEnd = Math.max(safeStart, Math.min(pendingRange.end, value.length));
+      const docFragment = value.slice(safeStart, safeEnd);
+      if (docFragment !== pendingNodeValue) {
+        return;
+      }
+      const replacement = findNodeByRange(parseTree, pendingRange);
+      if (replacement && replacement.isEditable) {
+        const range = replacement.range;
+        if (!range || range.start !== pendingRange.start || range.end !== pendingRange.end) {
+          return;
+        }
+        pendingSelectionRangeRef.current = null;
+        setSelectedNodeId(replacement.id);
+        setPendingNodeValue(replacement.expression);
+        setHasPendingChanges(false);
+        setNodeEditorParseError(null);
+        return;
+      }
+      pendingSelectionRangeRef.current = null;
+    }
+    if (selectedNodeId) {
+      const existing = parseNodeMap.get(selectedNodeId);
+      if (existing && existing.isEditable) {
+        return;
+      }
+    }
+    const fallback = firstEditableNode;
+    if (fallback) {
+      pendingSelectionRangeRef.current = null;
+      setSelectedNodeId(fallback.id);
+      setPendingNodeValue(fallback.expression);
+      setHasPendingChanges(false);
+      setNodeEditorParseError(null);
+      return;
+    }
+    pendingSelectionRangeRef.current = null;
+    setSelectedNodeId(null);
+    setHasPendingChanges(false);
+    setNodeEditorParseError(null);
+  }, [
+    parseTree,
+    parseNodeMap,
+    selectedNodeId,
+    firstEditableNode,
+    hasPendingChanges,
+    value,
+    pendingNodeValue
+  ]);
+
+  useEffect(() => {
+    if (!selectedNode) {
+      return;
+    }
+    if (!selectedNode.isEditable) {
+      return;
+    }
+    if (!hasPendingChanges && !pendingSelectionRangeRef.current) {
+      setNodeEditorParseError(null);
+    }
+  }, [selectedNode, hasPendingChanges]);
+
+  useEffect(() => {
+    if (!selectedNodeId) {
+      return;
+    }
+    setCollapsedNodeIds((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const ancestorId of getAncestorNodeIds(selectedNodeId)) {
+        if (ancestorId === 'root') {
+          continue;
+        }
+        const ancestorNode = parseNodeMap.get(ancestorId);
+        if (!ancestorNode?.isEditable) {
+          continue;
+        }
+        if (next.delete(ancestorId)) {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [selectedNodeId, parseNodeMap]);
+
+  const handleToggleNode = useCallback((nodeId: string) => {
+    setCollapsedNodeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectNode = useCallback(
+    (nodeId: string) => {
+      if (selectedNodeId === nodeId) {
+        return;
+      }
+      const node = parseNodeMap.get(nodeId);
+      if (!node) {
+        return;
+      }
+      if (!node.isEditable) {
+        return;
+      }
+      setSelectedNodeId(nodeId);
+      setPendingNodeValue(node.expression);
+      setHasPendingChanges(false);
+      setNodeEditorParseError(null);
+      pendingSelectionRangeRef.current = null;
+    },
+    [parseNodeMap, selectedNodeId]
+  );
+
+  const handleApplyChanges = useCallback(() => {
+    if (!selectedNode || !selectedNode.range || !selectedNode.isEditable) {
+      return;
+    }
+    if (!hasPendingChanges) {
+      return;
+    }
+    const { start, end } = selectedNode.range;
+    const nextDoc = value.slice(0, start) + pendingNodeValue + value.slice(end);
+    pendingSelectionRangeRef.current = {
+      start,
+      end: start + pendingNodeValue.length
+    };
+    onChange(nextDoc);
+    setHasPendingChanges(false);
+  }, [selectedNode, hasPendingChanges, pendingNodeValue, value, onChange]);
+
+  const selectedLabel =
+    selectedNode
+      ? `${selectedNode.typeName}:${formatExpressionPreview(selectedNode.expression)}`
+      : parseTree
+      ? 'Select an editable node from the tree'
+      : 'No node selected';
+
+  const treeOverlayMessage = useMemo(() => {
+    if (!parseTree) {
+      return 'Parse tree unavailable. Resolve syntax errors to enable tree mode.';
+    }
+    if (!firstEditableNode) {
+      return 'No editable nodes available for this expression.';
+    }
+    if (!selectedNode) {
+      return 'Select an editable node to modify';
+    }
+    if (!selectedNode.isEditable) {
+      return 'This node is read-only';
+    }
+    if (currentParseError) {
+      return 'Resolve the syntax error to edit nodes.';
+    }
+    return '';
+  }, [parseTree, selectedNode, firstEditableNode, currentParseError]);
+
+  const expressionPreviewSegments = useMemo(() => {
+    if (!value) {
+      return null;
+    }
+    const range = selectedNode?.range;
+    if (!range || !selectedNode?.isEditable) {
+      return {
+        before: value,
+        selection: '',
+        after: '',
+        hasSelection: false
+      };
+    }
+    const start = Math.max(0, Math.min(range.start, value.length));
+    const end = Math.max(start, Math.min(range.end, value.length));
+    if (end <= start) {
+      return {
+        before: value,
+        selection: '',
+        after: '',
+        hasSelection: false
+      };
+    }
+    return {
+      before: value.slice(0, start),
+      selection: value.slice(start, end),
+      after: value.slice(end),
+      hasSelection: true
+    };
+  }, [selectedNode, value]);
+
   const resultTypeName = useMemo(() => {
     if (!resultState.value) {
       return null;
@@ -394,94 +1346,219 @@ const FuncScriptTester = ({
     return formatTypedValue(resultState.value);
   }, [resultState.value]);
 
-  let resultContent: ReactNode;
-  if (resultState.error) {
-    resultContent = <div style={errorTextStyle}>{resultState.error}</div>;
-  } else if (resultState.value) {
-    resultContent = (
-      <>
-        <div>
-          <strong>Type:</strong> {resultTypeName}
-        </div>
-        <pre
-          style={{
-            marginTop: '0.5rem',
-            marginBottom: 0,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word'
-          }}
-        >
-          {formattedResult}
-        </pre>
-      </>
-    );
-  } else {
-    resultContent = (
-      <div style={unsetTokenStyle}>No result yet. Enter a script and run the test.</div>
-    );
-  }
+  const resultContent: ReactNode = resultState.error ? (
+    <div style={errorTextStyle}>{resultState.error}</div>
+  ) : resultState.value ? (
+    <>
+      <div>
+        <strong>Type:</strong> {resultTypeName}
+      </div>
+      <pre
+        style={{
+          marginTop: '0.5rem',
+          marginBottom: 0,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word'
+        }}
+      >
+        {formattedResult}
+      </pre>
+    </>
+  ) : (
+    <div style={unsetTokenStyle}>No result yet. Enter a script and run the test.</div>
+  );
+
+  const handleNodeEditorChange = useCallback(
+    (nextValue: string) => {
+      setPendingNodeValue(nextValue);
+      const node = selectedNodeRef.current;
+      if (!node) {
+        setHasPendingChanges(false);
+        return;
+      }
+      setHasPendingChanges(nextValue !== node.expression);
+    },
+    []
+  );
+
+  const treeModeDisabled = !parseTree || Boolean(currentParseError);
 
   return (
     <div className="funcscript-tester" style={containerStyle}>
-      <div style={{ ...columnStyle, flex: 2 }}>
-        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <FuncScriptEditor
-            value={value}
-            onChange={onChange}
-            onSegmentsChange={onSegmentsChange}
-            onError={onError}
-            minHeight={minHeight ?? 280}
-            style={style}
-            saveKey={saveKey}
-          />
-        </div>
-        <div>
-          <button type="button" onClick={runTest}>
-            Test
+      <div style={headerStyle}>
+        <div style={headerGroupStyle}>
+          <button
+            type="button"
+            style={{
+              ...modeButtonBaseStyle,
+              ...(mode === 'standard' ? modeButtonActiveStyle : {})
+            }}
+            onClick={() => setMode('standard')}
+          >
+            Standard
+          </button>
+          <button
+            type="button"
+            style={{
+              ...modeButtonBaseStyle,
+              ...(mode === 'tree' ? modeButtonActiveStyle : {}),
+              ...(treeModeDisabled ? modeButtonDisabledStyle : {})
+            }}
+            onClick={() => {
+              if (!treeModeDisabled) {
+                setMode('tree');
+              }
+            }}
+            disabled={treeModeDisabled}
+          >
+            Tree
           </button>
         </div>
-        <div style={resultPanelStyle}>{resultContent}</div>
+        <button
+          type="button"
+          style={testingToggleStyle}
+          onClick={() => setShowTestingControls((prev) => !prev)}
+        >
+          {showTestingControls ? 'Hide Testing' : 'Show Testing'}
+        </button>
       </div>
-      <div style={{ ...columnStyle, flex: 1 }}>
-        <div style={variablesListStyle}>
-          {variableEntries.length === 0 ? (
-            <div style={unsetTokenStyle}>Variables will appear here when referenced.</div>
-          ) : (
-            variableEntries.map((entry) => {
-              const isSelected = entry.key === selectedVariableKey;
-              const hasValue = entry.typedValue !== null && !entry.error;
-              const summaryText = entry.error
-                ? 'Error'
-                : hasValue
-                ? Engine.getTypeName(Engine.typeOf(entry.typedValue as TypedValue))
-                : 'Unset';
-              return (
-                <button
-                  key={entry.key}
-                  type="button"
-                  onClick={() => handleSelectVariable(entry.key)}
-                  style={isSelected ? selectedListItemStyle : listItemStyle}
-                >
-                  <div>
-                    <strong>{entry.name}</strong>
+      <div style={contentStyle}>
+        <div style={editorColumnStyle}>
+          <div style={editorBodyStyle}>
+            <div
+              style={{
+                ...standardEditorWrapperStyle,
+                display: mode === 'tree' ? 'none' : 'flex'
+              }}
+              data-testid="tester-standard-editor"
+            >
+              <FuncScriptEditor
+                value={value}
+                onChange={onChange}
+                onSegmentsChange={onSegmentsChange}
+                onError={handleEditorError}
+                onParseNodeChange={handleParseNodeChange}
+                minHeight={minHeight ?? 280}
+                style={{ ...testerEditorStyle, ...(style ?? {}) }}
+              />
+            </div>
+            {mode === 'tree' && (
+              <div style={treeLayoutStyle} data-testid="tester-tree-editor">
+                <div style={treePaneStyle}>
+                  {parseTree ? (
+                    <ParseTreeList
+                      node={parseTree}
+                      level={0}
+                      selectedId={selectedNodeId}
+                      collapsedNodeIds={collapsedNodeIds}
+                      onToggleNode={handleToggleNode}
+                      onSelect={handleSelectNode}
+                    />
+                  ) : (
+                    <div style={treeEmptyStyle}>Parse tree unavailable. Resolve syntax errors to enable tree mode.</div>
+                  )}
+                </div>
+                <div style={treeEditorPaneStyle}>
+                  <div style={nodeInfoStyle}>{selectedLabel}</div>
+                  {nodeEditorParseError && (
+                    <div style={nodeErrorStyle} data-testid="tree-node-error">
+                      {nodeEditorParseError}
+                    </div>
+                  )}
+                  <div style={nodeEditorContainerStyle}>
+                    <FuncScriptEditor
+                      value={pendingNodeValue}
+                      onChange={handleNodeEditorChange}
+                      onError={setNodeEditorParseError}
+                      minHeight={minHeight ?? 260}
+                      readOnly={!selectedNode?.isEditable || Boolean(currentParseError)}
+                      style={nodeEditorSurfaceStyle}
+                    />
+                    {treeOverlayMessage ? (
+                      <div style={treeEditorOverlayStyle}>{treeOverlayMessage}</div>
+                    ) : null}
                   </div>
-                  <div style={hasValue ? undefined : unsetTokenStyle}>{summaryText}</div>
-                  {entry.error ? <div style={errorTextStyle}>{entry.error}</div> : null}
-                </button>
-              );
-            })
-          )}
-        </div>
-        <div>
-          <div onBlur={handleVariableEditorBlur}>
-            <FuncScriptEditor
-              key={selectedVariableKey ?? 'variable-editor'}
-              value={variableEditorValue}
-              onChange={handleVariableEditorChange}
-              minHeight={160}
-            />
+                  {expressionPreviewSegments && (
+                    <div style={expressionPreviewContainerStyle}>
+                      <span>{expressionPreviewSegments.before}</span>
+                      {expressionPreviewSegments.hasSelection && (
+                        <span style={expressionSelectedTextStyle}>
+                          {expressionPreviewSegments.selection || ' '}
+                        </span>
+                      )}
+                      <span>{expressionPreviewSegments.after}</span>
+                    </div>
+                  )}
+                  {selectedNode?.isEditable && (
+                    <div style={{ padding: '8px 12px', borderTop: '1px solid #e1e4e8' }}>
+                      <button
+                        type="button"
+                        style={modeButtonBaseStyle}
+                        onClick={handleApplyChanges}
+                        disabled={
+                          !hasPendingChanges ||
+                          Boolean(nodeEditorParseError) ||
+                          Boolean(currentParseError)
+                        }
+                      >
+                        Apply Changes
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+        {showTestingControls && (
+          <div style={testingColumnStyle}>
+            <div>
+              <button type="button" style={modeButtonBaseStyle} onClick={runTest}>
+                Test
+              </button>
+            </div>
+            <div style={resultPanelStyle}>{resultContent}</div>
+            <div style={variablesListStyle}>
+              {variableEntries.length === 0 ? (
+                <div style={unsetTokenStyle}>Variables will appear here when referenced.</div>
+              ) : (
+                variableEntries.map((entry) => {
+                  const isSelected = entry.key === selectedVariableKey;
+                  const hasValue = entry.typedValue !== null && !entry.error;
+                  const summaryText = entry.error
+                    ? 'Error'
+                    : hasValue
+                    ? Engine.getTypeName(Engine.typeOf(entry.typedValue as TypedValue))
+                    : 'Unset';
+                  return (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      onClick={() => handleSelectVariable(entry.key)}
+                      style={isSelected ? selectedListItemStyle : listItemStyle}
+                    >
+                      <div>
+                        <strong>{entry.name}</strong>
+                      </div>
+                      <div style={hasValue ? undefined : unsetTokenStyle}>{summaryText}</div>
+                      {entry.error ? <div style={errorTextStyle}>{entry.error}</div> : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div>
+              <div onBlur={handleVariableEditorBlur}>
+                <FuncScriptEditor
+                  key={selectedVariableKey ?? 'variable-editor'}
+                  value={variableEditorValue}
+                  onChange={handleVariableEditorChange}
+                  minHeight={160}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
