@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditorView } from '@codemirror/view';
@@ -7,9 +7,10 @@ import FuncScriptEditor from '../FuncScriptEditor.js';
 
 type TreeEditorHarnessProps = {
   initialValue?: string;
+  saveKey?: string;
 };
 
-const TreeEditorHarness = ({ initialValue = 'sin(x)' }: TreeEditorHarnessProps) => {
+const TreeEditorHarness = ({ initialValue = 'sin(x)', saveKey }: TreeEditorHarnessProps) => {
   const [value, setValue] = useState(initialValue);
   return (
     <FuncScriptEditor
@@ -17,9 +18,14 @@ const TreeEditorHarness = ({ initialValue = 'sin(x)' }: TreeEditorHarnessProps) 
       onChange={setValue}
       minHeight={160}
       style={{ height: 240 }}
+      saveKey={saveKey}
     />
   );
 };
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
 
 describe('FuncScriptEditor tree workflow', () => {
   it('shows the edited node expression after applying changes', async () => {
@@ -133,5 +139,60 @@ describe('FuncScriptEditor tree workflow', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('tree-node-error')).toBeNull();
     });
+  });
+
+  it('allows collapsing and expanding tree nodes', async () => {
+    const user = userEvent.setup();
+    render(<TreeEditorHarness />);
+
+    const treeModeButton = (await screen.findAllByTestId('tree-mode-toggle'))[0];
+    await user.click(treeModeButton);
+
+    const collapseToggle = await screen.findByRole('button', {
+      name: /^Collapse node sin\(x\)$/
+    });
+    await user.click(collapseToggle);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
+    });
+
+    const expandToggle = await screen.findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
+
+    await screen.findByRole('button', { name: /^x$/ });
+  });
+
+  it('persists tree mode and collapsed nodes when saveKey is provided', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<TreeEditorHarness saveKey="persist-test" />);
+
+    const treeModeButton = (await screen.findAllByTestId('tree-mode-toggle'))[0];
+    await user.click(treeModeButton);
+
+    const collapseToggle = await screen.findByRole('button', {
+      name: /^Collapse node sin\(x\)$/
+    });
+    await user.click(collapseToggle);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
+    });
+
+    unmount();
+
+    render(<TreeEditorHarness saveKey="persist-test" />);
+
+    await screen.findByTestId('tree-mode-editor');
+    expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
+
+    const expandToggle = await screen.findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
+
+    await screen.findByRole('button', { name: /^x$/ });
   });
 });

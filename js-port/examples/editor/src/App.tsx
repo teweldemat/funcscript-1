@@ -85,6 +85,7 @@ function App(): JSX.Element {
                     onError={setParseError}
                     minHeight={320}
                     style={{ height: '100%' }}
+                    saveKey='example'
                   />
                 </Box>
                 {parseError ? (
