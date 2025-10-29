@@ -423,6 +423,18 @@ return j;
             var res=FuncScriptRuntime.Evaluate(exp);
             Assert.That(res,Is.EqualTo(3));
         }
+        [Test]
+        public void FunctionCallWithMemberAccess()
+        {
+            var exp = 
+            @"{
+                f:(x)=>5;
+                return f.x;
+            }";
+            var res=FuncScriptRuntime.Evaluate(exp);
+            Assert.That(res,Is.EqualTo(5));
+        }
+
 
         [Test]
         public void TestFormatAsJson()
