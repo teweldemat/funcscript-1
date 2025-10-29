@@ -844,8 +844,18 @@ const FuncScriptEditor = ({
       return;
     }
     if (pendingRange) {
+      const safeStart = Math.max(0, Math.min(pendingRange.start, value.length));
+      const safeEnd = Math.max(safeStart, Math.min(pendingRange.end, value.length));
+      const docFragment = value.slice(safeStart, safeEnd);
+      if (docFragment !== pendingNodeValue) {
+        return;
+      }
       const replacement = findNodeByRange(parseTree, pendingRange);
       if (replacement && replacement.isEditable) {
+        const range = replacement.range;
+        if (!range || range.start !== pendingRange.start || range.end !== pendingRange.end) {
+          return;
+        }
         pendingSelectionRangeRef.current = null;
         setSelectedNodeId(replacement.id);
         setPendingNodeValue(replacement.expression);
@@ -874,7 +884,15 @@ const FuncScriptEditor = ({
     setSelectedNodeId(null);
     setHasPendingChanges(false);
     setNodeEditorParseError(null);
-  }, [parseTree, parseNodeMap, selectedNodeId, firstEditableNode, hasPendingChanges]);
+  }, [
+    parseTree,
+    parseNodeMap,
+    selectedNodeId,
+    firstEditableNode,
+    hasPendingChanges,
+    value,
+    pendingNodeValue
+  ]);
 
   useEffect(() => {
     if (!selectedNode) {
