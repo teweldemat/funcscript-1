@@ -407,11 +407,12 @@ const treeButtonBaseStyle: CSSProperties = {
 };
 
 const ParseTreeList = ({ node, level, selectedId, onSelect }: ParseTreeListProps) => {
-  const label = `${node.typeName}:${formatExpressionPreview(node.expression)}`;
+  const expressionLabel = formatExpressionPreview(node.expression);
   const isSelected = node.id === selectedId;
   const isEditable = node.isEditable;
   const isSelectable = isEditable;
-  const displayLabel = label || node.typeName;
+  const displayLabel = expressionLabel || node.typeName;
+  const title = expressionLabel ? `${node.typeName}:${expressionLabel}` : node.typeName;
 
   if (!isEditable) {
     return (
@@ -448,7 +449,7 @@ const ParseTreeList = ({ node, level, selectedId, onSelect }: ParseTreeListProps
             onSelect(node.id);
           }
         }}
-        title={label}
+        title={title}
       >
         {displayLabel}
       </button>
@@ -744,6 +745,10 @@ const FuncScriptEditor = ({
   const [currentParseError, setCurrentParseError] = useState<string | null>(null);
   const [nodeEditorParseError, setNodeEditorParseError] = useState<string | null>(null);
 
+  useEffect(() => {
+    console.log('pendingNodeValue state', pendingNodeValue);
+  }, [pendingNodeValue]);
+
   const segmentsCallbackRef = useRef(onSegmentsChange);
   const userErrorCallbackRef = useRef(onError);
   const parseNodeCallbackRef = useRef<(node: RawParseNode | null) => void>(() => {});
@@ -768,6 +773,9 @@ const FuncScriptEditor = ({
   };
 
   nodeEditorErrorCallbackRef.current = (message) => {
+    if (message) {
+      console.log('node editor parse error', { message, pendingNodeValue });
+    }
     setNodeEditorParseError(message);
   };
 
@@ -812,6 +820,7 @@ const FuncScriptEditor = ({
       setSelectedNodeId(null);
     }
     if (pendingNodeValue !== '') {
+      console.log('setPendingNodeValue reset (no parseTree)');
       setPendingNodeValue('');
     }
     if (hasPendingChanges) {
@@ -827,6 +836,13 @@ const FuncScriptEditor = ({
       return;
     }
     const pendingRange = pendingSelectionRangeRef.current;
+    console.log('parseTree effect', {
+      hasPendingChanges,
+      hasPendingRange: Boolean(pendingRange)
+    });
+    if (!pendingRange && hasPendingChanges) {
+      return;
+    }
     if (pendingRange) {
       const replacement = findNodeByRange(parseTree, pendingRange);
       if (replacement && replacement.isEditable) {
@@ -858,7 +874,7 @@ const FuncScriptEditor = ({
     setSelectedNodeId(null);
     setHasPendingChanges(false);
     setNodeEditorParseError(null);
-  }, [parseTree, parseNodeMap, selectedNodeId, firstEditableNode]);
+  }, [parseTree, parseNodeMap, selectedNodeId, firstEditableNode, hasPendingChanges]);
 
   useEffect(() => {
     if (!selectedNode) {
@@ -885,6 +901,7 @@ const FuncScriptEditor = ({
         return;
       }
       setSelectedNodeId(nodeId);
+      console.log('setPendingNodeValue select', node.expression);
       setPendingNodeValue(node.expression);
       setHasPendingChanges(false);
       setNodeEditorParseError(null);
@@ -900,6 +917,7 @@ const FuncScriptEditor = ({
     if (!hasPendingChanges) {
       return;
     }
+    console.log('handleApplyChanges invoked', new Error().stack);
     const { start, end } = selectedNode.range;
     const nextDoc = value.slice(0, start) + pendingNodeValue + value.slice(end);
     pendingSelectionRangeRef.current = {
@@ -1038,6 +1056,10 @@ const FuncScriptEditor = ({
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               const nextValue = update.state.doc.toString();
+              console.log('node editor update', {
+                nextValue,
+                stack: new Error().stack
+              });
               setPendingNodeValue(nextValue);
               const node = selectedNodeRef.current;
               if (node && node.isEditable) {
@@ -1228,6 +1250,7 @@ const FuncScriptEditor = ({
               }
             }}
             disabled={!parseTree}
+            data-testid="tree-mode-toggle"
           >
             Tree
           </button>
@@ -1235,7 +1258,18 @@ const FuncScriptEditor = ({
             <button
               type="button"
               style={applyButtonStyle}
-              onClick={handleApplyChanges}
+              onPointerUp={(event) => {
+                if (event.pointerType && event.button !== 0) {
+                  return;
+                }
+                handleApplyChanges();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleApplyChanges();
+                }
+              }}
               title="Apply changes to selected node"
             >
               ✓
@@ -1261,11 +1295,13 @@ const FuncScriptEditor = ({
         <div style={editorPaneBaseStyle}>
           {mode === 'tree' && <div style={nodeInfoStyle}>{selectedLabel}</div>}
           {mode === 'tree' && nodeEditorParseError && (
-            <div style={nodeErrorStyle}>{nodeEditorParseError}</div>
+            <div style={nodeErrorStyle} data-testid="tree-node-error">
+              {nodeEditorParseError}
+            </div>
           )}
-          <div ref={containerRef} style={codeMirrorContainerStyle} />
+          <div ref={containerRef} style={codeMirrorContainerStyle} data-testid="standard-mode-editor" />
           {mode === 'tree' && (
-            <div style={treeEditorContainerStyle}>
+            <div style={treeEditorContainerStyle} data-testid="tree-mode-editor">
               <div ref={nodeEditorContainerRef} style={treeEditorCodeMirrorStyle} />
               {treeEditorOverlayMessage && (!selectedNode || !selectedNode.isEditable) && (
                 <div style={treeEditorOverlayStyle}>{treeEditorOverlayMessage}</div>

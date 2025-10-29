@@ -403,3 +403,4 @@ orch.content/files/
 .idea/.idea.Walya/.idea
 *.tgz
 *.cpuprofile
+js-port/funcscript-editor/dist
