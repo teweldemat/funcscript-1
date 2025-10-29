@@ -680,7 +680,8 @@ const editorPaneBaseStyle: CSSProperties = {
 };
 
 const codeMirrorContainerBaseStyle: CSSProperties = {
-  flex: 1
+  flex: 1,
+  minHeight: 0
 };
 
 const nodeInfoStyle: CSSProperties = {
@@ -1309,13 +1310,15 @@ const FuncScriptEditor = ({
             {
               '&': {
                 fontFamily: 'Roboto Mono, monospace',
-                minHeight: `${minHeight}px`
+                minHeight: `${minHeight}px`,
+                height: '100%'
               },
               '.cm-content': {
                 padding: '16px 0'
               },
               '.cm-scroller': {
-                overflow: 'auto'
+                overflow: 'auto',
+                height: '100%'
               }
             },
             { dark: false }
@@ -1400,13 +1403,15 @@ const FuncScriptEditor = ({
           {
             '&': {
               fontFamily: 'Roboto Mono, monospace',
-              minHeight: `${minHeight}px`
+              minHeight: `${minHeight}px`,
+              height: '100%'
             },
             '.cm-content': {
               padding: '16px 0'
             },
             '.cm-scroller': {
-              overflow: 'auto'
+              overflow: 'auto',
+              height: '100%'
             }
           },
           { dark: false }
