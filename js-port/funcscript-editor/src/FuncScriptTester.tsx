@@ -1239,6 +1239,9 @@ const FuncScriptTester = ({
 
   const handleSelectNode = useCallback(
     (nodeId: string) => {
+      if (nodeEditorParseError) {
+        return;
+      }
       if (selectedNodeId === nodeId) {
         return;
       }
@@ -1255,17 +1258,21 @@ const FuncScriptTester = ({
       setNodeEditorParseError(null);
       pendingSelectionRangeRef.current = null;
     },
-    [parseNodeMap, selectedNodeId]
+    [parseNodeMap, selectedNodeId, nodeEditorParseError]
   );
 
-  const handleApplyChanges = useCallback(() => {
-    if (!selectedNode || !selectedNode.range || !selectedNode.isEditable) {
+  const applyPendingChanges = useCallback(() => {
+    const node = selectedNodeRef.current;
+    if (!node || !node.range || !node.isEditable) {
       return;
     }
     if (!hasPendingChanges) {
       return;
     }
-    const { start, end } = selectedNode.range;
+    if (nodeEditorParseError || currentParseError) {
+      return;
+    }
+    const { start, end } = node.range;
     const nextDoc = value.slice(0, start) + pendingNodeValue + value.slice(end);
     pendingSelectionRangeRef.current = {
       start,
@@ -1273,7 +1280,7 @@ const FuncScriptTester = ({
     };
     onChange(nextDoc);
     setHasPendingChanges(false);
-  }, [selectedNode, hasPendingChanges, pendingNodeValue, value, onChange]);
+  }, [hasPendingChanges, nodeEditorParseError, currentParseError, pendingNodeValue, value, onChange]);
 
   const selectedLabel =
     selectedNode
@@ -1381,6 +1388,10 @@ const FuncScriptTester = ({
     []
   );
 
+  const handleNodeEditorBlur = useCallback(() => {
+    applyPendingChanges();
+  }, [applyPendingChanges]);
+
   const treeModeDisabled = !parseTree || Boolean(currentParseError);
 
   return (
@@ -1465,7 +1476,7 @@ const FuncScriptTester = ({
                       {nodeEditorParseError}
                     </div>
                   )}
-                  <div style={nodeEditorContainerStyle}>
+                  <div style={nodeEditorContainerStyle} onBlur={handleNodeEditorBlur}>
                     <FuncScriptEditor
                       value={pendingNodeValue}
                       onChange={handleNodeEditorChange}
@@ -1487,22 +1498,6 @@ const FuncScriptTester = ({
                         </span>
                       )}
                       <span>{expressionPreviewSegments.after}</span>
-                    </div>
-                  )}
-                  {selectedNode?.isEditable && (
-                    <div style={{ padding: '8px 12px', borderTop: '1px solid #e1e4e8' }}>
-                      <button
-                        type="button"
-                        style={modeButtonBaseStyle}
-                        onClick={handleApplyChanges}
-                        disabled={
-                          !hasPendingChanges ||
-                          Boolean(nodeEditorParseError) ||
-                          Boolean(currentParseError)
-                        }
-                      >
-                        Apply Changes
-                      </button>
                     </div>
                   )}
                 </div>

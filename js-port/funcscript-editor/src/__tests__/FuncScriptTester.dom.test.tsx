@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, within, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EditorView } from '@codemirror/view';
 import FuncScriptTester from '../FuncScriptTester.js';
@@ -77,7 +77,7 @@ describe('FuncScriptTester tree workflow', () => {
       expect(view!.state.doc.toString()).toBe('abc');
     });
 
-    await user.click(await within(treeEditor).findByRole('button', { name: 'Apply Changes' }));
+    fireEvent.blur(nodeEditorDom);
 
     const standardWrapper = screen.getByTestId('tester-standard-editor');
     await waitFor(() => {
@@ -127,7 +127,7 @@ describe('FuncScriptTester tree workflow', () => {
 
     expect(screen.queryByTestId('tree-node-error')).toBeNull();
 
-    await user.click(await within(treeEditor).findByRole('button', { name: 'Apply Changes' }));
+    fireEvent.blur(getNodeEditor());
 
     await within(treeEditor).findByRole('button', { name: /^sin\(x\)$/ });
 
@@ -190,6 +190,46 @@ describe('FuncScriptTester tree workflow', () => {
     await user.click(expandToggle);
 
     await screen.findByRole('button', { name: /^x$/ });
+  });
+
+  it('keeps the current node selected when a syntax error is present', async () => {
+    const user = userEvent.setup();
+    render(<TesterHarness />);
+
+    await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
+
+    const treeEditor = await screen.findByTestId('tester-tree-editor');
+    const identifierButton = await within(treeEditor).findByRole('button', { name: /^x$/ });
+    await user.click(identifierButton);
+
+    const getNodeEditor = () => {
+      const editors = within(treeEditor).getAllByRole('textbox');
+      expect(editors.length).toBeGreaterThan(0);
+      return editors[editors.length - 1] as HTMLElement;
+    };
+
+    const nodeEditorDom = getNodeEditor();
+    await user.click(nodeEditorDom);
+    const nodeEditorView = EditorView.findFromDOM(nodeEditorDom);
+    expect(nodeEditorView).not.toBeNull();
+
+    nodeEditorView!.dispatch({
+      changes: {
+        from: 0,
+        to: nodeEditorView!.state.doc.length,
+        insert: '('
+      }
+    });
+
+    await screen.findByTestId('tree-node-error');
+
+    const rootButton = await within(treeEditor).findByRole('button', { name: /^sin\(x\)$/ });
+    await user.click(rootButton);
+
+    const latestView = EditorView.findFromDOM(getNodeEditor());
+    expect(latestView).not.toBeNull();
+    expect(latestView!.state.doc.toString()).toBe('(');
+    expect(screen.getByTestId('tree-node-error')).toBeInTheDocument();
   });
 
   it('hides testing controls by default and toggles visibility', async () => {
