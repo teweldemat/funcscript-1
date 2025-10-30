@@ -546,6 +546,14 @@ const resolveVisibleHoverId = (
   return displayableNode.id;
 };
 
+const getParentNode = (nodeId: string, nodeIndex: Map<string, ParseTreeNode>): ParseTreeNode | null => {
+  if (!nodeId || nodeId === 'root') {
+    return null;
+  }
+  const parentId = nodeId.includes('-') ? nodeId.split('-').slice(0, -1).join('-') : 'root';
+  return nodeIndex.get(parentId) ?? null;
+};
+
 const findFirstEditableDescendant = (node: ParseTreeNode | null): ParseTreeNode | null => {
   if (!node) {
     return null;
@@ -782,7 +790,13 @@ const ParseTreeList = ({
         ) : (
           <span style={treeToggleSpacerStyle} />
         )}
-        <button type="button" style={buttonStyle} onClick={() => onSelect(node.id)} title={title}>
+        <button
+          type="button"
+          style={buttonStyle}
+          onClick={() => onSelect(node.id)}
+          title={title}
+          data-parse-node-id={node.id}
+        >
           {displayLabel}
         </button>
       </div>
@@ -1223,6 +1237,8 @@ const FuncScriptTester = ({
   const expressionPreviewContainerRef = useRef<HTMLDivElement | null>(null);
   const expressionPreviewSelectionRef = useRef<HTMLSpanElement | null>(null);
   const lastSelectionKeyRef = useRef<string | null>(null);
+  const parseTreeContainerRef = useRef<HTMLDivElement | null>(null);
+  const selectionSourceRef = useRef<'preview' | 'tree' | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const treeLayoutRef = useRef<HTMLDivElement | null>(null);
   const testingColumnRef = useRef<HTMLDivElement | null>(null);
@@ -1639,9 +1655,36 @@ const FuncScriptTester = ({
           changed = true;
         }
       }
-      return changed ? next : prev;
+    return changed ? next : prev;
     });
   }, [selectedNodeId, parseNodeMap]);
+
+  useEffect(() => {
+    if (selectionSourceRef.current !== 'preview') {
+      return;
+    }
+    if (!selectedNodeId) {
+      selectionSourceRef.current = null;
+      return;
+    }
+    const container = parseTreeContainerRef.current;
+    if (!container) {
+      selectionSourceRef.current = null;
+      return;
+    }
+    const safeId = selectedNodeId.replace(/"/g, '\\"');
+    const target = container.querySelector<HTMLElement>(`[data-parse-node-id="${safeId}"]`);
+    if (!target) {
+      selectionSourceRef.current = null;
+      return;
+    }
+    try {
+      target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } catch {
+      // ignore scroll errors
+    }
+    selectionSourceRef.current = null;
+  }, [selectedNodeId]);
 
   const handleToggleNode = useCallback((nodeId: string) => {
     setCollapsedNodeIds((prev) => {
@@ -1655,28 +1698,53 @@ const FuncScriptTester = ({
     });
   }, []);
 
-  const handleSelectNode = useCallback(
-    (nodeId: string) => {
+  const selectNodeById = useCallback(
+    (nodeId: string): boolean => {
       if (nodeEditorParseError) {
-        return;
+        return false;
       }
       if (selectedNodeId === nodeId) {
-        return;
+        return false;
       }
       const node = parseNodeMap.get(nodeId);
       if (!node) {
-        return;
+        return false;
       }
       if (!node.isEditable) {
-        return;
+        return false;
       }
       setSelectedNodeId(nodeId);
       setPendingNodeValue(node.expression);
       setHasPendingChanges(false);
       setNodeEditorParseError(null);
       pendingSelectionRangeRef.current = null;
+      return true;
     },
     [parseNodeMap, selectedNodeId, nodeEditorParseError]
+  );
+
+  const handleTreeNodeSelect = useCallback(
+    (nodeId: string) => {
+      selectionSourceRef.current = 'tree';
+      const changed = selectNodeById(nodeId);
+      if (!changed) {
+        selectionSourceRef.current = null;
+        return;
+      }
+      selectionSourceRef.current = null;
+    },
+    [selectNodeById]
+  );
+
+  const handlePreviewNodeSelect = useCallback(
+    (nodeId: string) => {
+      selectionSourceRef.current = 'preview';
+      const changed = selectNodeById(nodeId);
+      if (!changed) {
+        selectionSourceRef.current = null;
+      }
+    },
+    [selectNodeById]
   );
 
   const applyPendingChanges = useCallback(() => {
@@ -1991,13 +2059,32 @@ const FuncScriptTester = ({
         }
         return nextRange;
       });
-      const selectable = targetNode.isEditable ? targetNode : findFirstEditableDescendant(targetNode);
+      let selectable: ParseTreeNode | null = null;
+      if (targetNode.isEditable) {
+        selectable = targetNode;
+      } else {
+        const parentNode = getParentNode(targetNode.id, parseNodeMap);
+        if (parentNode) {
+          if (parentNode.children.length === 1 && parentNode.isEditable) {
+            selectable = parentNode;
+          } else if (parentNode.children.length > 1) {
+            selectable = parentNode.children.find((child) => child.isEditable) ?? null;
+          }
+        }
+        if (!selectable) {
+          selectable = findFirstEditableDescendant(targetNode);
+        }
+        if (!selectable && parentNode) {
+          selectable = findFirstEditableDescendant(parentNode);
+        }
+      }
+
       if (!selectable) {
         return;
       }
-      handleSelectNode(selectable.id);
+      handlePreviewNodeSelect(selectable.id);
     },
-    [mode, parseTree, expressionPreviewSegments, value, handleSelectNode]
+    [mode, parseTree, expressionPreviewSegments, value, parseNodeMap, handlePreviewNodeSelect]
   );
 
   const renderExpressionPreviewSegments = useCallback(() => {
@@ -2510,7 +2597,7 @@ const FuncScriptTester = ({
             </div>
             {mode === 'tree' && (
               <div ref={treeLayoutRef} style={treeLayoutStyle} data-testid="tester-tree-editor">
-                <div style={treePaneStyle}>
+                <div ref={parseTreeContainerRef} style={treePaneStyle}>
                   {parseTree ? (
                     <ParseTreeList
                       node={parseTree}
@@ -2519,7 +2606,7 @@ const FuncScriptTester = ({
                       hoveredId={hoveredNodeId}
                       collapsedNodeIds={collapsedNodeIds}
                       onToggleNode={handleToggleNode}
-                      onSelect={handleSelectNode}
+                      onSelect={handleTreeNodeSelect}
                     />
                   ) : (
                     <div style={treeEmptyStyle}>Parse tree unavailable. Resolve syntax errors to enable tree mode.</div>
