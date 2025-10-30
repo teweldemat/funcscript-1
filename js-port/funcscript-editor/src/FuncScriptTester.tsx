@@ -78,20 +78,12 @@ type EvaluationState = {
 
 type PersistedTesterState = {
   mode: 'standard' | 'tree';
-  collapsedNodeIds: string[];
   showTesting: boolean;
 };
 
 const STORAGE_PREFIX = 'funcscript-tester:';
 
 const getStorageKey = (key: string) => `${STORAGE_PREFIX}${key}`;
-
-const sanitizeCollapsedNodeIds = (value: unknown): string[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item): item is string => typeof item === 'string');
-};
 
 const loadPersistedState = (key: string): PersistedTesterState | null => {
   if (typeof window === 'undefined') {
@@ -107,9 +99,8 @@ const loadPersistedState = (key: string): PersistedTesterState | null => {
       return null;
     }
     const mode = parsed.mode === 'tree' ? 'tree' : 'standard';
-    const collapsedNodeIds = sanitizeCollapsedNodeIds(parsed.collapsedNodeIds);
     const showTesting = parsed.showTesting === true;
-    return { mode, collapsedNodeIds, showTesting };
+    return { mode, showTesting };
   } catch {
     return null;
   }
@@ -1220,9 +1211,7 @@ const FuncScriptTester = ({
   const initialPersistedState = useMemo(() => (saveKey ? loadPersistedState(saveKey) : null), [saveKey]);
 
   const [mode, setMode] = useState<'standard' | 'tree'>(initialPersistedState?.mode ?? 'standard');
-  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(
-    () => new Set(initialPersistedState?.collapsedNodeIds ?? [])
-  );
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
   const [showTestingControls, setShowTestingControls] = useState<boolean>(
     initialPersistedState?.showTesting ?? false
   );
@@ -1288,7 +1277,7 @@ const FuncScriptTester = ({
     const desiredMode = stored?.mode ?? 'standard';
     setMode((prev) => (prev === desiredMode ? prev : desiredMode));
     setShowTestingControls(stored?.showTesting ?? false);
-    setCollapsedNodeIds(new Set(stored?.collapsedNodeIds ?? []));
+    setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
   }, [saveKey]);
 
   useEffect(() => {
@@ -1297,10 +1286,9 @@ const FuncScriptTester = ({
     }
     storePersistedState(saveKey, {
       mode,
-      collapsedNodeIds: Array.from(collapsedNodeIds),
       showTesting: showTestingControls
     });
-  }, [saveKey, mode, collapsedNodeIds, showTestingControls]);
+  }, [saveKey, mode, showTestingControls]);
 
   const handleEditorError = useCallback(
     (message: string | null) => {
@@ -1479,6 +1467,29 @@ const FuncScriptTester = ({
   const parseNodeMap = useMemo(() => createParseNodeIndex(parseTree), [parseTree]);
   const firstEditableNode = useMemo(() => findFirstEditableNode(parseTree), [parseTree]);
   const selectedNode = selectedNodeId ? parseNodeMap.get(selectedNodeId) ?? null : null;
+  const expandNodePath = useCallback(
+    (nodeId: string) => {
+      if (!parseNodeMap.has(nodeId)) {
+        return;
+      }
+      const ancestors = getAncestorNodeIds(nodeId);
+      const idsToOpen = [...ancestors, nodeId].filter((id) => id !== 'root');
+      if (idsToOpen.length === 0) {
+        return;
+      }
+      setCollapsedNodeIds((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const id of idsToOpen) {
+          if (next.delete(id)) {
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    },
+    [parseNodeMap]
+  );
 
   useEffect(() => {
     if (!hoveredNodeId) {
@@ -1500,6 +1511,13 @@ const FuncScriptTester = ({
       }
     }
   }, [mode, hoveredNodeId, hoveredPreviewRange]);
+
+  useEffect(() => {
+    if (!hoveredNodeId) {
+      return;
+    }
+    expandNodePath(hoveredNodeId);
+  }, [hoveredNodeId, expandNodePath]);
 
   useEffect(() => {
     selectedNodeRef.current = selectedNode;
@@ -1548,27 +1566,24 @@ const FuncScriptTester = ({
       if (!current) {
         continue;
       }
-      if (current.isEditable) {
-        validIds.add(current.id);
-      }
+      validIds.add(current.id);
       for (const child of current.children) {
         stack.push(child);
       }
     }
     setCollapsedNodeIds((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
       let changed = false;
-      const next = new Set<string>();
+      const next = new Set(prev);
       for (const id of prev) {
-        if (validIds.has(id)) {
-          next.add(id);
-        } else {
+        if (!validIds.has(id)) {
+          next.delete(id);
           changed = true;
         }
       }
-      if (!changed) {
-        return prev;
-      }
-      return next;
+      return changed ? next : prev;
     });
   }, [parseTree]);
 
@@ -1598,6 +1613,7 @@ const FuncScriptTester = ({
         setPendingNodeValue(replacement.expression);
         setHasPendingChanges(false);
         setNodeEditorParseError(null);
+        expandNodePath(replacement.id);
         return;
       }
       pendingSelectionRangeRef.current = null;
@@ -1615,6 +1631,7 @@ const FuncScriptTester = ({
       setPendingNodeValue(fallback.expression);
       setHasPendingChanges(false);
       setNodeEditorParseError(null);
+      expandNodePath(fallback.id);
       return;
     }
     pendingSelectionRangeRef.current = null;
@@ -1628,7 +1645,8 @@ const FuncScriptTester = ({
     firstEditableNode,
     hasPendingChanges,
     value,
-    pendingNodeValue
+    pendingNodeValue,
+    expandNodePath
   ]);
 
   useEffect(() => {
@@ -1642,29 +1660,6 @@ const FuncScriptTester = ({
       setNodeEditorParseError(null);
     }
   }, [selectedNode, hasPendingChanges]);
-
-  useEffect(() => {
-    if (!selectedNodeId) {
-      return;
-    }
-    setCollapsedNodeIds((prev) => {
-      let changed = false;
-      const next = new Set(prev);
-      for (const ancestorId of getAncestorNodeIds(selectedNodeId)) {
-        if (ancestorId === 'root') {
-          continue;
-        }
-        const ancestorNode = parseNodeMap.get(ancestorId);
-        if (!ancestorNode?.isEditable) {
-          continue;
-        }
-        if (next.delete(ancestorId)) {
-          changed = true;
-        }
-      }
-    return changed ? next : prev;
-    });
-  }, [selectedNodeId, parseNodeMap]);
 
   useEffect(() => {
     if (selectionSourceRef.current !== 'preview') {
@@ -1725,9 +1720,10 @@ const FuncScriptTester = ({
       setHasPendingChanges(false);
       setNodeEditorParseError(null);
       pendingSelectionRangeRef.current = null;
+      expandNodePath(nodeId);
       return true;
     },
-    [parseNodeMap, selectedNodeId, nodeEditorParseError]
+    [parseNodeMap, selectedNodeId, nodeEditorParseError, expandNodePath]
   );
 
   const handleTreeNodeSelect = useCallback(
@@ -1746,12 +1742,11 @@ const FuncScriptTester = ({
   const handlePreviewNodeSelect = useCallback(
     (nodeId: string) => {
       selectionSourceRef.current = 'preview';
-      const changed = selectNodeById(nodeId);
-      if (!changed) {
-        selectionSourceRef.current = null;
-      }
+      selectNodeById(nodeId);
+      expandNodePath(nodeId);
+      selectionSourceRef.current = null;
     },
-    [selectNodeById]
+    [selectNodeById, expandNodePath]
   );
 
   const applyPendingChanges = useCallback(() => {
