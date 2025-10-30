@@ -1560,11 +1560,22 @@ const FuncScriptTester = ({
     if (containerHeight <= 0) {
       return;
     }
-    const selectionCenter = relativeTop + selectionHeight / 2;
+    const selectionTop = relativeTop;
+    const selectionBottom = relativeTop + selectionHeight;
+    const viewTop = container.scrollTop;
+    const viewBottom = viewTop + containerHeight;
     const maxScroll = Math.max(0, container.scrollHeight - containerHeight);
-    const targetScroll = clamp(selectionCenter - containerHeight / 2, 0, maxScroll);
+    const margin = Math.min(24, containerHeight / 4);
+    const desiredTop = clamp(selectionTop - margin, 0, maxScroll);
 
-    if (Math.abs(container.scrollTop - targetScroll) > 1) {
+    let targetScroll: number | null = null;
+    if (selectionTop < viewTop + margin) {
+      targetScroll = desiredTop;
+    } else if (selectionBottom > viewBottom - margin) {
+      targetScroll = desiredTop;
+    }
+
+    if (targetScroll !== null && Math.abs(container.scrollTop - targetScroll) > 1) {
       container.scrollTop = targetScroll;
     }
   }, [mode, expressionPreviewSegments, selectedNodeId]);
