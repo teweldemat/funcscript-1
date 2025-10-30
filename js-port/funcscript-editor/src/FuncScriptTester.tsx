@@ -228,6 +228,7 @@ type ExpressionPreviewData = {
   selectionRange: { start: number; end: number } | null;
   hoverRange: { start: number; end: number } | null;
   hasSelection: boolean;
+  selectionText: string | null;
 };
 
 const NON_EDITABLE_NODE_TYPES = new Set<string>([
@@ -696,6 +697,7 @@ type ParseTreeListProps = {
   collapsedNodeIds: Set<string>;
   onToggleNode: (nodeId: string) => void;
   onSelect: (nodeId: string) => void;
+  pendingSelectedValue: string | null;
 };
 
 const treeButtonBaseStyle: CSSProperties = {
@@ -742,10 +744,14 @@ const ParseTreeList = ({
   hoveredId,
   collapsedNodeIds,
   onToggleNode,
-  onSelect
+  onSelect,
+  pendingSelectedValue
 }: ParseTreeListProps) => {
-  const expressionLabel = formatExpressionPreview(node.expression);
   const isSelected = node.id === selectedId;
+  const expressionSource = isSelected && pendingSelectedValue !== null
+    ? pendingSelectedValue
+    : node.expression;
+  const expressionLabel = formatExpressionPreview(expressionSource);
   const isHovered = node.id === hoveredId;
   const isEditable = node.isEditable;
   const isCollapsed = collapsedNodeIds.has(node.id);
@@ -811,6 +817,7 @@ const ParseTreeList = ({
             collapsedNodeIds={collapsedNodeIds}
             onToggleNode={onToggleNode}
             onSelect={onSelect}
+            pendingSelectedValue={pendingSelectedValue}
           />
         ))}
     </div>
@@ -1770,7 +1777,7 @@ const FuncScriptTester = ({
 
   const selectedLabel =
     selectedNode
-      ? `${selectedNode.typeName}:${formatExpressionPreview(selectedNode.expression)}`
+      ? `${selectedNode.typeName}:${formatExpressionPreview(pendingNodeValue)}`
       : parseTree
       ? 'Select an editable node from the tree'
       : 'No node selected';
@@ -1821,7 +1828,8 @@ const FuncScriptTester = ({
         ],
         selectionRange: null,
         hoverRange: null,
-        hasSelection: false
+        hasSelection: false,
+        selectionText: null
       };
     }
 
@@ -1866,7 +1874,8 @@ const FuncScriptTester = ({
         ],
         selectionRange,
         hoverRange,
-        hasSelection: Boolean(selectionRange)
+        hasSelection: Boolean(selectionRange),
+        selectionText: selectionRange ? pendingNodeValue : null
       };
     }
 
@@ -1874,9 +1883,10 @@ const FuncScriptTester = ({
       segments,
       selectionRange,
       hoverRange,
-      hasSelection: Boolean(selectionRange)
+      hasSelection: Boolean(selectionRange),
+      selectionText: selectionRange ? pendingNodeValue : null
     };
-  }, [selectedNode, value, hoveredPreviewRange]);
+  }, [selectedNode, value, hoveredPreviewRange, pendingNodeValue]);
 
   useEffect(() => {
     if (expressionPreviewSegments) {
@@ -2093,18 +2103,31 @@ const FuncScriptTester = ({
     }
     const elements: ReactNode[] = [];
     let selectionRefAssigned = false;
-    let selectionGroup: { nodes: ReactNode[]; startIndex: number } | null = null;
+    let selectionGroup: { segments: ExpressionPreviewSegment[]; startIndex: number } | null = null;
 
     const flushSelectionGroup = () => {
       if (!selectionGroup) {
         return;
       }
+      const { segments, startIndex } = selectionGroup;
+      const containsHover = segments.some((segment) => segment.isHovered);
+      const selectionStyle: CSSProperties = {
+        ...expressionSelectedTextStyle,
+        ...(containsHover ? expressionHoveredTextStyle : {})
+      };
+      const fallbackText = segments.map((segment) => segment.text).join('');
+      const displayText =
+        expressionPreviewSegments.selectionText !== null
+          ? expressionPreviewSegments.selectionText
+          : fallbackText;
+
       elements.push(
         <span
-          key={`selection-group-${selectionGroup.startIndex}`}
+          key={`selection-group-${startIndex}`}
           ref={!selectionRefAssigned ? expressionPreviewSelectionRef : undefined}
+          style={selectionStyle}
         >
-          {selectionGroup.nodes}
+          {displayText}
         </span>
       );
       if (!selectionRefAssigned) {
@@ -2114,24 +2137,20 @@ const FuncScriptTester = ({
     };
 
     expressionPreviewSegments.segments.forEach((segment, index) => {
-      const style: CSSProperties = {
-        ...(segment.isSelected ? expressionSelectedTextStyle : {}),
-        ...(segment.isHovered ? expressionHoveredTextStyle : {})
-      };
-      const segmentNode = (
+      if (segment.isSelected) {
+        if (!selectionGroup) {
+          selectionGroup = { segments: [], startIndex: index };
+        }
+        selectionGroup.segments.push(segment);
+        return;
+      }
+      flushSelectionGroup();
+      const style: CSSProperties = segment.isHovered ? expressionHoveredTextStyle : {};
+      elements.push(
         <span key={`expression-segment-${index}`} style={style}>
           {segment.text}
         </span>
       );
-      if (segment.isSelected) {
-        if (!selectionGroup) {
-          selectionGroup = { nodes: [], startIndex: index };
-        }
-        selectionGroup.nodes.push(segmentNode);
-      } else {
-        flushSelectionGroup();
-        elements.push(segmentNode);
-      }
     });
 
     flushSelectionGroup();
@@ -2607,6 +2626,7 @@ const FuncScriptTester = ({
                       collapsedNodeIds={collapsedNodeIds}
                       onToggleNode={handleToggleNode}
                       onSelect={handleTreeNodeSelect}
+                      pendingSelectedValue={selectedNode ? pendingNodeValue : null}
                     />
                   ) : (
                     <div style={treeEmptyStyle}>Parse tree unavailable. Resolve syntax errors to enable tree mode.</div>
