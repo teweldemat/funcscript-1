@@ -125,6 +125,88 @@ const storePersistedState = (key: string, state: PersistedTesterState) => {
   }
 };
 
+const clamp = (value: number, min: number, max: number) => {
+  if (Number.isNaN(value)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, value));
+};
+
+type PointerDragOptions = {
+  cursor: CSSProperties['cursor'];
+  onMove: (event: PointerEvent) => void;
+  onEnd?: () => void;
+};
+
+const beginPointerDrag = (
+  event: React.PointerEvent<HTMLElement>,
+  { cursor, onMove, onEnd }: PointerDragOptions
+) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return () => undefined;
+  }
+
+  event.preventDefault();
+
+  const pointerId = event.pointerId;
+  const target = event.currentTarget;
+  const originalCursor = document.body.style.cursor;
+  const originalUserSelect = document.body.style.userSelect;
+
+  if (cursor) {
+    document.body.style.cursor = cursor;
+  }
+  document.body.style.userSelect = 'none';
+
+  let ended = false;
+
+  const cleanup = () => {
+    if (ended) {
+      return;
+    }
+    ended = true;
+    document.body.style.cursor = originalCursor;
+    document.body.style.userSelect = originalUserSelect;
+    window.removeEventListener('pointermove', handleMove);
+    window.removeEventListener('pointerup', handleUp);
+    window.removeEventListener('pointercancel', handleUp);
+    try {
+      target.releasePointerCapture(pointerId);
+    } catch {
+      // ignore if pointer capture is unsupported
+    }
+    if (onEnd) {
+      onEnd();
+    }
+  };
+
+  const handleMove = (moveEvent: PointerEvent) => {
+    if (moveEvent.pointerId !== pointerId || ended) {
+      return;
+    }
+    onMove(moveEvent);
+  };
+
+  const handleUp = (upEvent: PointerEvent) => {
+    if (upEvent.pointerId !== pointerId) {
+      return;
+    }
+    cleanup();
+  };
+
+  window.addEventListener('pointermove', handleMove);
+  window.addEventListener('pointerup', handleUp);
+  window.addEventListener('pointercancel', handleUp);
+
+  try {
+    target.setPointerCapture(pointerId);
+  } catch {
+    // ignore if pointer capture is unsupported
+  }
+
+  return cleanup;
+};
+
 type ParseTreeNode = {
   id: string;
   typeName: string;
@@ -398,6 +480,15 @@ const getAncestorNodeIds = (nodeId: string): string[] => {
 
 const TREE_NODE_INDENT = 12;
 
+const MAIN_SPLIT_MIN = 15;
+const MAIN_SPLIT_MAX = 85;
+const TREE_PANE_MIN = 160;
+const TREE_PANE_MAX = 520;
+const VARIABLE_SPLIT_MIN = 25;
+const VARIABLE_SPLIT_MAX = 75;
+const TREE_EXPRESSION_SPLIT_MIN = 30;
+const TREE_EXPRESSION_SPLIT_MAX = 80;
+
 type ParseTreeListProps = {
   node: ParseTreeNode;
   level: number;
@@ -619,8 +710,7 @@ const treeLayoutStyle: CSSProperties = {
   backgroundColor: '#ffffff'
 };
 
-const treePaneStyle: CSSProperties = {
-  width: 260,
+const treePaneBaseStyle: CSSProperties = {
   borderRight: '1px solid #d0d7de',
   overflowY: 'auto',
   padding: '8px 4px',
@@ -657,7 +747,7 @@ const nodeErrorStyle: CSSProperties = {
   borderBottom: '1px solid #ffd7d5'
 };
 
-const expressionPreviewContainerStyle: CSSProperties = {
+const expressionPreviewBaseStyle: CSSProperties = {
   fontSize: 11,
   lineHeight: 1.4,
   fontFamily: 'Roboto Mono, monospace',
@@ -665,7 +755,6 @@ const expressionPreviewContainerStyle: CSSProperties = {
   borderTop: '1px solid #e1e4e8',
   backgroundColor: '#f6f8fa',
   color: '#57606a',
-  height: 160,
   overflowY: 'auto',
   boxSizing: 'border-box',
   whiteSpace: 'pre-wrap',
@@ -690,11 +779,11 @@ const treeEditorOverlayStyle: CSSProperties = {
   backgroundColor: 'rgba(246, 248, 250, 0.85)'
 };
 
-const testingColumnStyle: CSSProperties = {
+const testingColumnBaseStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.75rem',
+  gap: 0,
   minHeight: 0,
   padding: '0.75rem',
   borderLeft: '1px solid #d0d7de',
@@ -713,15 +802,13 @@ const resultPanelStyle: CSSProperties = {
   flexShrink: 0
 };
 
-const variablesListStyle: CSSProperties = {
+const variablesListBaseStyle: CSSProperties = {
   border: '1px solid #d0d7de',
   borderRadius: 6,
   padding: '0.5rem',
   minHeight: 0,
   overflowY: 'auto',
-  flex: 1,
-  background: '#fff',
-  flexShrink: 0
+  background: '#fff'
 };
 
 const listItemStyle: CSSProperties = {
@@ -751,11 +838,11 @@ const errorTextStyle: CSSProperties = {
   whiteSpace: 'pre-wrap'
 };
 
-const nodeEditorContainerStyle: CSSProperties = {
-  flex: 1,
-  minHeight: 0,
+const nodeEditorBaseStyle: CSSProperties = {
   position: 'relative',
-  display: 'flex'
+  display: 'flex',
+  flex: 1,
+  minHeight: 0
 };
 
 const nodeEditorSurfaceStyle: CSSProperties = {
@@ -769,8 +856,7 @@ const testerEditorStyle: CSSProperties = {
   display: 'flex'
 };
 
-const variableEditorContainerStyle: CSSProperties = {
-  flex: 1,
+const variableEditorBaseStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   minHeight: 0,
@@ -779,6 +865,53 @@ const variableEditorContainerStyle: CSSProperties = {
 
 const variableEditorSurfaceStyle: CSSProperties = {
   flex: 1,
+  minHeight: 0
+};
+
+const mainSplitterStyle: CSSProperties = {
+  width: 6,
+  cursor: 'col-resize',
+  backgroundColor: '#d8dee4',
+  borderLeft: '1px solid #d0d7de',
+  borderRight: '1px solid #d0d7de',
+  flexShrink: 0
+};
+
+const treeSplitterStyle: CSSProperties = {
+  width: 6,
+  cursor: 'col-resize',
+  backgroundColor: '#d8dee4',
+  borderLeft: '1px solid #d0d7de',
+  borderRight: '1px solid #d0d7de',
+  flexShrink: 0
+};
+
+const variableSplitterStyle: CSSProperties = {
+  height: 8,
+  cursor: 'row-resize',
+  backgroundColor: '#d8dee4',
+  borderTop: '1px solid #d0d7de',
+  borderBottom: '1px solid #d0d7de',
+  borderRadius: 6,
+  flexShrink: 0,
+  margin: '0.5rem 0'
+};
+
+const treeExpressionSplitterStyle: CSSProperties = {
+  height: 8,
+  cursor: 'row-resize',
+  backgroundColor: '#d8dee4',
+  borderTop: '1px solid #d0d7de',
+  borderBottom: '1px solid #d0d7de',
+  borderRadius: 6,
+  flexShrink: 0,
+  margin: '0.5rem 0'
+};
+
+const treeEditorContentStyle: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
   minHeight: 0
 };
 
@@ -881,6 +1014,20 @@ const FuncScriptTester = ({
   const hadParseTreeRef = useRef(false);
   const expressionPreviewContainerRef = useRef<HTMLDivElement | null>(null);
   const expressionPreviewSelectionRef = useRef<HTMLSpanElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const treeLayoutRef = useRef<HTMLDivElement | null>(null);
+  const testingColumnRef = useRef<HTMLDivElement | null>(null);
+  const treeEditorContentRef = useRef<HTMLDivElement | null>(null);
+
+  const [mainSplitRatio, setMainSplitRatio] = useState(60);
+  const [treePaneWidth, setTreePaneWidth] = useState(260);
+  const [variableSplitRatio, setVariableSplitRatio] = useState(50);
+  const [treeExpressionSplitRatio, setTreeExpressionSplitRatio] = useState(60);
+
+  const mainDragCleanupRef = useRef<(() => void) | null>(null);
+  const treeDragCleanupRef = useRef<(() => void) | null>(null);
+  const variableDragCleanupRef = useRef<(() => void) | null>(null);
+  const treeExpressionDragCleanupRef = useRef<(() => void) | null>(null);
 
   const providerRef = useRef<TesterDataProvider | null>(null);
   if (!providerRef.current) {
@@ -890,6 +1037,13 @@ const FuncScriptTester = ({
   useEffect(() => {
     variablesRef.current = variables;
   }, [variables]);
+
+  useEffect(() => () => {
+    mainDragCleanupRef.current?.();
+    treeDragCleanupRef.current?.();
+    variableDragCleanupRef.current?.();
+    treeExpressionDragCleanupRef.current?.();
+  }, []);
 
   useEffect(() => {
     if (!saveKey) {
@@ -1456,14 +1610,322 @@ const FuncScriptTester = ({
     applyPendingChanges();
   }, [applyPendingChanges]);
 
-  const treeModeDisabled = !parseTree || Boolean(currentParseError);
-  const leftPaneStyle = useMemo(
-    () => ({
-      ...leftPaneBaseStyle,
-      borderRight: showTestingControls ? '1px solid #d0d7de' : 'none'
-    }),
+  const safeMainSplitRatio = clamp(mainSplitRatio, MAIN_SPLIT_MIN, MAIN_SPLIT_MAX);
+  const safeVariableSplitRatio = clamp(variableSplitRatio, VARIABLE_SPLIT_MIN, VARIABLE_SPLIT_MAX);
+  const treeLayoutRect =
+    mode === 'tree' && treeLayoutRef.current
+      ? treeLayoutRef.current.getBoundingClientRect()
+      : null;
+  const dynamicTreeMaxWidth = treeLayoutRect && treeLayoutRect.width > 0
+    ? Math.max(TREE_PANE_MIN, Math.min(TREE_PANE_MAX, treeLayoutRect.width - 240))
+    : TREE_PANE_MAX;
+  const safeTreePaneWidth = clamp(treePaneWidth, TREE_PANE_MIN, dynamicTreeMaxWidth);
+  const safeTreeExpressionSplitRatio = clamp(
+    treeExpressionSplitRatio,
+    TREE_EXPRESSION_SPLIT_MIN,
+    TREE_EXPRESSION_SPLIT_MAX
+  );
+
+  const handleMainSplitterPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!showTestingControls) {
+        return;
+      }
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0) {
+        return;
+      }
+      const safeRatio = safeMainSplitRatio;
+      const startX = event.clientX;
+      const startWidth = (rect.width * safeRatio) / 100;
+
+      mainDragCleanupRef.current?.();
+      mainDragCleanupRef.current = beginPointerDrag(event, {
+        cursor: 'col-resize',
+        onMove: (moveEvent) => {
+          const delta = moveEvent.clientX - startX;
+          const nextWidth = startWidth + delta;
+          const nextRatio = (nextWidth / rect.width) * 100;
+          setMainSplitRatio(clamp(nextRatio, MAIN_SPLIT_MIN, MAIN_SPLIT_MAX));
+        },
+        onEnd: () => {
+          mainDragCleanupRef.current = null;
+        }
+      });
+    },
+    [showTestingControls, safeMainSplitRatio]
+  );
+
+  const handleMainSplitterKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!showTestingControls) {
+        return;
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        const direction = event.key === 'ArrowLeft' ? -1 : 1;
+        const step = event.shiftKey ? 5 : 2;
+        setMainSplitRatio((prev) => clamp(prev + direction * step, MAIN_SPLIT_MIN, MAIN_SPLIT_MAX));
+      }
+    },
     [showTestingControls]
   );
+
+  const handleTreeSplitterPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (mode !== 'tree') {
+        return;
+      }
+      const layout = treeLayoutRef.current;
+      if (!layout) {
+        return;
+      }
+      const rect = layout.getBoundingClientRect();
+      if (rect.width <= 0) {
+        return;
+      }
+      const editorMinWidth = 240;
+      const maxWidth = Math.max(TREE_PANE_MIN, Math.min(TREE_PANE_MAX, rect.width - editorMinWidth));
+      const startX = event.clientX;
+      const startWidth = safeTreePaneWidth;
+
+      treeDragCleanupRef.current?.();
+      treeDragCleanupRef.current = beginPointerDrag(event, {
+        cursor: 'col-resize',
+        onMove: (moveEvent) => {
+          const delta = moveEvent.clientX - startX;
+          const nextWidth = clamp(startWidth + delta, TREE_PANE_MIN, maxWidth);
+          setTreePaneWidth(nextWidth);
+        },
+        onEnd: () => {
+          treeDragCleanupRef.current = null;
+        }
+      });
+    },
+    [mode, safeTreePaneWidth]
+  );
+
+  const handleTreeSplitterKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (mode !== 'tree') {
+        return;
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        const direction = event.key === 'ArrowLeft' ? -1 : 1;
+        const step = event.shiftKey ? 32 : 16;
+        const layout = treeLayoutRef.current;
+        const rect = layout?.getBoundingClientRect();
+        const editorMinWidth = 240;
+        const maxWidth = rect
+          ? Math.max(TREE_PANE_MIN, Math.min(TREE_PANE_MAX, rect.width - editorMinWidth))
+          : TREE_PANE_MAX;
+        setTreePaneWidth((prev) => clamp(prev + direction * step, TREE_PANE_MIN, maxWidth));
+      }
+    },
+    [mode]
+  );
+
+  const handleVariableSplitterPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!showTestingControls) {
+        return;
+      }
+      const column = testingColumnRef.current;
+      if (!column) {
+        return;
+      }
+      const rect = column.getBoundingClientRect();
+      if (rect.height <= 0) {
+        return;
+      }
+      const safeRatio = safeVariableSplitRatio;
+      const startY = event.clientY;
+      const startHeight = (rect.height * safeRatio) / 100;
+
+      variableDragCleanupRef.current?.();
+      variableDragCleanupRef.current = beginPointerDrag(event, {
+        cursor: 'row-resize',
+        onMove: (moveEvent) => {
+          const delta = moveEvent.clientY - startY;
+          const nextHeight = startHeight + delta;
+          const nextRatio = (nextHeight / rect.height) * 100;
+          setVariableSplitRatio(clamp(nextRatio, VARIABLE_SPLIT_MIN, VARIABLE_SPLIT_MAX));
+        },
+        onEnd: () => {
+          variableDragCleanupRef.current = null;
+        }
+      });
+    },
+    [showTestingControls, safeVariableSplitRatio]
+  );
+
+  const handleVariableSplitterKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!showTestingControls) {
+        return;
+      }
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const direction = event.key === 'ArrowUp' ? -1 : 1;
+        const step = event.shiftKey ? 8 : 4;
+        setVariableSplitRatio((prev) => clamp(prev + direction * step, VARIABLE_SPLIT_MIN, VARIABLE_SPLIT_MAX));
+      }
+    },
+    [showTestingControls]
+  );
+
+  const handleTreeExpressionSplitterPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (mode !== 'tree') {
+        return;
+      }
+      if (!expressionPreviewSegments) {
+        return;
+      }
+      const container = treeEditorContentRef.current;
+      if (!container) {
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      if (rect.height <= 0) {
+        return;
+      }
+      const safeRatio = safeTreeExpressionSplitRatio;
+      const startY = event.clientY;
+      const startHeight = (rect.height * safeRatio) / 100;
+
+      treeExpressionDragCleanupRef.current?.();
+      treeExpressionDragCleanupRef.current = beginPointerDrag(event, {
+        cursor: 'row-resize',
+        onMove: (moveEvent) => {
+          const delta = moveEvent.clientY - startY;
+          const nextHeight = startHeight + delta;
+          const nextRatio = (nextHeight / rect.height) * 100;
+          setTreeExpressionSplitRatio(
+            clamp(nextRatio, TREE_EXPRESSION_SPLIT_MIN, TREE_EXPRESSION_SPLIT_MAX)
+          );
+        },
+        onEnd: () => {
+          treeExpressionDragCleanupRef.current = null;
+        }
+      });
+    },
+    [mode, expressionPreviewSegments, safeTreeExpressionSplitRatio]
+  );
+
+  const handleTreeExpressionSplitterKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (mode !== 'tree' || !expressionPreviewSegments) {
+        return;
+      }
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const direction = event.key === 'ArrowUp' ? -1 : 1;
+        const step = event.shiftKey ? 8 : 4;
+        setTreeExpressionSplitRatio((prev) =>
+          clamp(prev + direction * step, TREE_EXPRESSION_SPLIT_MIN, TREE_EXPRESSION_SPLIT_MAX)
+        );
+      }
+    },
+    [mode, expressionPreviewSegments]
+  );
+
+  const treeModeDisabled = !parseTree || Boolean(currentParseError);
+
+  const leftPaneStyle = useMemo(() => {
+    const base: CSSProperties = {
+      ...leftPaneBaseStyle,
+      borderRight: showTestingControls ? '1px solid #d0d7de' : 'none'
+    };
+    if (!showTestingControls) {
+      return {
+        ...base,
+        flex: 1
+      };
+    }
+    return {
+      ...base,
+      flex: '0 0 auto',
+      width: `${safeMainSplitRatio}%`,
+      minWidth: 320
+    };
+  }, [showTestingControls, safeMainSplitRatio]);
+
+  const testingColumnStyle = useMemo(
+    () => ({
+      ...testingColumnBaseStyle,
+      minWidth: 260
+    }),
+    []
+  );
+
+  const treePaneStyle = useMemo(
+    () => ({
+      ...treePaneBaseStyle,
+      flex: '0 0 auto',
+      width: safeTreePaneWidth,
+      minWidth: TREE_PANE_MIN,
+      maxWidth: dynamicTreeMaxWidth
+    }),
+    [safeTreePaneWidth, dynamicTreeMaxWidth]
+  );
+
+  const variablesListStyle = useMemo(
+    () => ({
+      ...variablesListBaseStyle,
+      flexGrow: safeVariableSplitRatio,
+      flexShrink: 1,
+      flexBasis: 0,
+      minHeight: 120
+    }),
+    [safeVariableSplitRatio]
+  );
+
+  const variableEditorContainerStyle = useMemo(
+    () => ({
+      ...variableEditorBaseStyle,
+      flexGrow: 100 - safeVariableSplitRatio,
+      flexShrink: 1,
+      flexBasis: 0,
+      minHeight: 120
+    }),
+    [safeVariableSplitRatio]
+  );
+
+  const nodeEditorContainerStyle = useMemo(() => {
+    if (!expressionPreviewSegments) {
+      return {
+        ...nodeEditorBaseStyle,
+        flex: 1
+      };
+    }
+    return {
+      ...nodeEditorBaseStyle,
+      flexGrow: safeTreeExpressionSplitRatio,
+      flexShrink: 1,
+      flexBasis: 0,
+      minHeight: 160
+    };
+  }, [expressionPreviewSegments, safeTreeExpressionSplitRatio]);
+
+  const expressionPreviewContainerStyle = useMemo(() => {
+    if (!expressionPreviewSegments) {
+      return expressionPreviewBaseStyle;
+    }
+    return {
+      ...expressionPreviewBaseStyle,
+      flexGrow: 100 - safeTreeExpressionSplitRatio,
+      flexShrink: 1,
+      flexBasis: 0,
+      minHeight: 96
+    };
+  }, [expressionPreviewSegments, safeTreeExpressionSplitRatio]);
+
   const testToggleButtonStyle = useMemo(
     () => ({
       ...testToggleStyle,
@@ -1473,7 +1935,7 @@ const FuncScriptTester = ({
   );
 
   return (
-    <div className="funcscript-tester" style={containerStyle}>
+    <div className="funcscript-tester" ref={containerRef} style={containerStyle}>
       <div style={leftPaneStyle}>
         <div style={toolbarStyle}>
           <div style={toolbarButtonGroupStyle}>
@@ -1544,7 +2006,7 @@ const FuncScriptTester = ({
               />
             </div>
             {mode === 'tree' && (
-              <div style={treeLayoutStyle} data-testid="tester-tree-editor">
+              <div ref={treeLayoutRef} style={treeLayoutStyle} data-testid="tester-tree-editor">
                 <div style={treePaneStyle}>
                   {parseTree ? (
                     <ParseTreeList
@@ -1559,6 +2021,18 @@ const FuncScriptTester = ({
                     <div style={treeEmptyStyle}>Parse tree unavailable. Resolve syntax errors to enable tree mode.</div>
                   )}
                 </div>
+                <div
+                  role="separator"
+                  tabIndex={0}
+                  aria-orientation="vertical"
+                  aria-label="Resize tree panels"
+                  aria-valuemin={TREE_PANE_MIN}
+                  aria-valuemax={Math.round(dynamicTreeMaxWidth)}
+                  aria-valuenow={Math.round(safeTreePaneWidth)}
+                  style={treeSplitterStyle}
+                  onPointerDown={handleTreeSplitterPointerDown}
+                  onKeyDown={handleTreeSplitterKeyDown}
+                />
                 <div style={treeEditorPaneStyle}>
                   <div style={nodeInfoStyle}>{selectedLabel}</div>
                   {nodeEditorParseError && (
@@ -1566,30 +2040,49 @@ const FuncScriptTester = ({
                       {nodeEditorParseError}
                     </div>
                   )}
-                  <div style={nodeEditorContainerStyle} onBlur={handleNodeEditorBlur}>
-                    <FuncScriptEditor
-                      value={pendingNodeValue}
-                      onChange={handleNodeEditorChange}
-                      onError={setNodeEditorParseError}
-                      minHeight={minHeight ?? 260}
-                      readOnly={!selectedNode?.isEditable || Boolean(currentParseError)}
-                      style={nodeEditorSurfaceStyle}
-                    />
-                    {treeOverlayMessage ? (
-                      <div style={treeEditorOverlayStyle}>{treeOverlayMessage}</div>
-                    ) : null}
-                  </div>
-                  {expressionPreviewSegments && (
-                    <div ref={expressionPreviewContainerRef} style={expressionPreviewContainerStyle}>
-                      <span>{expressionPreviewSegments.before}</span>
-                      {expressionPreviewSegments.hasSelection && (
-                        <span ref={expressionPreviewSelectionRef} style={expressionSelectedTextStyle}>
-                          {expressionPreviewSegments.selection || ' '}
-                        </span>
-                      )}
-                      <span>{expressionPreviewSegments.after}</span>
+                  <div ref={treeEditorContentRef} style={treeEditorContentStyle}>
+                    <div style={nodeEditorContainerStyle} onBlur={handleNodeEditorBlur}>
+                      <FuncScriptEditor
+                        value={pendingNodeValue}
+                        onChange={handleNodeEditorChange}
+                        onError={setNodeEditorParseError}
+                        minHeight={minHeight ?? 260}
+                        readOnly={!selectedNode?.isEditable || Boolean(currentParseError)}
+                        style={nodeEditorSurfaceStyle}
+                      />
+                      {treeOverlayMessage ? (
+                        <div style={treeEditorOverlayStyle}>{treeOverlayMessage}</div>
+                      ) : null}
                     </div>
-                  )}
+                    {expressionPreviewSegments && (
+                      <>
+                        <div
+                          role="separator"
+                          tabIndex={0}
+                          aria-orientation="horizontal"
+                          aria-label="Resize expression preview"
+                          aria-valuemin={TREE_EXPRESSION_SPLIT_MIN}
+                          aria-valuemax={TREE_EXPRESSION_SPLIT_MAX}
+                          aria-valuenow={Math.round(safeTreeExpressionSplitRatio)}
+                          style={treeExpressionSplitterStyle}
+                          onPointerDown={handleTreeExpressionSplitterPointerDown}
+                          onKeyDown={handleTreeExpressionSplitterKeyDown}
+                        />
+                        <div
+                          ref={expressionPreviewContainerRef}
+                          style={expressionPreviewContainerStyle}
+                        >
+                          <span>{expressionPreviewSegments.before}</span>
+                          {expressionPreviewSegments.hasSelection && (
+                            <span ref={expressionPreviewSelectionRef} style={expressionSelectedTextStyle}>
+                              {expressionPreviewSegments.selection || ' '}
+                            </span>
+                          )}
+                          <span>{expressionPreviewSegments.after}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1598,47 +2091,73 @@ const FuncScriptTester = ({
         </div>
       </div>
       {showTestingControls && (
-        <div style={testingColumnStyle}>
-          <div style={variablesListStyle}>
-            {variableEntries.length === 0 ? (
-              <div style={unsetTokenStyle}>Variables will appear here when referenced.</div>
-            ) : (
-              variableEntries.map((entry) => {
-                const isSelected = entry.key === selectedVariableKey;
-                const hasValue = entry.typedValue !== null && !entry.error;
-                const summaryText = entry.error
-                  ? 'Error'
-                  : hasValue
-                  ? Engine.getTypeName(Engine.typeOf(entry.typedValue as TypedValue))
-                  : 'Unset';
-                return (
-                  <button
-                    key={entry.key}
-                    type="button"
-                    onClick={() => handleSelectVariable(entry.key)}
-                    style={isSelected ? selectedListItemStyle : listItemStyle}
-                  >
-                    <div>
-                      <strong>{entry.name}</strong>
-                    </div>
-                    <div style={hasValue ? undefined : unsetTokenStyle}>{summaryText}</div>
-                    {entry.error ? <div style={errorTextStyle}>{entry.error}</div> : null}
-                  </button>
-                );
-              })
-            )}
-          </div>
-          <div style={variableEditorContainerStyle}>
-            <div onBlur={handleVariableEditorBlur} style={variableEditorSurfaceStyle}>
-              <FuncScriptEditor
-                key={selectedVariableKey ?? 'variable-editor'}
-                value={variableEditorValue}
-                onChange={handleVariableEditorChange}
-                minHeight={160}
-              />
+        <>
+          <div
+            role="separator"
+            tabIndex={0}
+            aria-orientation="vertical"
+            aria-label="Resize testing column"
+            aria-valuemin={MAIN_SPLIT_MIN}
+            aria-valuemax={MAIN_SPLIT_MAX}
+            aria-valuenow={Math.round(safeMainSplitRatio)}
+            style={mainSplitterStyle}
+            onPointerDown={handleMainSplitterPointerDown}
+            onKeyDown={handleMainSplitterKeyDown}
+          />
+          <div ref={testingColumnRef} style={testingColumnStyle}>
+            <div style={variablesListStyle}>
+              {variableEntries.length === 0 ? (
+                <div style={unsetTokenStyle}>Variables will appear here when referenced.</div>
+              ) : (
+                variableEntries.map((entry) => {
+                  const isSelected = entry.key === selectedVariableKey;
+                  const hasValue = entry.typedValue !== null && !entry.error;
+                  const summaryText = entry.error
+                    ? 'Error'
+                    : hasValue
+                    ? Engine.getTypeName(Engine.typeOf(entry.typedValue as TypedValue))
+                    : 'Unset';
+                  return (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      onClick={() => handleSelectVariable(entry.key)}
+                      style={isSelected ? selectedListItemStyle : listItemStyle}
+                    >
+                      <div>
+                        <strong>{entry.name}</strong>
+                      </div>
+                      <div style={hasValue ? undefined : unsetTokenStyle}>{summaryText}</div>
+                      {entry.error ? <div style={errorTextStyle}>{entry.error}</div> : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div
+              role="separator"
+              tabIndex={0}
+              aria-orientation="horizontal"
+              aria-label="Resize variable editor"
+              aria-valuemin={VARIABLE_SPLIT_MIN}
+              aria-valuemax={VARIABLE_SPLIT_MAX}
+              aria-valuenow={Math.round(safeVariableSplitRatio)}
+              style={variableSplitterStyle}
+              onPointerDown={handleVariableSplitterPointerDown}
+              onKeyDown={handleVariableSplitterKeyDown}
+            />
+            <div style={variableEditorContainerStyle}>
+              <div onBlur={handleVariableEditorBlur} style={variableEditorSurfaceStyle}>
+                <FuncScriptEditor
+                  key={selectedVariableKey ?? 'variable-editor'}
+                  value={variableEditorValue}
+                  onChange={handleVariableEditorChange}
+                  minHeight={160}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
