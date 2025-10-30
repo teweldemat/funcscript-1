@@ -904,7 +904,7 @@ const treeExpressionSplitterStyle: CSSProperties = {
   borderTop: '1px solid #d0d7de',
   borderBottom: '1px solid #d0d7de',
   borderRadius: 6,
-  flexShrink: 0,
+  flex: '0 0 auto',
   margin: '0.5rem 0'
 };
 
@@ -912,7 +912,8 @@ const treeEditorContentStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 0
+  minHeight: 0,
+  overflow: 'hidden'
 };
 
 const typedValueToPlain = (typedValue: TypedValue): unknown => {
@@ -1545,17 +1546,28 @@ const FuncScriptTester = ({
       container.scrollTop = 0;
       return;
     }
-    const selectionTop = selection.offsetTop;
-    const selectionBottom = selectionTop + selection.offsetHeight;
-    const visibleTop = container.scrollTop;
-    const visibleBottom = visibleTop + container.clientHeight;
-
-    if (selectionTop < visibleTop) {
-      container.scrollTop = selectionTop;
-    } else if (selectionBottom > visibleBottom) {
-      container.scrollTop = selectionBottom - container.clientHeight;
+    const containerRect = container.getBoundingClientRect();
+    if (containerRect.height <= 0) {
+      return;
     }
-  }, [mode, expressionPreviewSegments]);
+    const selectionRect = selection.getBoundingClientRect();
+    const relativeTop = selectionRect.top - containerRect.top + container.scrollTop;
+    const selectionHeight = selectionRect.height || selection.offsetHeight || 0;
+    if (!Number.isFinite(relativeTop) || !Number.isFinite(selectionHeight)) {
+      return;
+    }
+    const containerHeight = container.clientHeight;
+    if (containerHeight <= 0) {
+      return;
+    }
+    const selectionCenter = relativeTop + selectionHeight / 2;
+    const maxScroll = Math.max(0, container.scrollHeight - containerHeight);
+    const targetScroll = clamp(selectionCenter - containerHeight / 2, 0, maxScroll);
+
+    if (Math.abs(container.scrollTop - targetScroll) > 1) {
+      container.scrollTop = targetScroll;
+    }
+  }, [mode, expressionPreviewSegments, selectedNodeId]);
 
   const resultTypeName = useMemo(() => {
     if (!resultState.value) {
@@ -1897,11 +1909,18 @@ const FuncScriptTester = ({
     [safeVariableSplitRatio]
   );
 
+  const baseNodeMinHeight = minHeight ?? 260;
+  const nodeEditorMinHeight = expressionPreviewSegments
+    ? Math.max(140, Math.min(baseNodeMinHeight, 220))
+    : baseNodeMinHeight;
+
   const nodeEditorContainerStyle = useMemo(() => {
     if (!expressionPreviewSegments) {
       return {
         ...nodeEditorBaseStyle,
-        flex: 1
+        flex: 1,
+        minHeight: nodeEditorMinHeight,
+        overflow: 'hidden'
       };
     }
     return {
@@ -1909,9 +1928,10 @@ const FuncScriptTester = ({
       flexGrow: safeTreeExpressionSplitRatio,
       flexShrink: 1,
       flexBasis: 0,
-      minHeight: 160
+      minHeight: nodeEditorMinHeight,
+      overflow: 'hidden'
     };
-  }, [expressionPreviewSegments, safeTreeExpressionSplitRatio]);
+  }, [expressionPreviewSegments, safeTreeExpressionSplitRatio, nodeEditorMinHeight]);
 
   const expressionPreviewContainerStyle = useMemo(() => {
     if (!expressionPreviewSegments) {
@@ -2046,7 +2066,7 @@ const FuncScriptTester = ({
                         value={pendingNodeValue}
                         onChange={handleNodeEditorChange}
                         onError={setNodeEditorParseError}
-                        minHeight={minHeight ?? 260}
+                        minHeight={nodeEditorMinHeight}
                         readOnly={!selectedNode?.isEditable || Boolean(currentParseError)}
                         style={nodeEditorSurfaceStyle}
                       />
