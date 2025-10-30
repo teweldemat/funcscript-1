@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode
 } from 'react';
 import FuncScriptEditor, {
@@ -214,6 +215,19 @@ type ParseTreeNode = {
   expression: string;
   isEditable: boolean;
   children: ParseTreeNode[];
+};
+
+type ExpressionPreviewSegment = {
+  text: string;
+  isSelected: boolean;
+  isHovered: boolean;
+};
+
+type ExpressionPreviewData = {
+  segments: ExpressionPreviewSegment[];
+  selectionRange: { start: number; end: number } | null;
+  hoverRange: { start: number; end: number } | null;
+  hasSelection: boolean;
 };
 
 const NON_EDITABLE_NODE_TYPES = new Set<string>([
@@ -435,6 +449,183 @@ const findNodeByRange = (
   return null;
 };
 
+const findDeepestNodeContainingOffset = (
+  node: ParseTreeNode | null,
+  offset: number
+): ParseTreeNode | null => {
+  if (!node) {
+    return null;
+  }
+
+  let bestMatch: ParseTreeNode | null = null;
+  const stack: ParseTreeNode[] = [node];
+
+  while (stack.length) {
+    const current = stack.pop();
+    if (!current) {
+      continue;
+    }
+    const range = current.range;
+    const contains = range ? offset >= range.start && offset < range.end : false;
+    if (contains) {
+      bestMatch = current;
+    }
+    for (const child of current.children) {
+      stack.push(child);
+    }
+  }
+
+  return bestMatch;
+};
+
+const resolveNodeForOffset = (
+  root: ParseTreeNode | null,
+  offset: number,
+  docLength: number
+): ParseTreeNode | null => {
+  if (!root || docLength <= 0) {
+    return null;
+  }
+  const attempts = new Set<number>([offset]);
+  if (offset > 0) {
+    attempts.add(offset - 1);
+  }
+  if (offset + 1 < docLength) {
+    attempts.add(offset + 1);
+  }
+  for (const candidate of attempts) {
+    const match = findDeepestNodeContainingOffset(root, candidate);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+const findDisplayableTreeNode = (
+  node: ParseTreeNode | null,
+  nodeIndex: Map<string, ParseTreeNode>
+): ParseTreeNode | null => {
+  let current: ParseTreeNode | null = node;
+  while (current) {
+    const hasVisibleChildren = current.children.some((child) => hasVisibleEditableDescendant(child));
+    if (current.isEditable || hasVisibleChildren) {
+      return current;
+    }
+    const ancestors = getAncestorNodeIds(current.id);
+    if (ancestors.length === 0) {
+      break;
+    }
+    const parentId = ancestors[ancestors.length - 1];
+    current = nodeIndex.get(parentId) ?? null;
+  }
+  return null;
+};
+
+const resolveVisibleHoverId = (
+  node: ParseTreeNode | null,
+  collapsedNodeIds: Set<string>,
+  nodeIndex: Map<string, ParseTreeNode>
+): string | null => {
+  if (!node) {
+    return null;
+  }
+
+  const displayableNode = findDisplayableTreeNode(node, nodeIndex);
+  if (!displayableNode) {
+    return null;
+  }
+
+  const ancestors = getAncestorNodeIds(displayableNode.id);
+  for (let index = ancestors.length - 1; index >= 0; index -= 1) {
+    const ancestorId = ancestors[index];
+    if (collapsedNodeIds.has(ancestorId)) {
+      return ancestorId;
+    }
+  }
+  return displayableNode.id;
+};
+
+const findFirstEditableDescendant = (node: ParseTreeNode | null): ParseTreeNode | null => {
+  if (!node) {
+    return null;
+  }
+  for (const child of node.children) {
+    if (child.isEditable) {
+      return child;
+    }
+  }
+  for (const child of node.children) {
+    const descendant = findFirstEditableDescendant(child);
+    if (descendant) {
+      return descendant;
+    }
+  }
+  return null;
+};
+
+const getCharacterOffsetForPoint = (
+  container: HTMLElement,
+  clientX: number,
+  clientY: number
+): number | null => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const doc = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (x: number, y: number) => {
+      offsetNode: Node;
+      offset: number;
+    } | null;
+  };
+
+  let range: Range | null = null;
+
+  if (typeof doc.caretRangeFromPoint === 'function') {
+    try {
+      range = doc.caretRangeFromPoint(clientX, clientY);
+    } catch {
+      range = null;
+    }
+  }
+
+  if (!range && typeof doc.caretPositionFromPoint === 'function') {
+    const position = doc.caretPositionFromPoint(clientX, clientY);
+    if (position) {
+      const tempRange = doc.createRange();
+      try {
+        tempRange.setStart(position.offsetNode, position.offset);
+        tempRange.collapse(true);
+        range = tempRange;
+      } catch {
+        range = null;
+      }
+    }
+  }
+
+  if (!range) {
+    return null;
+  }
+
+  const { startContainer } = range;
+  if (!container.contains(startContainer)) {
+    return null;
+  }
+
+  const preCaretRange = range.cloneRange();
+  preCaretRange.selectNodeContents(container);
+  try {
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+  } catch {
+    return null;
+  }
+
+  const length = preCaretRange.toString().length;
+  return Number.isFinite(length) ? length : null;
+};
+
 const findFirstEditableNode = (root: ParseTreeNode | null): ParseTreeNode | null => {
   if (!root) {
     return null;
@@ -493,6 +684,7 @@ type ParseTreeListProps = {
   node: ParseTreeNode;
   level: number;
   selectedId: string | null;
+  hoveredId: string | null;
   collapsedNodeIds: Set<string>;
   onToggleNode: (nodeId: string) => void;
   onSelect: (nodeId: string) => void;
@@ -539,12 +731,14 @@ const ParseTreeList = ({
   node,
   level,
   selectedId,
+  hoveredId,
   collapsedNodeIds,
   onToggleNode,
   onSelect
 }: ParseTreeListProps) => {
   const expressionLabel = formatExpressionPreview(node.expression);
   const isSelected = node.id === selectedId;
+  const isHovered = node.id === hoveredId;
   const isEditable = node.isEditable;
   const isCollapsed = collapsedNodeIds.has(node.id);
 
@@ -560,8 +754,8 @@ const ParseTreeList = ({
 
   const buttonStyle: CSSProperties = {
     ...treeButtonBaseStyle,
-    background: isSelected ? '#dbe9ff' : 'transparent',
-    borderColor: isSelected ? '#0969da' : 'transparent',
+    background: isSelected ? '#dbe9ff' : isHovered ? '#edf4ff' : 'transparent',
+    borderColor: isSelected ? '#0969da' : isHovered ? '#9ec3ff' : 'transparent',
     cursor: isEditable ? 'pointer' : 'default',
     color: isEditable ? '#24292f' : '#8c959f'
   };
@@ -599,6 +793,7 @@ const ParseTreeList = ({
             node={child}
             level={level + 1}
             selectedId={selectedId}
+            hoveredId={hoveredId}
             collapsedNodeIds={collapsedNodeIds}
             onToggleNode={onToggleNode}
             onSelect={onSelect}
@@ -765,6 +960,14 @@ const expressionSelectedTextStyle: CSSProperties = {
   textDecoration: 'underline',
   fontWeight: 600,
   color: '#24292f'
+};
+
+const expressionHoveredTextStyle: CSSProperties = {
+  backgroundColor: '#cce4ff',
+  color: '#0b4a82',
+  borderRadius: 4,
+  fontWeight: 600,
+  textDecoration: 'none'
 };
 
 const treeEditorOverlayStyle: CSSProperties = {
@@ -1005,6 +1208,10 @@ const FuncScriptTester = ({
 
   const [currentParseNode, setCurrentParseNode] = useState<FuncScriptParseNode | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredPreviewRange, setHoveredPreviewRange] = useState<{ start: number; end: number } | null>(
+    null
+  );
   const [pendingNodeValue, setPendingNodeValue] = useState('');
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [currentParseError, setCurrentParseError] = useState<string | null>(null);
@@ -1015,6 +1222,7 @@ const FuncScriptTester = ({
   const hadParseTreeRef = useRef(false);
   const expressionPreviewContainerRef = useRef<HTMLDivElement | null>(null);
   const expressionPreviewSelectionRef = useRef<HTMLSpanElement | null>(null);
+  const lastSelectionKeyRef = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const treeLayoutRef = useRef<HTMLDivElement | null>(null);
   const testingColumnRef = useRef<HTMLDivElement | null>(null);
@@ -1248,6 +1456,27 @@ const FuncScriptTester = ({
   const parseNodeMap = useMemo(() => createParseNodeIndex(parseTree), [parseTree]);
   const firstEditableNode = useMemo(() => findFirstEditableNode(parseTree), [parseTree]);
   const selectedNode = selectedNodeId ? parseNodeMap.get(selectedNodeId) ?? null : null;
+
+  useEffect(() => {
+    if (!hoveredNodeId) {
+      return;
+    }
+    if (!parseNodeMap.has(hoveredNodeId)) {
+      setHoveredNodeId(null);
+      setHoveredPreviewRange(null);
+    }
+  }, [hoveredNodeId, parseNodeMap]);
+
+  useEffect(() => {
+    if (mode !== 'tree') {
+      if (hoveredNodeId !== null) {
+        setHoveredNodeId(null);
+      }
+      if (hoveredPreviewRange !== null) {
+        setHoveredPreviewRange(null);
+      }
+    }
+  }, [mode, hoveredNodeId, hoveredPreviewRange]);
 
   useEffect(() => {
     selectedNodeRef.current = selectedNode;
@@ -1497,69 +1726,160 @@ const FuncScriptTester = ({
     return '';
   }, [parseTree, selectedNode, firstEditableNode, currentParseError]);
 
-  const expressionPreviewSegments = useMemo(() => {
+  const expressionPreviewSegments = useMemo<ExpressionPreviewData | null>(() => {
     if (!value) {
       return null;
     }
-    const range = selectedNode?.range;
-    if (!range || !selectedNode?.isEditable) {
+    const docLength = value.length;
+    const selectionRangeRaw =
+      selectedNode?.isEditable && selectedNode.range
+        ? clampRange(selectedNode.range.start, selectedNode.range.end, docLength)
+        : null;
+    const hoverRangeRaw = hoveredPreviewRange
+      ? clampRange(hoveredPreviewRange.start, hoveredPreviewRange.end, docLength)
+      : null;
+
+    const selectionRange = selectionRangeRaw;
+    const hoverRange = hoverRangeRaw;
+
+    if (!selectionRange && !hoverRange) {
       return {
-        before: value,
-        selection: '',
-        after: '',
+        segments: [
+          {
+            text: value,
+            isSelected: false,
+            isHovered: false
+          }
+        ],
+        selectionRange: null,
+        hoverRange: null,
         hasSelection: false
       };
     }
-    const start = Math.max(0, Math.min(range.start, value.length));
-    const end = Math.max(start, Math.min(range.end, value.length));
-    if (end <= start) {
+
+    const points = new Set<number>([0, docLength]);
+    if (selectionRange) {
+      points.add(selectionRange.start);
+      points.add(selectionRange.end);
+    }
+    if (hoverRange) {
+      points.add(hoverRange.start);
+      points.add(hoverRange.end);
+    }
+
+    const sortedPoints = Array.from(points).sort((a, b) => a - b);
+    const segments: ExpressionPreviewSegment[] = [];
+
+    for (let index = 0; index < sortedPoints.length - 1; index += 1) {
+      const start = sortedPoints[index];
+      const end = sortedPoints[index + 1];
+      if (end <= start) {
+        continue;
+      }
+      const text = value.slice(start, end);
+      if (text.length === 0) {
+        continue;
+      }
+      const isSelected = Boolean(
+        selectionRange && start >= selectionRange.start && end <= selectionRange.end
+      );
+      const isHovered = Boolean(hoverRange && start >= hoverRange.start && end <= hoverRange.end);
+      segments.push({ text, isSelected, isHovered });
+    }
+
+    if (segments.length === 0) {
       return {
-        before: value,
-        selection: '',
-        after: '',
-        hasSelection: false
+        segments: [
+          {
+            text: value,
+            isSelected: false,
+            isHovered: false
+          }
+        ],
+        selectionRange,
+        hoverRange,
+        hasSelection: Boolean(selectionRange)
       };
     }
+
     return {
-      before: value.slice(0, start),
-      selection: value.slice(start, end),
-      after: value.slice(end),
-      hasSelection: true
+      segments,
+      selectionRange,
+      hoverRange,
+      hasSelection: Boolean(selectionRange)
     };
-  }, [selectedNode, value]);
+  }, [selectedNode, value, hoveredPreviewRange]);
+
+  useEffect(() => {
+    if (expressionPreviewSegments) {
+      return;
+    }
+    if (hoveredNodeId !== null) {
+      setHoveredNodeId(null);
+    }
+    if (hoveredPreviewRange !== null) {
+      setHoveredPreviewRange(null);
+    }
+  }, [expressionPreviewSegments, hoveredNodeId, hoveredPreviewRange]);
 
   useEffect(() => {
     const container = expressionPreviewContainerRef.current;
     if (!container) {
       return;
     }
+
     if (mode !== 'tree') {
-      container.scrollTop = 0;
+      if (container.scrollTop !== 0) {
+        container.scrollTop = 0;
+      }
+      lastSelectionKeyRef.current = null;
       return;
     }
+
     if (!expressionPreviewSegments) {
-      container.scrollTop = 0;
+      if (container.scrollTop !== 0) {
+        container.scrollTop = 0;
+      }
+      lastSelectionKeyRef.current = null;
       return;
     }
+
+    if (!expressionPreviewSegments.hasSelection || !expressionPreviewSegments.selectionRange) {
+      if (container.scrollTop !== 0) {
+        container.scrollTop = 0;
+      }
+      lastSelectionKeyRef.current = null;
+      return;
+    }
+
+    const selectionRange = expressionPreviewSegments.selectionRange;
+    const key = `${selectedNodeId ?? 'null'}:${selectionRange.start}-${selectionRange.end}`;
+    if (lastSelectionKeyRef.current === key) {
+      return;
+    }
+
     const selection = expressionPreviewSelectionRef.current;
-    if (!expressionPreviewSegments.hasSelection || !selection) {
-      container.scrollTop = 0;
+    if (!selection) {
       return;
     }
+
     const containerRect = container.getBoundingClientRect();
     if (containerRect.height <= 0) {
       return;
     }
+
     const selectionRect = selection.getBoundingClientRect();
     const relativeTop = selectionRect.top - containerRect.top + container.scrollTop;
     const selectionHeight = selectionRect.height || selection.offsetHeight || 0;
     if (!Number.isFinite(relativeTop) || !Number.isFinite(selectionHeight)) {
       return;
     }
+
     const containerHeight = container.clientHeight;
     if (containerHeight <= 0) {
       return;
     }
+
     const selectionTop = relativeTop;
     const selectionBottom = relativeTop + selectionHeight;
     const viewTop = container.scrollTop;
@@ -1578,7 +1898,159 @@ const FuncScriptTester = ({
     if (targetScroll !== null && Math.abs(container.scrollTop - targetScroll) > 1) {
       container.scrollTop = targetScroll;
     }
+
+    lastSelectionKeyRef.current = key;
   }, [mode, expressionPreviewSegments, selectedNodeId]);
+
+  const handleExpressionPreviewMouseMove = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (mode !== 'tree' || !parseTree || !expressionPreviewSegments) {
+        setHoveredNodeId((prev) => (prev === null ? prev : null));
+        setHoveredPreviewRange((prev) => (prev === null ? prev : null));
+        return;
+      }
+      const container = expressionPreviewContainerRef.current;
+      if (!container) {
+        return;
+      }
+      const docLength = value.length;
+      if (docLength === 0) {
+        setHoveredNodeId((prev) => (prev === null ? prev : null));
+        setHoveredPreviewRange((prev) => (prev === null ? prev : null));
+        return;
+      }
+      const offset = getCharacterOffsetForPoint(container, event.clientX, event.clientY);
+      if (offset === null) {
+        setHoveredNodeId((prev) => (prev === null ? prev : null));
+        setHoveredPreviewRange((prev) => (prev === null ? prev : null));
+        return;
+      }
+      const clampedOffset = clamp(offset, 0, docLength - 1);
+      const targetNode = resolveNodeForOffset(parseTree, clampedOffset, docLength);
+      const nextRange = targetNode?.range
+        ? clampRange(targetNode.range.start, targetNode.range.end, docLength) ?? null
+        : null;
+      setHoveredPreviewRange((prev) => {
+        if (prev && nextRange && prev.start === nextRange.start && prev.end === nextRange.end) {
+          return prev;
+        }
+        if (!prev && !nextRange) {
+          return prev;
+        }
+        return nextRange;
+      });
+      const nextId = resolveVisibleHoverId(targetNode, collapsedNodeIds, parseNodeMap) ?? null;
+      setHoveredNodeId((prev) => (prev === nextId ? prev : nextId));
+    },
+    [
+      mode,
+      parseTree,
+      expressionPreviewSegments,
+      value,
+      collapsedNodeIds,
+      parseNodeMap
+    ]
+  );
+
+  const handleExpressionPreviewMouseLeave = useCallback(() => {
+    setHoveredNodeId((prev) => (prev === null ? prev : null));
+    setHoveredPreviewRange((prev) => (prev === null ? prev : null));
+  }, []);
+
+  const handleExpressionPreviewClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (mode !== 'tree' || !parseTree || !expressionPreviewSegments) {
+        return;
+      }
+      const container = expressionPreviewContainerRef.current;
+      if (!container) {
+        return;
+      }
+      const docLength = value.length;
+      if (docLength === 0) {
+        return;
+      }
+      const offset = getCharacterOffsetForPoint(container, event.clientX, event.clientY);
+      if (offset === null) {
+        return;
+      }
+      const clampedOffset = clamp(offset, 0, docLength - 1);
+      const targetNode = resolveNodeForOffset(parseTree, clampedOffset, docLength);
+      if (!targetNode) {
+        return;
+      }
+      const nextRange = targetNode.range
+        ? clampRange(targetNode.range.start, targetNode.range.end, docLength) ?? null
+        : null;
+      setHoveredPreviewRange((prev) => {
+        if (prev && nextRange && prev.start === nextRange.start && prev.end === nextRange.end) {
+          return prev;
+        }
+        if (!prev && !nextRange) {
+          return prev;
+        }
+        return nextRange;
+      });
+      const selectable = targetNode.isEditable ? targetNode : findFirstEditableDescendant(targetNode);
+      if (!selectable) {
+        return;
+      }
+      handleSelectNode(selectable.id);
+    },
+    [mode, parseTree, expressionPreviewSegments, value, handleSelectNode]
+  );
+
+  const renderExpressionPreviewSegments = useCallback(() => {
+    if (!expressionPreviewSegments) {
+      return null;
+    }
+    const elements: ReactNode[] = [];
+    let selectionRefAssigned = false;
+    let selectionGroup: { nodes: ReactNode[]; startIndex: number } | null = null;
+
+    const flushSelectionGroup = () => {
+      if (!selectionGroup) {
+        return;
+      }
+      elements.push(
+        <span
+          key={`selection-group-${selectionGroup.startIndex}`}
+          ref={!selectionRefAssigned ? expressionPreviewSelectionRef : undefined}
+        >
+          {selectionGroup.nodes}
+        </span>
+      );
+      if (!selectionRefAssigned) {
+        selectionRefAssigned = true;
+      }
+      selectionGroup = null;
+    };
+
+    expressionPreviewSegments.segments.forEach((segment, index) => {
+      const style: CSSProperties = {
+        ...(segment.isSelected ? expressionSelectedTextStyle : {}),
+        ...(segment.isHovered ? expressionHoveredTextStyle : {})
+      };
+      const segmentNode = (
+        <span key={`expression-segment-${index}`} style={style}>
+          {segment.text}
+        </span>
+      );
+      if (segment.isSelected) {
+        if (!selectionGroup) {
+          selectionGroup = { nodes: [], startIndex: index };
+        }
+        selectionGroup.nodes.push(segmentNode);
+      } else {
+        flushSelectionGroup();
+        elements.push(segmentNode);
+      }
+    });
+
+    flushSelectionGroup();
+
+    return elements;
+  }, [expressionPreviewSegments, expressionPreviewSelectionRef]);
 
   const resultTypeName = useMemo(() => {
     if (!resultState.value) {
@@ -2044,6 +2516,7 @@ const FuncScriptTester = ({
                       node={parseTree}
                       level={0}
                       selectedId={selectedNodeId}
+                      hoveredId={hoveredNodeId}
                       collapsedNodeIds={collapsedNodeIds}
                       onToggleNode={handleToggleNode}
                       onSelect={handleSelectNode}
@@ -2102,14 +2575,11 @@ const FuncScriptTester = ({
                         <div
                           ref={expressionPreviewContainerRef}
                           style={expressionPreviewContainerStyle}
+                          onMouseMove={handleExpressionPreviewMouseMove}
+                          onMouseLeave={handleExpressionPreviewMouseLeave}
+                          onClick={handleExpressionPreviewClick}
                         >
-                          <span>{expressionPreviewSegments.before}</span>
-                          {expressionPreviewSegments.hasSelection && (
-                            <span ref={expressionPreviewSelectionRef} style={expressionSelectedTextStyle}>
-                              {expressionPreviewSegments.selection || ' '}
-                            </span>
-                          )}
-                          <span>{expressionPreviewSegments.after}</span>
+                          {renderExpressionPreviewSegments()}
                         </div>
                       </>
                     )}
