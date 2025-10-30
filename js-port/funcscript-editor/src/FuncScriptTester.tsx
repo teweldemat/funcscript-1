@@ -531,7 +531,8 @@ const leftPaneBaseStyle: CSSProperties = {
   flex: 2,
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 0
+  minHeight: 0,
+  overflow: 'hidden'
 };
 
 const toolbarStyle: CSSProperties = {
@@ -589,19 +590,23 @@ const leftPaneContentStyle: CSSProperties = {
   flexDirection: 'column',
   gap: '0.75rem',
   padding: '0.75rem',
-  minHeight: 0
+  minHeight: 0,
+  overflow: 'hidden'
 };
 
 const editorBodyStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 0
+  gap: '0.75rem',
+  minHeight: 0,
+  overflow: 'hidden'
 };
 
 const standardEditorWrapperStyle: CSSProperties = {
   flex: 1,
-  minHeight: 0
+  minHeight: 0,
+  display: 'flex'
 };
 
 const treeLayoutStyle: CSSProperties = {
@@ -660,6 +665,9 @@ const expressionPreviewContainerStyle: CSSProperties = {
   borderTop: '1px solid #e1e4e8',
   backgroundColor: '#f6f8fa',
   color: '#57606a',
+  height: 160,
+  overflowY: 'auto',
+  boxSizing: 'border-box',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word'
 };
@@ -690,7 +698,8 @@ const testingColumnStyle: CSSProperties = {
   minHeight: 0,
   padding: '0.75rem',
   borderLeft: '1px solid #d0d7de',
-  backgroundColor: '#ffffff'
+  backgroundColor: '#ffffff',
+  overflow: 'hidden'
 };
 
 const resultPanelStyle: CSSProperties = {
@@ -700,7 +709,8 @@ const resultPanelStyle: CSSProperties = {
   minHeight: 120,
   maxHeight: 240,
   overflow: 'auto',
-  background: '#f6f8fa'
+  background: '#f6f8fa',
+  flexShrink: 0
 };
 
 const variablesListStyle: CSSProperties = {
@@ -710,7 +720,8 @@ const variablesListStyle: CSSProperties = {
   minHeight: 0,
   overflowY: 'auto',
   flex: 1,
-  background: '#fff'
+  background: '#fff',
+  flexShrink: 0
 };
 
 const listItemStyle: CSSProperties = {
@@ -754,14 +765,16 @@ const nodeEditorSurfaceStyle: CSSProperties = {
 
 const testerEditorStyle: CSSProperties = {
   flex: 1,
-  minHeight: 0
+  minHeight: 0,
+  display: 'flex'
 };
 
 const variableEditorContainerStyle: CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  minHeight: 0
+  minHeight: 0,
+  overflow: 'hidden'
 };
 
 const variableEditorSurfaceStyle: CSSProperties = {
@@ -866,6 +879,8 @@ const FuncScriptTester = ({
   const pendingSelectionRangeRef = useRef<{ start: number; end: number } | null>(null);
   const selectedNodeRef = useRef<ParseTreeNode | null>(null);
   const hadParseTreeRef = useRef(false);
+  const expressionPreviewContainerRef = useRef<HTMLDivElement | null>(null);
+  const expressionPreviewSelectionRef = useRef<HTMLSpanElement | null>(null);
 
   const providerRef = useRef<TesterDataProvider | null>(null);
   if (!providerRef.current) {
@@ -1358,6 +1373,36 @@ const FuncScriptTester = ({
     };
   }, [selectedNode, value]);
 
+  useEffect(() => {
+    const container = expressionPreviewContainerRef.current;
+    if (!container) {
+      return;
+    }
+    if (mode !== 'tree') {
+      container.scrollTop = 0;
+      return;
+    }
+    if (!expressionPreviewSegments) {
+      container.scrollTop = 0;
+      return;
+    }
+    const selection = expressionPreviewSelectionRef.current;
+    if (!expressionPreviewSegments.hasSelection || !selection) {
+      container.scrollTop = 0;
+      return;
+    }
+    const selectionTop = selection.offsetTop;
+    const selectionBottom = selectionTop + selection.offsetHeight;
+    const visibleTop = container.scrollTop;
+    const visibleBottom = visibleTop + container.clientHeight;
+
+    if (selectionTop < visibleTop) {
+      container.scrollTop = selectionTop;
+    } else if (selectionBottom > visibleBottom) {
+      container.scrollTop = selectionBottom - container.clientHeight;
+    }
+  }, [mode, expressionPreviewSegments]);
+
   const resultTypeName = useMemo(() => {
     if (!resultState.value) {
       return null;
@@ -1535,10 +1580,10 @@ const FuncScriptTester = ({
                     ) : null}
                   </div>
                   {expressionPreviewSegments && (
-                    <div style={expressionPreviewContainerStyle}>
+                    <div ref={expressionPreviewContainerRef} style={expressionPreviewContainerStyle}>
                       <span>{expressionPreviewSegments.before}</span>
                       {expressionPreviewSegments.hasSelection && (
-                        <span style={expressionSelectedTextStyle}>
+                        <span ref={expressionPreviewSelectionRef} style={expressionSelectedTextStyle}>
                           {expressionPreviewSegments.selection || ' '}
                         </span>
                       )}
@@ -1549,7 +1594,7 @@ const FuncScriptTester = ({
               </div>
             )}
           </div>
-          <div style={resultPanelStyle}>{resultContent}</div>
+          {showTestingControls && <div style={resultPanelStyle}>{resultContent}</div>}
         </div>
       </div>
       {showTestingControls && (
