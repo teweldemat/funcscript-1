@@ -3,6 +3,8 @@ using global::FuncScript.Error;
 using global::FuncScript.Model;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
+using FuncScript.Block;
 
 namespace FuncScript.Test
 {
@@ -90,6 +92,10 @@ namespace FuncScript.Test
         [TestCase(@"1!=2!=3", null,FsError.ERROR_PARAMETER_COUNT_MISMATCH)]
 
         [TestCase(@"if(2=null,0,1)", 1)]  //how would if deal with null condition
+        [TestCase(@"if 1=1 then ""yes"" else ""no""", "yes")]
+        [TestCase(@"if 1=2 then ""yes"" else ""no""", "no")]
+        [TestCase(@"if (1=2) then 10 else 20", 20)]
+        [TestCase(@"if 1=1 then if 2=2 then 1 else 2 else 3", 1)]
 
         [TestCase(@"not(1=1)", false)] //not function
         [TestCase(@"not(3=1)", true)]
@@ -151,6 +157,9 @@ namespace FuncScript.Test
         [TestCase(@"false or  ([34]>5)", null,FsError.ERROR_TYPE_MISMATCH)]
         [TestCase(@"true or ([34]>5)", true)]
 
+        [TestCase(@"error(""boom"")", null, FsError.ERROR_DEFAULT)]
+        [TestCase(@"error(""boom"", ""CUSTOM"")", null, "CUSTOM")]
+
 
         [TestCase(@"2*3 in [4,6]", true)] //the precidence bonanza
         [TestCase(@"2=2 and 3=4", false)]
@@ -179,6 +188,40 @@ namespace FuncScript.Test
         public void SoManyTests_1(string expr, object res,string errorType=null)
         {
             TestResult(expr,res,errorType:errorType);
+        }
+
+        [Test]
+        public void ErrorFunctionReturnsFsErrorWithMessage()
+        {
+            var result = Tests.AssertSingleResult("error(\"boom\")");
+            Assert.That(result, Is.TypeOf<FsError>());
+            Assert.That(((FsError)result).ErrorMessage, Is.EqualTo("boom"));
+        }
+
+        [Test]
+        public void ErrorFunctionAllowsCustomType()
+        {
+            var result = Tests.AssertSingleResult("error(\"boom\", \"CUSTOM\")");
+            Assert.That(result, Is.TypeOf<FsError>());
+            var fsError = (FsError)result;
+            Assert.That(fsError.ErrorType, Is.EqualTo("CUSTOM"));
+            Assert.That(fsError.ErrorMessage, Is.EqualTo("boom"));
+        }
+
+        [Test]
+        public void IfThenElseSyntaxParsesToFunctionCall()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "if 1=1 then \"yes\" else \"no\"";
+
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            var expr = FuncScriptParser.Parse(provider, expression, errors);
+
+            Assert.That(errors, Is.Empty);
+            Assert.That(expr, Is.TypeOf<FunctionCallExpression>());
+
+            var result = FuncScriptRuntime.Evaluate(provider, expression);
+            Assert.That(result, Is.EqualTo("yes"));
         }
 
         

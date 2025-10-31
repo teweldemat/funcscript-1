@@ -69,6 +69,16 @@ namespace FuncScript.Core
                 return i;
             }
 
+            i = GetIfThenElseExpression(provider, exp, index, out var ifCall, out var ifNode, serrors);
+            if (i > index)
+            {
+                parseNode = ifNode;
+                prog = ifCall;
+                prog.Pos = index;
+                prog.Length = i - index;
+                return i;
+            }
+
             i = GetCaseExpression(provider, exp, i, out var caseExp, out var caseNode, serrors);
             if (i > index)
             {

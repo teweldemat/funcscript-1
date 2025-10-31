@@ -40,6 +40,23 @@ afterEach(() => {
 });
 
 describe('FuncScriptTester tree workflow', () => {
+  it('collapses parse tree nodes by default', async () => {
+    const user = userEvent.setup();
+    render(<TesterHarness />);
+
+    await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
+
+    const treeEditor = await screen.findByTestId('tester-tree-editor');
+    expect(within(treeEditor).queryByRole('button', { name: /^x$/ })).toBeNull();
+
+    const expandToggle = await within(treeEditor).findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
+
+    await within(treeEditor).findByRole('button', { name: /^x$/ });
+  });
+
   it('applies node edits back to the full expression', async () => {
     const user = userEvent.setup();
     const { container } = render(<TesterHarness />);
@@ -47,6 +64,11 @@ describe('FuncScriptTester tree workflow', () => {
     await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
 
     const treeEditor = await screen.findByTestId('tester-tree-editor');
+
+    const expandToggle = await within(treeEditor).findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
 
     const nodeButton = await within(treeEditor).findByRole('button', { name: /^x$/ });
     await user.click(nodeButton);
@@ -99,6 +121,10 @@ describe('FuncScriptTester tree workflow', () => {
     await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
 
     const treeEditor = await screen.findByTestId('tester-tree-editor');
+    const expandToggle = await within(treeEditor).findByRole('button', {
+      name: /^Expand node sin\(abc\)$/
+    });
+    await user.click(expandToggle);
     const nodeButton = await within(treeEditor).findByRole('button', { name: /^abc$/ });
     await user.click(nodeButton);
 
@@ -142,21 +168,31 @@ describe('FuncScriptTester tree workflow', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
 
-    const collapseToggle = await screen.findByRole('button', {
+    const treeEditor = await screen.findByTestId('tester-tree-editor');
+    expect(within(treeEditor).queryByRole('button', { name: /^x$/ })).toBeNull();
+
+    const expandToggle = await within(treeEditor).findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
+
+    await within(treeEditor).findByRole('button', { name: /^x$/ });
+
+    const collapseToggle = await within(treeEditor).findByRole('button', {
       name: /^Collapse node sin\(x\)$/
     });
     await user.click(collapseToggle);
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
+      expect(within(treeEditor).queryByRole('button', { name: /^x$/ })).toBeNull();
     });
 
-    const expandToggle = await screen.findByRole('button', {
+    const expandAgain = await within(treeEditor).findByRole('button', {
       name: /^Expand node sin\(x\)$/
     });
-    await user.click(expandToggle);
+    await user.click(expandAgain);
 
-    await screen.findByRole('button', { name: /^x$/ });
+    await within(treeEditor).findByRole('button', { name: /^x$/ });
   });
 
   it('persists tree state when saveKey is provided', async () => {
@@ -165,13 +201,23 @@ describe('FuncScriptTester tree workflow', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
 
-    const collapseToggle = await screen.findByRole('button', {
+    const treeEditor = await screen.findByTestId('tester-tree-editor');
+    expect(within(treeEditor).queryByRole('button', { name: /^x$/ })).toBeNull();
+
+    const expandToggle = await within(treeEditor).findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
+
+    await within(treeEditor).findByRole('button', { name: /^x$/ });
+
+    const collapseToggle = await within(treeEditor).findByRole('button', {
       name: /^Collapse node sin\(x\)$/
     });
     await user.click(collapseToggle);
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /^x$/ })).toBeNull();
+      expect(within(treeEditor).queryByRole('button', { name: /^x$/ })).toBeNull();
     });
 
     const testToggle = screen.getAllByRole('button', { name: 'Test' })[0];
@@ -186,10 +232,10 @@ describe('FuncScriptTester tree workflow', () => {
     const toggles = screen.getAllByRole('button', { name: 'Test' });
     expect(toggles[0]).toHaveAttribute('aria-pressed', 'true');
 
-    const expandToggle = await screen.findByRole('button', {
+    const expandAfterReload = await screen.findByRole('button', {
       name: /^Expand node sin\(x\)$/
     });
-    await user.click(expandToggle);
+    await user.click(expandAfterReload);
 
     await screen.findByRole('button', { name: /^x$/ });
   });
@@ -201,6 +247,10 @@ describe('FuncScriptTester tree workflow', () => {
     await user.click((await screen.findAllByRole('button', { name: 'Tree' }))[0]);
 
     const treeEditor = await screen.findByTestId('tester-tree-editor');
+    const expandToggle = await within(treeEditor).findByRole('button', {
+      name: /^Expand node sin\(x\)$/
+    });
+    await user.click(expandToggle);
     const identifierButton = await within(treeEditor).findByRole('button', { name: /^x$/ });
     await user.click(identifierButton);
 

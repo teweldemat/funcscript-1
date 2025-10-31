@@ -1239,6 +1239,8 @@ const FuncScriptTester = ({
   const treeLayoutRef = useRef<HTMLDivElement | null>(null);
   const testingColumnRef = useRef<HTMLDivElement | null>(null);
   const treeEditorContentRef = useRef<HTMLDivElement | null>(null);
+  const collapsedInitializedRef = useRef(false);
+  const initialAutoSelectRef = useRef(true);
 
   const [mainSplitRatio, setMainSplitRatio] = useState(60);
   const [treePaneWidth, setTreePaneWidth] = useState(260);
@@ -1269,6 +1271,8 @@ const FuncScriptTester = ({
   useEffect(() => {
     if (!saveKey) {
       setMode((prev) => (prev === 'standard' ? prev : 'standard'));
+      collapsedInitializedRef.current = false;
+      initialAutoSelectRef.current = true;
       setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
       setShowTestingControls(false);
       return;
@@ -1277,6 +1281,8 @@ const FuncScriptTester = ({
     const desiredMode = stored?.mode ?? 'standard';
     setMode((prev) => (prev === desiredMode ? prev : desiredMode));
     setShowTestingControls(stored?.showTesting ?? false);
+    collapsedInitializedRef.current = false;
+    initialAutoSelectRef.current = true;
     setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
   }, [saveKey]);
 
@@ -1473,7 +1479,7 @@ const FuncScriptTester = ({
         return;
       }
       const ancestors = getAncestorNodeIds(nodeId);
-      const idsToOpen = [...ancestors, nodeId].filter((id) => id !== 'root');
+      const idsToOpen = [...ancestors, nodeId];
       if (idsToOpen.length === 0) {
         return;
       }
@@ -1556,10 +1562,13 @@ const FuncScriptTester = ({
       if (!hadParseTreeRef.current) {
         return;
       }
+      collapsedInitializedRef.current = false;
+      initialAutoSelectRef.current = true;
       setCollapsedNodeIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
       return;
     }
     const validIds = new Set<string>();
+    const defaultCollapsed = new Set<string>();
     const stack: ParseTreeNode[] = [parseTree];
     while (stack.length) {
       const current = stack.pop();
@@ -1567,13 +1576,15 @@ const FuncScriptTester = ({
         continue;
       }
       validIds.add(current.id);
+      defaultCollapsed.add(current.id);
       for (const child of current.children) {
         stack.push(child);
       }
     }
     setCollapsedNodeIds((prev) => {
-      if (prev.size === 0) {
-        return prev;
+      if (!collapsedInitializedRef.current) {
+        collapsedInitializedRef.current = true;
+        return defaultCollapsed;
       }
       let changed = false;
       const next = new Set(prev);
@@ -1631,7 +1642,11 @@ const FuncScriptTester = ({
       setPendingNodeValue(fallback.expression);
       setHasPendingChanges(false);
       setNodeEditorParseError(null);
-      expandNodePath(fallback.id);
+      if (initialAutoSelectRef.current) {
+        initialAutoSelectRef.current = false;
+      } else {
+        expandNodePath(fallback.id);
+      }
       return;
     }
     pendingSelectionRangeRef.current = null;
