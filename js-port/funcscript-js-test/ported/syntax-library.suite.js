@@ -1,7 +1,21 @@
-const { expectEvaluation, expectNull, FsError, runCase, finalizeSuite } = require('./common');
+const assert = require('assert');
+const { expectEvaluation, expectNull, FsError, runCase, finalizeSuite, DefaultFsDataProvider } = require('./common');
+const { FuncScriptParser } = require('../../funcscript-js/src/parser/funcscript-parser');
+const { FunctionCallExpression } = require('../../funcscript-js/src/block/function-call-expression');
 
 function run() {
   const suite = {};
+
+  const collectNodes = (node, predicate, bucket = []) => {
+    if (!node) return bucket;
+    if (predicate(node)) bucket.push(node);
+    if (Array.isArray(node.Childs)) {
+      for (const child of node.Childs) {
+        collectNodes(child, predicate, bucket);
+      }
+    }
+    return bucket;
+  };
 
   const libraryCases = [
     { name: 'LessThan true', expression: '1<3', expected: true },
@@ -44,6 +58,9 @@ function run() {
     { name: 'Chained Equals invalid', expression: '1=2=3', errorType: FsError.ERROR_PARAMETER_COUNT_MISMATCH },
     { name: 'Chained NotEquals invalid', expression: '1!=2!=3', errorType: FsError.ERROR_PARAMETER_COUNT_MISMATCH },
     { name: 'If null comparison', expression: 'if(2=null,0,1)', expected: 1 },
+    { name: 'If then else true branch', expression: 'if 1=1 then "yes" else "no"', expected: 'yes' },
+    { name: 'If then else false branch', expression: 'if 1=2 then "yes" else "no"', expected: 'no' },
+    { name: 'If then else nested', expression: 'if 1=1 then if 2=2 then 1 else 2 else 3', expected: 1 },
     { name: 'Not true', expression: 'not(1=1)', expected: false },
     { name: 'Not false', expression: 'not(3=1)', expected: true },
     { name: 'Not null mismatch', expression: 'not(null)', errorType: FsError.ERROR_TYPE_MISMATCH },
@@ -89,6 +106,8 @@ function run() {
     { name: 'And mismatch', expression: 'true and ([34]>5)', errorType: FsError.ERROR_TYPE_MISMATCH },
     { name: 'Or mismatch', expression: 'false or  ([34]>5)', errorType: FsError.ERROR_TYPE_MISMATCH },
     { name: 'Or short circuit', expression: 'true or ([34]>5)', expected: true },
+    { name: 'Error default type', expression: 'error("boom")', expected: new FsError(FsError.ERROR_DEFAULT, 'boom') },
+    { name: 'Error custom type', expression: 'error("boom", "CUSTOM")', expected: new FsError('CUSTOM', 'boom') },
     { name: 'In with expression', expression: '2*3 in [4,6]', expected: true },
     { name: 'Equals conjunction false', expression: '2=2 and 3=4', expected: false },
     { name: 'Equals disjunction true', expression: '2=2 or 3=4', expected: true },
@@ -120,6 +139,21 @@ function run() {
       }
       expectEvaluation(expression, expected);
     });
+  });
+
+  runCase(suite, 'If then else parses to function call', () => {
+    const provider = new DefaultFsDataProvider();
+    const expression = 'if 1=1 then "yes" else "no"';
+    const result = FuncScriptParser.parse(provider, expression);
+    assert.ok(result && result.block instanceof FunctionCallExpression, 'Expected function call expression');
+
+    const keywordNodes = collectNodes(result.parseNode, node => node.NodeType === 'KeyWord');
+    assert.strictEqual(keywordNodes.length, 2, 'Expected both then/else keyword nodes');
+    const spans = keywordNodes.map((node) => expression.substring(node.Pos, node.Pos + node.Length));
+    assert.ok(spans.includes('then'));
+    assert.ok(spans.includes('else'));
+
+    expectEvaluation(expression, 'yes');
   });
 
   const precedenceCases = [{ name: 'False or false or true', expression: 'false or false or true', expected: true }];

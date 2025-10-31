@@ -95,6 +95,51 @@ namespace FuncScript.Test
 
 
         }
+
+        [Test]
+        public void IfThenElseParseTreeIncludesKeywords()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "if 1=1 then 3 else 4";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            var block = FuncScriptParser.Parse(provider, expression, out var node, errors);
+
+            Assert.IsNotNull(block);
+            Assert.IsNotNull(node);
+            Assert.IsEmpty(errors);
+
+            Assert.AreEqual(ParseNodeType.FunctionCall, node.NodeType);
+            Assert.AreEqual(0, node.Pos);
+            Assert.AreEqual(expression.Length, node.Length);
+            Assert.That(node.Childs, Has.Count.EqualTo(2));
+
+            var identifierNode = node.Childs[0];
+            Assert.AreEqual(ParseNodeType.Identifier, identifierNode.NodeType);
+            Assert.AreEqual(0, identifierNode.Pos);
+            Assert.AreEqual(2, identifierNode.Length);
+
+            var parameterNode = node.Childs[1];
+            Assert.AreEqual(ParseNodeType.FunctionParameterList, parameterNode.NodeType);
+
+            var keywordNodes = parameterNode.Childs
+                .Where(ch => ch.NodeType == ParseNodeType.KeyWord)
+                .ToList();
+
+            Assert.That(keywordNodes, Has.Count.EqualTo(2));
+
+            var thenNode = keywordNodes.Single(ch => expression.Substring(ch.Pos, ch.Length)
+                .Equals("then", StringComparison.OrdinalIgnoreCase));
+            Assert.AreEqual(7, thenNode.Pos);
+            Assert.AreEqual(4, thenNode.Length);
+
+            var elseNode = keywordNodes.Single(ch => expression.Substring(ch.Pos, ch.Length)
+                .Equals("else", StringComparison.OrdinalIgnoreCase));
+            Assert.AreEqual(14, elseNode.Pos);
+            Assert.AreEqual(4, elseNode.Length);
+
+            Assert.That(block, Is.TypeOf<FunctionCallExpression>());
+        }
+
         void AssertTreeSpanConsitency(ParseNode node)
         {
             var left = node.Pos;

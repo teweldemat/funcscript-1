@@ -61,6 +61,7 @@ const { FileTextFunction } = require('./os/file-text-function');
 
 const { GuidFunction } = require('./misc/guid-function');
 const { LogFunction } = require('./misc/log-function');
+const { ErrorFunction } = require('./misc/error-function');
 
 module.exports = function buildBuiltinMap() {
   const entries = [
@@ -119,6 +120,7 @@ module.exports = function buildBuiltinMap() {
     { fn: new DirectoryListFunction(), names: ['dirlist'] },
     { fn: new FileTextFunction(), names: ['file'] },
     { fn: new GuidFunction(), names: ['guid'] },
+    { fn: new ErrorFunction(), names: ['error'] },
     { fn: new LogFunction(), names: ['log'] }
   ];
 

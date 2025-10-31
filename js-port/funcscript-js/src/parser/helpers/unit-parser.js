@@ -197,6 +197,18 @@ module.exports = function createUnitParser(env) {
       return { next: kvcRes.next, block, node: kvcRes.node };
     }
 
+    if (typeof env.getIfThenElseExpression === 'function') {
+      const ifRes = env.getIfThenElseExpression(context, exp, i, errors);
+      if (ifRes.block) {
+        const block = ifRes.block;
+        if (typeof block.Pos !== 'number') {
+          block.Pos = index;
+        }
+        block.Length = ifRes.next - index;
+        return { next: ifRes.next, block, node: ifRes.node };
+      }
+    }
+
     const switchRes = env.getSwitchExpression(context, exp, i, errors);
     if (switchRes && switchRes.next > i) {
       const block = switchRes.block;

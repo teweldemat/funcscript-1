@@ -21,6 +21,7 @@ const createPrefixParser = require('./helpers/prefix-parser');
 const createExpressionParser = require('./helpers/expression-parser');
 const createCaseParser = require('./helpers/case-parser');
 const createSwitchParser = require('./helpers/switch-parser');
+const createIfThenElseParser = require('./helpers/if-then-else-parser');
 
 const env = {
   utils,
@@ -43,6 +44,8 @@ const env = {
   ParseNodeType
 };
 
+const getIfThenElseExpression = createIfThenElseParser(env);
+
 const getListExpression = createListParser(env);
 const getKvcExpression = createKvcParser(env);
 const { getUnit, getExpInParenthesis } = createUnitParser(env);
@@ -63,6 +66,7 @@ env.getListExpression = getListExpression;
 env.getKvcExpression = getKvcExpression;
 env.getUnit = getUnit;
 env.getExpInParenthesis = getExpInParenthesis;
+env.getIfThenElseExpression = getIfThenElseExpression;
 env.getFunctionCallParametersList = getFunctionCallParametersList;
 env.getCallAndMemberAccess = getCallAndMemberAccess;
 env.getInfixExpression = getInfixExpression;

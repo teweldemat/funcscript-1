@@ -56,6 +56,7 @@ const { HtmlEncodeFunction } = require('./html/html-encode-function');
 
 const { GuidFunction } = require('./misc/guid-function');
 const { LogFunction } = require('./misc/log-function');
+const { ErrorFunction } = require('./misc/error-function');
 
 module.exports = function buildBrowserBuiltinMap() {
   const entries = [
@@ -110,6 +111,7 @@ module.exports = function buildBrowserBuiltinMap() {
     { fn: new TicksToDateFunction(), names: ['tickstoday'] },
     { fn: new HtmlEncodeFunction(), names: ['hencode'] },
     { fn: new GuidFunction(), names: ['guid'] },
+    { fn: new ErrorFunction(), names: ['error'] },
     { fn: new LogFunction(), names: ['log'] }
   ];
 

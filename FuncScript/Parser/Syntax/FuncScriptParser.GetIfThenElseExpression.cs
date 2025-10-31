@@ -29,7 +29,7 @@ namespace FuncScript.Core
                 return index;
 
             if (!TrySplitIfThenElseSegments(exp, conditionStart, out var conditionSegment, out var trueSegment,
-                    out var falseStart))
+                    out var falseStart, out var thenIndex, out var elseIndex))
             {
                 return index;
             }
@@ -112,8 +112,22 @@ namespace FuncScript.Core
 
             var paramsStart = conditionExpr.Pos;
             var paramsEnd = falseExpr.Pos + falseExpr.Length;
+            var parametersChildren = new List<ParseNode>();
+            if (conditionNode != null)
+                parametersChildren.Add(conditionNode);
+
+            parametersChildren.Add(new ParseNode(ParseNodeType.KeyWord, thenIndex, 4));
+
+            if (trueNode != null)
+                parametersChildren.Add(trueNode);
+
+            parametersChildren.Add(new ParseNode(ParseNodeType.KeyWord, elseIndex, 4));
+
+            if (falseNode != null)
+                parametersChildren.Add(falseNode);
+
             var parametersNode = new ParseNode(ParseNodeType.FunctionParameterList, paramsStart,
-                paramsEnd - paramsStart, parameterChildren);
+                paramsEnd - paramsStart, parametersChildren);
 
             parseNode = new ParseNode(ParseNodeType.FunctionCall, index, falseConsumed - index,
                 new[] { identifierNode, parametersNode });
@@ -122,13 +136,16 @@ namespace FuncScript.Core
         }
 
         private static bool TrySplitIfThenElseSegments(string exp, int conditionStart,
-            out (int start, int end) conditionSegment, out (int start, int end) trueSegment, out int falseStart)
+            out (int start, int end) conditionSegment, out (int start, int end) trueSegment, out int falseStart,
+            out int thenIndex, out int elseIndex)
         {
             conditionSegment = default;
             trueSegment = default;
             falseStart = -1;
+            thenIndex = -1;
+            elseIndex = -1;
 
-            var thenIndex = FindKeywordOutsideExpressions(exp, conditionStart, "then");
+            thenIndex = FindKeywordOutsideExpressions(exp, conditionStart, "then");
             if (thenIndex < 0)
                 return false;
 
@@ -140,7 +157,7 @@ namespace FuncScript.Core
             if (trueStart >= exp.Length)
                 return false;
 
-            var elseIndex = FindElseOutsideExpressions(exp, trueStart);
+            elseIndex = FindElseOutsideExpressions(exp, trueStart);
             if (elseIndex < 0)
                 return false;
 
