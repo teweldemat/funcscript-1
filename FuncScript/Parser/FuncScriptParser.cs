@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using FuncScript.Functions.Logic;
 using FuncScript.Model;
+using System.Linq;
 namespace FuncScript.Core
 {
     public partial class FuncScriptParser
@@ -1328,7 +1329,7 @@ namespace FuncScript.Core
                 Length = i - index,
                 Parameters = pars.ToArray(),
             };
-            parseNode = new ParseNode(ParseNodeType.Case, index, index - i);
+            parseNode = new ParseNode(ParseNodeType.Case, index, i - index);
             parseNode.Childs = childNodes;
             return i;
         }
@@ -1397,7 +1398,7 @@ namespace FuncScript.Core
                 Length = i - index,
                 Parameters = pars.ToArray(),
             };
-            parseNode = new ParseNode(ParseNodeType.Case, index, index - i);
+            parseNode = new ParseNode(ParseNodeType.Case, index, i - index);
             parseNode.Childs = childNodes;
             return i;
         }
@@ -1584,13 +1585,45 @@ namespace FuncScript.Core
             }
 
             var func = parseContext.GetData(idenLower);
+            var firstChild = childNodes.FirstOrDefault();
+            var lastChild = childNodes.LastOrDefault();
+
+            var startPos = firstChild?.Pos ?? index;
+            var endPos = lastChild != null ? lastChild.Pos + lastChild.Length : startPos;
+            if (endPos < startPos)
+                endPos = startPos;
+            var spanLength = endPos - startPos;
+
+            ExpressionBlock functionBlock;
+            var operatorPos = idenNode?.Pos ?? startPos;
+            var operatorLength = idenNode?.Length ?? 0;
+
+            if (func == null)
+            {
+                functionBlock = new ReferenceBlock(iden, idenLower)
+                {
+                    Pos = operatorPos,
+                    Length = operatorLength
+                };
+            }
+            else
+            {
+                functionBlock = new LiteralBlock(func)
+                {
+                    Pos = operatorPos,
+                    Length = operatorLength
+                };
+            }
+
             prog = new FunctionCallExpression
             {
-                Function = func == null ? new ReferenceBlock(iden, idenLower) : new LiteralBlock(func),
-                Parameters = allOperands.ToArray()
+                Function = functionBlock,
+                Parameters = allOperands.ToArray(),
+                Pos = startPos,
+                Length = spanLength
             };
-            parseNode = new ParseNode(ParseNodeType.GeneralInfixExpression, childNodes[0].Pos,
-                childNodes[^1].Pos + childNodes[^1].Length + childNodes[0].Pos);
+
+            parseNode = new ParseNode(ParseNodeType.GeneralInfixExpression, startPos, spanLength, childNodes);
 
             return i;
         }

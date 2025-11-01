@@ -1,4 +1,5 @@
 using FuncScript.Block;
+using System.Linq;
 
 namespace FuncScript.Core
 {
@@ -85,13 +86,30 @@ namespace FuncScript.Core
                 return index;
             }
 
+            var firstChild = childNodes.FirstOrDefault();
+            var lastChild = childNodes.LastOrDefault();
+
+            var startPos = firstChild?.Pos ?? index;
+            var endPos = lastChild != null ? lastChild.Pos + lastChild.Length : startPos;
+            if (endPos < startPos)
+                endPos = startPos;
+            var spanLength = endPos - startPos;
+
+            var functionLiteral = new LiteralBlock(func)
+            {
+                Pos = idenNode?.Pos ?? startPos,
+                Length = idenNode?.Length ?? 0
+            };
+
             prog = new FunctionCallExpression
             {
-                Function = new LiteralBlock(func),
-                Parameters = allOperands.ToArray()
+                Function = functionLiteral,
+                Parameters = allOperands.ToArray(),
+                Pos = startPos,
+                Length = spanLength
             };
-            parseNode = new ParseNode(ParseNodeType.GeneralInfixExpression, childNodes[0].Pos,
-                childNodes[^1].Pos + childNodes[^1].Length + childNodes[0].Pos);
+
+            parseNode = new ParseNode(ParseNodeType.GeneralInfixExpression, startPos, spanLength, childNodes);
 
             return i;
         }

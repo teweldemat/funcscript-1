@@ -73,7 +73,7 @@ namespace FuncScript.Core
                 Length = i - index,
                 Parameters = pars.ToArray(),
             };
-            parseNode = new ParseNode(ParseNodeType.Case, index, index - i);
+            parseNode = new ParseNode(ParseNodeType.Case, index, i - index);
             parseNode.Childs = childNodes;
             return i;
         }

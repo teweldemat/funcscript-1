@@ -114,6 +114,23 @@ namespace FuncScript.Test
             }
 
         }
+        [Test]
+        public void TestListMemberAccessError2()
+        {
+            var error_exp = "c.d";
+            var exp = $"{{a:5; b:{error_exp};}}";
+            try
+            {
+                FuncScriptRuntime.Evaluate(exp);
+                throw new Exception("No error");
+            }
+            catch (Exception ex)
+            {
+                AnalyzeError(ex, exp, exp.IndexOf(error_exp), error_exp.Length);
+                Assert.AreEqual(typeof(Error.TypeMismatchError), ex.InnerException.GetType());
+            }
+
+        }
 
         [Test]
         public void TestSyntaxErrorMissingOperand()

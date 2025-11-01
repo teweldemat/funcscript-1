@@ -211,7 +211,7 @@ namespace FuncScript.Test
             p++;
             i++;
         }
-        
+
         [Test]
         public void TestColoring2()
         {
@@ -263,6 +263,90 @@ namespace FuncScript.Test
             p += 2;
             i++;
         
+        }
+
+        [Test]
+        public void CaseParseNodeLengthMatchesExpressionSpan()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "case true: 1";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            FuncScriptParser.Parse(provider, expression, out var node, errors);
+
+            Assert.That(errors, Is.Empty, "Parsing a simple case expression should not report errors");
+            Assert.That(node, Is.Not.Null, "Parser should produce a parse node for a valid case expression");
+            Assert.That(node.NodeType, Is.EqualTo(ParseNodeType.Case));
+            Assert.That(node.Pos, Is.EqualTo(0));
+            Assert.That(node.Length, Is.EqualTo(expression.Length), "Case node length should cover the entire expression");
+        }
+
+        [Test]
+        public void SwitchParseNodeLengthMatchesExpressionSpan()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "switch 1, 1: \"one\"";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            FuncScriptParser.Parse(provider, expression, out var node, errors);
+
+            Assert.That(errors, Is.Empty, "Parsing a switch expression should not report errors");
+            Assert.That(node, Is.Not.Null, "Parser should produce a parse node for a valid switch expression");
+            Assert.That(node.NodeType, Is.EqualTo(ParseNodeType.Case));
+            Assert.That(node.Pos, Is.EqualTo(0));
+            Assert.That(node.Length, Is.EqualTo(expression.Length), "Switch node length should cover the entire expression");
+        }
+
+        [Test]
+        public void GeneralInfixParseNodeUsesChildSpan()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "  [\"a\",\"b\"] join \",\"";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            FuncScriptParser.Parse(provider, expression, out var node, errors);
+
+            Assert.That(errors, Is.Empty, "General infix parsing should succeed");
+            Assert.That(node, Is.Not.Null);
+            Assert.That(node.NodeType, Is.EqualTo(ParseNodeType.GeneralInfixExpression));
+
+            var expectedStart = expression.IndexOf('[');
+            Assert.That(node.Pos, Is.EqualTo(expectedStart));
+
+            var expectedLength = expression.Length - expectedStart;
+            Assert.That(node.Length, Is.EqualTo(expectedLength), "General infix node should span its operand range");
+        }
+
+        [Test]
+        public void GeneralInfixExpressionBlockLengthMatchesParseSpan()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "  [\"a\",\"b\"] join \",\"";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            var block = FuncScriptParser.Parse(provider, expression, out _, errors);
+
+            Assert.That(errors, Is.Empty, "General infix parsing should succeed");
+            Assert.That(block, Is.TypeOf<FunctionCallExpression>());
+
+            var expectedStart = expression.IndexOf('[');
+            Assert.That(block.CodeLocation.Position, Is.EqualTo(expectedStart));
+
+            var expectedLength = expression.Length - expectedStart;
+            Assert.That(block.CodeLocation.Length, Is.EqualTo(expectedLength), "Function call block should cover the entire infix expression");
+        }
+
+        [Test]
+        public void GeneralInfixFunctionLiteralCapturesIdentifierSpan()
+        {
+            var provider = new DefaultFsDataProvider();
+            var expression = "  [\"a\",\"b\"] join \",\"";
+            var errors = new List<FuncScriptParser.SyntaxErrorData>();
+            var block = FuncScriptParser.Parse(provider, expression, out _, errors);
+
+            Assert.That(errors, Is.Empty, "General infix parsing should succeed");
+            var call = block as FunctionCallExpression;
+            Assert.IsNotNull(call, "General infix parsing should produce a function call expression");
+
+            var functionIdentifierIndex = expression.IndexOf("join", StringComparison.Ordinal);
+            Assert.That(call.Function.CodeLocation.Position, Is.EqualTo(functionIdentifierIndex));
+            Assert.That(call.Function.CodeLocation.Length, Is.EqualTo("join".Length));
         }
     }
 }
