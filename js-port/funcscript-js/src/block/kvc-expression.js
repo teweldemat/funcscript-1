@@ -73,11 +73,11 @@ class KvcExpression extends ExpressionBlock {
 
   evaluate(provider) {
     const scope = new KvcExpressionProvider(provider, this);
-    const pairs = this._keyValues.map((kv) => [kv.Key, scope.get(kv.KeyLower)]);
-    const collection = new SimpleKeyValueCollection(null, pairs);
     if (this.singleReturn) {
       return ensureTyped(this.singleReturn.evaluate(scope));
     }
+    const pairs = this._keyValues.map((kv) => [kv.Key, scope.get(kv.KeyLower)]);
+    const collection = new SimpleKeyValueCollection(null, pairs);
     return makeValue(FSDataType.KeyValueCollection, collection);
   }
 

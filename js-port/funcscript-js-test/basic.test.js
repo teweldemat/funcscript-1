@@ -48,6 +48,10 @@ function run() {
   assert.strictEqual(result[0], FSDataType.Integer);
   assert.strictEqual(result[1], 30);
 
+  result = evaluate('{a:x.y; b:3; return b}', provider);
+  assert.strictEqual(result[0], FSDataType.Integer);
+  assert.strictEqual(result[1], 3);
+
   result = evaluate('[{a:1},{a:2}] { return a; }', provider);
   assert.strictEqual(result[0], FSDataType.List);
   const projected = result[1];
