@@ -45,7 +45,7 @@ namespace FuncScript.Block
                 return ParentProvider.Get(name);
             }
         }
-
+        
         public class KeyValueExpression
         {
             public String Key;
@@ -111,15 +111,13 @@ namespace FuncScript.Block
         {
             var evalProvider = new KvcExpressionProvider(provider, this);
 
-            var kvc = new SimpleKeyValueCollection(null, this._keyValues
-                .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
-                    evalProvider.Get(kv.KeyLower))).ToArray());
-            
-
             if (singleReturn != null)
             {
                 return singleReturn.Evaluate(evalProvider);
             }
+            var kvc = new SimpleKeyValueCollection(null, this._keyValues
+                .Select(kv => KeyValuePair.Create<string, object>(kv.Key,
+                    evalProvider.Get(kv.KeyLower))).ToArray());
             return kvc;
         }
 

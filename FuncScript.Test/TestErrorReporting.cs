@@ -131,6 +131,13 @@ namespace FuncScript.Test
             }
 
         }
+        [Test]
+        public void TestListUncalledError()
+        {
+            var exp = "{a:x.y; b:3; return b}";
+            var res=FuncScriptRuntime.Evaluate(exp);
+            Assert.AreEqual(res,3);
+        }
 
         [Test]
         public void TestSyntaxErrorMissingOperand()
