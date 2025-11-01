@@ -173,16 +173,31 @@ module.exports = function createInfixParser(env) {
     );
   }
 
-  function buildGeneralInfixNode(children, fallbackPos) {
+  function buildGeneralInfixNode(children, fallbackStart, fallbackEnd) {
     const filtered = children.filter(Boolean);
-    if (!filtered.length) {
-      return null;
+
+    let start = Number.isFinite(fallbackStart) ? fallbackStart : 0;
+    let end = Number.isFinite(fallbackEnd) ? fallbackEnd : start;
+
+    if (filtered.length) {
+      const first = filtered[0];
+      const last = filtered[filtered.length - 1];
+      const firstPos = Number.isFinite(first?.Pos) ? first.Pos : start;
+      const lastEnd = Number.isFinite(last?.Pos) && Number.isFinite(last?.Length)
+        ? last.Pos + last.Length
+        : end;
+      start = firstPos;
+      end = Math.max(start, lastEnd);
+    } else {
+      end = Math.max(start, end);
     }
-    const first = filtered[0];
-    const last = filtered[filtered.length - 1];
-    const start = first.Pos;
-    const end = last.Pos + last.Length;
-    return new env.ParseNode(env.ParseNodeType.GeneralInfixExpression, start, Math.max(0, end - start), filtered);
+
+    const length = Math.max(0, end - start);
+    const node = filtered.length
+      ? new env.ParseNode(env.ParseNodeType.GeneralInfixExpression, start, length, filtered)
+      : null;
+
+    return { node, span: { start, end, length } };
   }
 
   function getGeneralInfixFunctionCall(context, exp, index, errors) {
@@ -266,13 +281,18 @@ module.exports = function createInfixParser(env) {
       return fallbackResult;
     }
 
-    const literalFunc = new LiteralBlock(env.makeValue(env.FSDataType.Function, funcObject));
-    const call = new env.FunctionCallExpression(literalFunc, operands);
-    call.Pos = operands[0].Pos;
-    const last = operands[operands.length - 1];
-    call.Length = last.Pos + last.Length - call.Pos;
+    const firstRange = getBlockRange(operands[0]);
+    const lastRange = getBlockRange(operands[operands.length - 1]) || firstRange;
+    const fallbackStart = firstRange?.start ?? operands[0]?.Pos ?? index;
+    const fallbackEnd = lastRange?.end ?? fallbackStart;
 
-    const node = buildGeneralInfixNode(childNodes, call.Pos);
+    const { node, span } = buildGeneralInfixNode(childNodes, fallbackStart, fallbackEnd);
+
+    const operatorPos = Number.isFinite(idRes.node?.Pos) ? idRes.node.Pos : span.start;
+    const operatorLength = Number.isFinite(idRes.node?.Length) ? idRes.node.Length : 0;
+    const literalFunc = new LiteralBlock(env.makeValue(env.FSDataType.Function, funcObject), operatorPos, operatorLength);
+
+    const call = new env.FunctionCallExpression(literalFunc, operands, span.start, span.length);
 
     return { next: currentIndex, block: call, node };
   }
